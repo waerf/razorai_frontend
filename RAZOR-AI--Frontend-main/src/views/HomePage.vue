@@ -47,7 +47,7 @@
       <div class="quick-access-cards">
         <el-card class="quick-access-card" @click.native="goToRobotMarket">
           <div class="quick-access-icon">
-            <i class="el-icon-shop"></i>
+            <i class="el-icon-goods"></i>
           </div>
           <div class="quick-access-title">机器人市场</div>
           <div class="quick-access-description">浏览和订阅AI机器人</div>

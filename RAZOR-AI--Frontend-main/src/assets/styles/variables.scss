@@ -12,8 +12,12 @@ $hover-background-color: #F0F2F7; // 背景悬停颜色（浅灰蓝）
 $background-color: #F6F6F6; // 页面背景色
 $border-color: #E5E6EB; // 边框颜色
 $divider-color: #E5E6EB; // 分割线颜色
+$selected-background-color: #c0e1fd; // 选中背景色
+$selected-text-color: #165DFF; // 选中文字颜色
+$title-text-color: color.adjust($selected-text-color, $lightness: 10%); // 标题文字颜色
 $accent-color: #0F88EB; // 强调色（知乎蓝）
-$accent-hover-color: color.adjust($accent-color, $lightness: -10%); // 强调色悬停（深蓝）
+$accent-hover-color: color.adjust($accent-color, $lightness: 10%); // 强调色悬停（深蓝）
+$primary-hover-color: color.adjust($primary-color, $lightness: -5%); // 主色悬停
 $card-background-color: #FFFFFF; // 卡片背景色
 
 // 阴影效果 - 保持原有

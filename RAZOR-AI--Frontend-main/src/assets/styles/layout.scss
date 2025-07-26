@@ -24,21 +24,41 @@
    height: 8vh;
 
    .header-name {
-      width: 18vw;
+      width: 20vw;
       height: 5vh;
       padding: 2vh 2vw;
       margin: 0;
       font-size: 3.0vh;
       color: vars.$text-color;
       text-align: center;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      border-radius: 0.5vh;
       
       &:hover {
-         width: 18vw;
-         height: 5vh;
+         width: 20vw;
+         height: 4.8vh;
          padding: 2vh 2vw;
          background-color: vars.$hover-background-color;
          color: vars.$hover-text-color;
-         @include m.box-shadow(0, 0.6vh, 1.5vh, rgba(0, 0, 0, 0.2));
+         @include m.box-shadow(0, 0.3vh, 0.2vh, rgba(0, 0, 0, 0.1));
+         transform: translateY(-0.1vh);
+      }
+
+      &.active {
+         background-color: vars.$accent-color;
+         color: white;
+         transform: translateY(-0.2vh);
+      }
+
+      &.active:hover {
+            background-color: color.adjust(
+               vars.$accent-color,
+               $lightness: 5%
+            );
+         transform: translateY(-0.25vh);
+         @include m.box-shadow(0, 0.3vh, 0.2vh, rgba(0, 0, 0, 0.1));
+         // border-bottom: 0.3vh solid vars.$selected-background-color;
       }
    }   
    
@@ -53,6 +73,7 @@
    }
 
    .user-info {
+      width: 8vw;
       display: flex;
       align-items: center;
       gap: 0.8vw;
@@ -62,11 +83,12 @@
    }
    /* Logo 和名称区域 */
    .logo-button-container {
-      width: 15vw;
+      width: 20vw;
+      height: auto;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      background-color: vars.$background-color;
+      // background-color: vars.$hover-background-color;
       border-bottom: 0.1vh solid #dcdcdc;
       position: sticky;
       top: 0;
@@ -76,10 +98,11 @@
       .logo {
          width: 5vh; /* 控制 Logo 大小 */
          height: 5vh;
+         padding-right: 2vw;
       }
 
       .company-name {
-         color: vars.$text-color;
+         color: vars.$title-text-color;
          font-size: 3vh;
          font-weight: bold;
          flex-grow: 1;
@@ -97,7 +120,7 @@
 
 /* 左侧菜单栏 */
 .sidebar {
-   width: 25vw;
+   width: 22.5vw;
    height: 100%;
    background-color: vars.$primary-color;
    padding-left: 2vw;
@@ -109,7 +132,7 @@
    align-items: center;
    box-sizing: border-box;
    border-right: 0.1vh solid #dcdcdc;
-   transition: all 0.3s ease;
+   transition: all 0.15s ease;
 
    /*聊天历史 */
    .chat-history {
@@ -121,6 +144,7 @@
       width: 100%;
       height: auto;
       max-height: 46vh;
+      min-height: 46vh;
       background-color: color.adjust(
          vars.$primary-color,
          $lightness: 10%
@@ -194,39 +218,97 @@
       align-items: center;
       font-size: 2vh;
       border-bottom: 0.1vh solid vars.$divider-color;
+      transition: all 0.3s ease;
 
       &:hover {
          background-color: vars.$hover-background-color;
          color: vars.$hover-text-color;
          @include m.box-shadow(0, 0.6vh, 1.5vh, rgba(0, 0, 0, 0.2));
       }
+
+      &.active {
+         background-color: vars.$selected-background-color;
+         color: vars.$selected-text-color;
+         border-left: 0.4vh solid vars.$accent-color;
+         @include m.box-shadow(0, 0.3vh, 0.8vh, rgba(0, 0, 0, 0.3));
+         
+         .menu-item-icon {
+            color: vars.$selected-text-color;
+         }
+      }
+
       .menu-item-icon {
          font-size: vars.$menu-icon-size;
          margin-right: vars.$menu-icon-margin;
       }
    }
-
-   /* 分割线 */
-   .divider {
+   .sidebar-button {
       width: 100%;
-      height: 0.1vh;
-      background-color: vars.$divider-color;
-      padding-top: 0.8vh;
-      padding-left: 2vw;
-      padding-right: 2vw;
+      padding: 1.2vh 2vw;
+      color: vars.$text-color;
+      cursor: pointer;
+      display: flex;
+      font-size: 2vh;
+      border-bottom: 0.1vh solid vars.$divider-color;
+      .sidebar-button-icon {
+         margin-left: 17.5vw; 
+         font-size: vars.$menu-icon-size;
+         margin-right: vars.$menu-icon-margin;
+      }
    }
 
-   /* 滚动条样式 */
-   &::-webkit-scrollbar {
-      width: 1vw;
-   }
+}
 
-   &::-webkit-scrollbar-thumb {
-      background: rgba(198, 195, 195, 0.3);
-   }
+/* 侧边栏隐藏状态 */
+.sidebar.hidden {
+   width: 4vw;
+   height: 100%;
+   background-color: vars.$primary-color;
+   padding-left: 2vw;
+   padding-right: 2vw;
+   overflow-y: auto;
+   overflow-x: hidden;
+   display: flex;
+   flex-direction: column;
+   align-items: center;
+   box-sizing: border-box;
+   border-right: 0.1vh solid #dcdcdc;
+   transition: all 0.3s ease;
+   padding-left: 0.8vw;
+   padding-right: 0.2vw;
 
-   &::-webkit-scrollbar-track {
-      background: transparent;
+   .menu-item {
+      align-items: center;
+      font-size: 0vh;
+
+      &:hover {
+         background-color: vars.$hover-background-color;
+         @include m.box-shadow(0, 0.6vh, 1.5vh, rgba(0, 0, 0, 0.2));
+      }
+      .menu-item-icon {
+         margin-right: vars.$menu-icon-margin;
+      }
+   }
+   .chat-history {
+      background-color: vars.$primary-color;
+      box-shadow: 0 0vh 0vh rgba(0, 0, 0, 0);
+      overflow-y: auto;
+      max-height: 0vh;
+      min-height: 0vh;
+      &::-webkit-scrollbar {
+         width: 0.0vw;
+      }
+      &::-webkit-scrollbar-thumb {
+         background: vars.$primary-color;
+      }
+      &::-webkit-scrollbar-track {
+         background: vars.$primary-color;
+      }
+   }
+   .sidebar-button {
+      .sidebar-button-icon {
+         margin-left: 0vw; 
+      }
    }
 }
    
@@ -243,15 +325,6 @@
       background-color: rgba(255,255,255,0.1);
       border-radius: 0.5vh;
    }
-}
-
-/* 侧边栏隐藏状态 */
-.sidebar.hidden {
-   transform: translateX(-100%);
-   width: 0;
-   overflow: hidden;
-   pointer-events: none;
-   padding: 0;
 }
 
 /* 主内容区域 */

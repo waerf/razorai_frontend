@@ -2,40 +2,31 @@
   <div class="layout-container">
     <!-- 顶部导航栏 -->
     <el-header class="ourHeader">
-      <!-- 当左侧菜单栏隐藏时 -->
       <div class="logo-button-container">
         <img
-          v-if="isSidebarHidden"
           @click="toggleSidebar"
           class="logo"
           src="@/assets/images/logo.png"
           alt="Logo"
         />
-        <button
-          v-if="isSidebarHidden"
-          class="toggle-sidebar-btn in-header"
-          @click="toggleSidebar"
-        >
-          <el-icon name="s-unfold"></el-icon>
-        </button>
-        <!-- 当左侧菜单栏显示时 -->
-        <div v-if="!isSidebarHidden" class="company-name">RAZOR-AI</div>
-        <button
-          v-if="!isSidebarHidden"
-          class="toggle-sidebar-btn"
-          @click="toggleSidebar"
-        >
-          <el-icon name="s-fold"></el-icon>
-        </button>
+        <div class="company-name">RAZOR-AI</div>
       </div>
 
       <!-- 通过占位实现位置的偏移 -->
       <h2 class="header-name-empty">{{ ' ' }}</h2>
-      <h2 class="header-name" @click="switchNavigationTo('RAZOR-AI')">
+      <h2
+        class="header-name"
+        :class="{ active: currentActiveTab === 'RAZOR-AI' }"
+        @click="switchNavigationTo('RAZOR-AI')"
+      >
         {{ headername_withRazorAI }}
       </h2>
-      <h2 class="header-name" @click="switchNavigationTo('Market')">
-        {{ headername_withMarket }}
+      <h2
+        class="header-name"
+        :class="{ active: currentActiveTab === 'Community' }"
+        @click="switchNavigationTo('Community')"
+      >
+        {{ headername_withCommunity }}
       </h2>
       <h2 class="header-name-empty">{{ ' ' }}</h2>
       <div class="user-info">
@@ -56,26 +47,61 @@
         class="sidebar"
         :class="{ hidden: isSidebarHidden }"
       >
+        <!-- 侧边栏显示隐藏按键 -->
+        <div
+          v-if="!isSidebarHidden"
+          class="sidebar-button"
+          @click="toggleSidebar"
+        >
+          <el-icon name="s-fold" class="sidebar-button-icon"></el-icon>
+        </div>
+        <div
+          v-if="isSidebarHidden"
+          class="sidebar-button"
+          @click="toggleSidebar"
+        >
+          <el-icon name="s-unfold" class="sidebar-button-icon"></el-icon>
+        </div>
         <!-- 主要功能区域 -->
-        <div class="menu-item" @click="navigateTo('Home')">
+        <div
+          class="menu-item"
+          :class="{ active: $route.name === 'Home' }"
+          @click="navigateTo('Home')"
+        >
           <el-icon name="s-home" class="menu-item-icon"></el-icon>首页
         </div>
-        <div class="menu-item" @click="navigateTo('PersonalHome')">
-          <el-icon name="s-custom" class="menu-item-icon"></el-icon>个人主页
-        </div>
-        <div class="menu-item" @click="navigateTo('SubscribedBots')">
+        <div
+          class="menu-item"
+          :class="{ active: $route.name === 'SubscribedBots' }"
+          @click="navigateTo('SubscribedBots')"
+        >
           <el-icon name="s-opportunity" class="menu-item-icon"></el-icon>
           已订阅机器人
         </div>
-        <div class="menu-item" @click="navigateTo('RobotMarket')">
+        <div
+          class="menu-item"
+          :class="{ active: $route.name === 'RobotMarket' }"
+          @click="navigateTo('RobotMarket')"
+        >
           <el-icon name="goods" class="menu-item-icon"></el-icon>机器人市场
         </div>
-        <div class="menu-item" @click="navigateTo('CreateBots')">
+        <div
+          class="menu-item"
+          :class="{ active: $route.name === 'CreateBots' }"
+          @click="navigateTo('CreateBots')"
+        >
           <el-icon name="coordinate" class="menu-item-icon"></el-icon>创造机器人
         </div>
-        <div class="menu-item" @click="navigateTo('ConversationHistory')">
+        <div
+          class="menu-item"
+          :class="{ active: $route.name === 'ConversationHistory' }"
+          @click="navigateTo('ConversationHistory')"
+        >
           <el-icon name="time" class="menu-item-icon"></el-icon>历史记录
         </div>
+        <!-- <div class="menu-item" @click="navigateTo('PersonalHome')">
+          <el-icon name="s-custom" class="menu-item-icon"></el-icon>个人主页
+        </div> -->
         <!-- <div class="menu-item" @click="navigateTo('Test')">
           <el-icon name="chat-line-round" class="menu-item-icon"></el-icon
           >睿择社区
@@ -115,7 +141,7 @@
       </aside>
 
       <aside
-        v-if="navigation == 'Market'"
+        v-if="navigation == 'Community'"
         class="sidebar"
         :class="{ hidden: isSidebarHidden }"
       >
@@ -138,7 +164,7 @@
       :modal="true"
       :close-on-click-modal="false"
       center
-      width="30%"
+      width="40%"
     >
       <LoginForm @close="loginDialogVisible = false" />
     </el-dialog>
@@ -158,10 +184,19 @@ export default {
       loginDialogVisible: false,
       isSidebarHidden: false, // 控制菜单栏是否隐藏
       navigation: 'RAZOR-AI',
+      currentActiveTab: 'RAZOR-AI', // 添加当前激活标签状态
     };
   },
   created() {
     this.getAllChats();
+    // 根据当前路由设置初始激活状态
+    if (this.$route.path.includes('community')) {
+      this.currentActiveTab = 'Community';
+      this.navigation = 'Community';
+    } else {
+      this.currentActiveTab = 'RAZOR-AI';
+      this.navigation = 'RAZOR-AI';
+    }
   },
   computed: {
     ...mapGetters('user', ['isLoggedIn', 'userId', 'userName']), // 映射 getters
@@ -176,13 +211,25 @@ export default {
       this.$message('当前路由：' + this.$route.path);
       return this.$route.meta.title;
     },
-    headername_withMarket() {
-      if (this.navigation != 'Market') return '市场';
+    headername_withCommunity() {
+      if (this.navigation != 'Community') return '社区';
       // 从当前路由的 meta 信息中获取标题并修改前缀
       // console.log('当前路由：', this.$route);
       this.$message('当前路由：' + this.$route.path);
       const fullTitle = this.$route.meta.title || '默认标题';
-      return '市场-' + fullTitle.replace(/^(RazorAI-|RAZOR-AI-)/i, '');
+      return '社区-' + fullTitle.replace(/^(RazorAI-|RAZOR-AI-)/i, '');
+    },
+  },
+  watch: {
+    // 监听路由变化，自动调整激活状态
+    $route(to) {
+      if (to.path.includes('community')) {
+        this.currentActiveTab = 'Community';
+        this.navigation = 'Community';
+      } else {
+        this.currentActiveTab = 'RAZOR-AI';
+        this.navigation = 'RAZOR-AI';
+      }
     },
   },
   methods: {
@@ -201,8 +248,21 @@ export default {
       this.isSidebarHidden = !this.isSidebarHidden;
     },
     switchNavigationTo(navigation) {
+      // 更新当前激活的标签
+      this.currentActiveTab = navigation;
       this.navigation = navigation;
-      this.navigateTo('Home');
+
+      // 根据不同的导航执行不同的逻辑
+      if (navigation === 'RAZOR-AI') {
+        this.navigateTo('Home');
+      } else if (navigation === 'Community') {
+        // 如果有Community页面的话
+        console.log('切换到Community页面');
+        // this.navigateTo('Community');
+      }
+
+      // 重置侧边栏状态
+      this.isSidebarHidden = false;
     },
     navigateTo(route) {
       if (this.$route.name !== route) {
