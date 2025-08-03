@@ -42,8 +42,11 @@ A managed purchase, maintenance, and update platform for AI products. This is th
 5. 进入项目目录
    
    ```sh
-   cd razor-ai-frontend
+   cd RAZOR-AI--Frontend-main
    ```
+
+   - 进入失败请换成绝对路径
+   
 6. 安装依赖项
    
    - 若存在node_modules文件夹和yarn.lock/package-lock.json文件，应先删除
