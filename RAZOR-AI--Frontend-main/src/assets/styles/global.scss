@@ -1,0 +1,20 @@
+// src/assets/styles/global.scss
+@use './variables.scss' as vars;
+@use 'sass:color';// 引入颜色函数
+html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    overflow-x: hidden;
+    font-family: vars.$font-family;
+  }
+/* 通用滚动条样式 *//* 自定义滚动条样式，仅限于右侧主要内容区域 */
+.el-main {
+  /* Firefox 和标准滚动条 */
+  scrollbar-width: thin; /* 设置滚动条为较细模式 */
+  scrollbar-color: color.adjust(vars.$primary-color,$lightness: 30%) color.adjust(vars.$background-color,$lightness: -80%); /* 设置滑块和轨道颜色 */
+  /* Webkit 滚动条样式 */
+  &::-webkit-scrollbar {
+    width: 15px; /* 滚动条宽度 */
+  }
+}
