@@ -4,9 +4,28 @@ import axios from 'axios';
 import MyStorage from './storage'; // 引入 Storage 工具类
 
 const api = axios.create({
-  baseURL: '/api',
-  timeout: 1000,
+  baseURL: process.env.VUE_APP_API_BASE_URL || 'http://localhost:8000',
+  timeout: 5000,
 });
+
+const adminApi = axios.create({
+  baseURL: process.env.VUE_APP_API_BASE_URL || 'http://localhost:8000',
+  timeout: 5000,
+});
+
+// 为adminApi添加请求拦截器
+adminApi.interceptors.request.use(
+  (config) => {
+    const token = MyStorage.get('admin_token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
 
 // 请求拦截器
 api.interceptors.request.use(
@@ -57,6 +76,50 @@ export const register = (payload) =>
   api.post('/user/register', payload, {
     headers: { skipAuth: true }, // 跳过 Authorization 头
   });
+
+export const adminLogin = (data) => {
+  return adminApi.post('/admin/login', data);
+};
+
+export const approveRobot = (robotId) => {
+  return adminApi.post(`/admin/robots/${robotId}/approve`);
+};
+
+export const rejectRobot = (robotId) => {
+  return adminApi.post(`/admin/robots/${robotId}/reject`);
+};
+
+export const getPendingRobots = () => {
+  return adminApi.get('/admin/robots/pending');
+};
+
+export const getFeedbacks = () => {
+  return adminApi.get('/admin/feedbacks');
+};
+
+export const markFeedbackAsRead = (feedbackId) => {
+  return adminApi.post(`/admin/feedbacks/${feedbackId}/read`);
+};
+
+export const deleteFeedback = (feedbackId) => {
+  return adminApi.delete(`/admin/feedbacks/${feedbackId}`);
+};
+
+export const getNotifications = () => {
+  return adminApi.get('/admin/notifications');
+};
+
+export const sendNotification = (notificationId) => {
+  return adminApi.post(`/admin/notifications/${notificationId}/send`);
+};
+
+export const createNotification = (data) => {
+  return adminApi.post('/admin/notifications', data);
+};
+
+export const deleteNotification = (notificationId) => {
+  return adminApi.delete(`/admin/notifications/${notificationId}`);
+};
 
 export const fetchAllAgentsData = () =>
   api.get('/market', { headers: { skipAuth: true } }); // 跳过 Authorization 头

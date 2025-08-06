@@ -80,7 +80,8 @@ export default {
         position: absolute;
         width: 100%;
         height: 100%;
-        background-image: linear-gradient(
+        background-image:
+          linear-gradient(
             to right,
             rgba($border-color, 0.1) 2px,
             transparent 1px

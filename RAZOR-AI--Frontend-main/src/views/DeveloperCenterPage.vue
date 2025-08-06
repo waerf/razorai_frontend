@@ -128,7 +128,8 @@ export default {
 .developer-center-page {
   position: relative; /* 相对定位，用于层叠上下文 */
   padding: 20px; /* 内边距为20px */
-  font-family: 'Poppins', sans-serif; /* 字体设置为Poppins，如果没有则使用无衬线字体 */
+  font-family:
+    'Poppins', sans-serif; /* 字体设置为Poppins，如果没有则使用无衬线字体 */
   color: #fff; /* 文本颜色为白色 */
   background: transparent; /* 背景透明，以便动态背景覆盖 */
   min-height: 100vh; /* 最小高度为视窗高度的100% */
