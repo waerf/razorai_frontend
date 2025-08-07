@@ -47,18 +47,32 @@
         </button>
       </div>
     </div>
+
+    <!-- 机器人详情弹窗 -->
+    <robot-detail-dialog
+      :visible="robotDetailVisible"
+      :robotId="currentRobotId"
+      @close="robotDetailVisible = false"
+      @show-robot="viewDetails"
+    />
   </div>
 </template>
 
 <script>
 import { mapState, mapActions } from 'vuex';
 import user from '@/store/user';
+import RobotDetailDialog from './RobotDetailPage.vue';
 
 export default {
   name: 'SubscribedBotsPage',
+  components: {
+    RobotDetailDialog,
+  },
   data() {
     return {
       searchQuery: '', // 搜索关键字
+      robotDetailVisible: false,
+      currentRobotId: null,
     };
   },
   computed: {
@@ -95,7 +109,8 @@ export default {
         this.$message.error('无效的机器人信息');
         return;
       }
-      this.$router.push({ name: 'RobotDetail', params: { id: agentId } });
+      this.currentRobotId = agentId;
+      this.robotDetailVisible = true;
     },
     getRemainingDays(endtime) {
       const endDate = new Date(endtime);
@@ -165,7 +180,7 @@ export default {
 }
 
 .robot-card:hover {
-  background-color: darken($background-color, 30%);
+  background-color: lighten($background-color, 30%);
   transform: translateY(-5px);
 }
 
@@ -200,25 +215,26 @@ export default {
 
 .unsubscribe-button {
   padding: 10px 15px;
-  background-color: #ff4d4f;
+  background-color: $primary-color;
   border: none;
   border-radius: 5px;
-  color: white;
+  color: $text-color;
   font-size: 1em;
   cursor: pointer;
   transition: background-color 0.3s;
 }
 
 .unsubscribe-button:hover {
-  background-color: #ff7875;
+  background: #138496;
+  border-color: #117a8b;
 }
 
 .details-button {
   padding: 10px 15px;
-  background-color: #4caf50;
+  background-color: $primary-color;
   border: none;
   border-radius: 5px;
-  color: white;
+  color: $text-color;
   font-size: 1em;
   cursor: pointer;
   transition: background-color 0.3s;
@@ -226,7 +242,8 @@ export default {
 }
 
 .details-button:hover {
-  background-color: #66bb6a;
+  background: #138496;
+  border-color: #117a8b;
 }
 
 .expired-tag {
