@@ -4,11 +4,17 @@
     v-if="visible"
     class="robot-detail-overlay"
     @click="shouldListenToClicks ? closeDetail() : null"
+    @wheel="shouldListenToClicks ? null : $event.preventDefault()"
+    @touchmove="shouldListenToClicks ? null : $event.preventDefault()"
+    @keydown="shouldListenToClicks ? null : $event.preventDefault()"
   >
     <div
       class="robot-detail-content"
       :class="{ 'content-disabled': !shouldListenToClicks }"
       @click.stop
+      @wheel.stop="shouldListenToClicks ? null : $event.preventDefault()"
+      @touchmove.stop="shouldListenToClicks ? null : $event.preventDefault()"
+      @keydown.stop="shouldListenToClicks ? null : $event.preventDefault()"
       v-loading="loading"
     >
       <!-- 弹窗头部 -->
@@ -42,6 +48,12 @@
                   '这是一个功能强大的AI机器人，可以帮助您完成各种任务。'
                 }}
               </p>
+              <p class="robot-developer">
+                <span class="developer-label">开发者：</span>
+                <span class="developer-name">{{
+                  robot.developer || '未知开发者'
+                }}</span>
+              </p>
               <div class="robot-stats">
                 <div class="stat-item">
                   <div class="stat-value">{{ robotStats.rating }}</div>
@@ -54,6 +66,10 @@
                 <div class="stat-item">
                   <div class="stat-value">{{ robotStats.comments }}</div>
                   <div class="stat-label">评论数</div>
+                </div>
+                <div class="stat-item">
+                  <div class="stat-value">{{ robot.requiredPoints || 1 }}</div>
+                  <div class="stat-label">所需积分</div>
                 </div>
               </div>
               <div class="robot-detail-actions">
@@ -153,6 +169,8 @@
               </div>
               <div class="comment-text">{{ comment.text }}</div>
               <div class="comment-actions">
+                <!-- 点赞/点踩功能已注释 -->
+                <!--
                 <button
                   class="comment-action"
                   :class="{ liked: comment.userLiked }"
@@ -167,6 +185,7 @@
                 >
                   <i class="el-icon-thumb"></i> {{ comment.dislikes || 0 }}
                 </button>
+                -->
               </div>
             </div>
           </div>
@@ -227,6 +246,10 @@
                     <i class="el-icon-star-on" style="color: #ffc107"></i>
                     {{ recRobot.rating || 4.5 }}
                   </div>
+                  <div class="recommendation-card-points">
+                    <i class="el-icon-coin" style="color: #f39c12"></i>
+                    {{ recRobot.requiredPoints || 1 }}积分
+                  </div>
                 </div>
                 <el-button
                   size="mini"
@@ -255,6 +278,7 @@
     >
       <subscription-selector
         :robotId="robot.id"
+        :requiredPoints="robot.requiredPoints || 1"
         :onConfirm="handleSubscriptionConfirm"
         :onClose="closeSubscriptionDialog"
       />
@@ -338,10 +362,11 @@ export default {
           userId: 'user1',
           rating: 5,
           text: '这个机器人非常好用，回答问题很准确，强烈推荐！',
-          likes: 15,
-          dislikes: 2,
-          userLiked: false,
-          userDisliked: false,
+          // 点赞/点踩功能已注释
+          // likes: 15,
+          // dislikes: 2,
+          // userLiked: false,
+          // userDisliked: false,
           timestamp: '2024-01-15 14:30',
         },
       ],
@@ -358,6 +383,7 @@ export default {
               description: '专业的对话机器人，支持多种语言',
               rating: 4.8,
               developer: '开发者A',
+              requiredPoints: 1,
             },
           ],
         },
@@ -372,6 +398,7 @@ export default {
               description: '强大的图像生成工具',
               rating: 4.9,
               developer: '开发者C',
+              requiredPoints: 1,
             },
           ],
         },
@@ -401,8 +428,10 @@ export default {
       // 监听弹窗显示状态变化，添加或移除键盘事件监听
       if (newVal) {
         this.addKeyboardListener();
+        this.disableBodyScroll();
       } else {
         this.removeKeyboardListener();
+        this.enableBodyScroll();
       }
     },
     robotId(newVal) {
@@ -415,15 +444,63 @@ export default {
     // 键盘事件监听管理
     addKeyboardListener() {
       document.addEventListener('keydown', this.handleKeyDown);
+      // 添加滚轮事件监听
+      document.addEventListener('wheel', this.handleWheelEvent, {
+        passive: false,
+      });
+      // 添加触摸事件监听（移动端）
+      document.addEventListener('touchmove', this.handleTouchEvent, {
+        passive: false,
+      });
     },
     removeKeyboardListener() {
       document.removeEventListener('keydown', this.handleKeyDown);
+      // 移除滚轮事件监听
+      document.removeEventListener('wheel', this.handleWheelEvent);
+      // 移除触摸事件监听
+      document.removeEventListener('touchmove', this.handleTouchEvent);
     },
     handleKeyDown(event) {
       // 只处理ESC键
       if (event.key === 'Escape') {
         event.preventDefault();
         this.handleEscapeKey();
+      } else if (!this.shouldListenToClicks) {
+        // 如果有子弹窗打开，阻止所有其他键盘事件
+        event.preventDefault();
+        event.stopPropagation();
+      }
+    },
+    handleWheelEvent(event) {
+      // 如果有子弹窗打开，阻止滚轮事件
+      if (!this.shouldListenToClicks) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+    },
+    handleTouchEvent(event) {
+      // 如果有子弹窗打开，阻止触摸滚动事件
+      if (!this.shouldListenToClicks) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+    },
+    // 禁用body滚动
+    disableBodyScroll() {
+      document.body.style.overflow = 'hidden';
+      document.body.style.position = 'fixed';
+      document.body.style.width = '100%';
+      document.body.style.top = `-${window.scrollY}px`;
+    },
+    // 恢复body滚动
+    enableBodyScroll() {
+      const scrollY = document.body.style.top;
+      document.body.style.overflow = '';
+      document.body.style.position = '';
+      document.body.style.width = '';
+      document.body.style.top = '';
+      if (scrollY) {
+        window.scrollTo(0, parseInt(scrollY || '0') * -1);
       }
     },
     handleEscapeKey() {
@@ -487,10 +564,11 @@ export default {
         userId: this.userId,
         rating: this.currentRating,
         text: this.newComment.text,
-        likes: 0,
-        dislikes: 0,
-        userLiked: false,
-        userDisliked: false,
+        // 点赞/点踩功能已注释
+        // likes: 0,
+        // dislikes: 0,
+        // userLiked: false,
+        // userDisliked: false,
         timestamp: new Date().toLocaleString(),
       };
 
@@ -504,6 +582,8 @@ export default {
 
       this.$message.success('评论添加成功！');
     },
+    // 点赞/点踩功能已注释
+    /*
     likeComment(index) {
       const comment = this.comments[index];
       if (comment.userLiked) {
@@ -532,6 +612,7 @@ export default {
         comment.userDisliked = true;
       }
     },
+    */
     // 确认删除评论
     confirmDeleteComment(index) {
       console.log('准备删除评论，索引:', index);
@@ -610,6 +691,7 @@ export default {
     showRecommendations() {
       this.incrementDialogRef();
       this.recommendationDialogVisible = true;
+      this.disableBodyScroll();
     },
     closeRecommendations() {
       this.isClosingSubDialog = true;
@@ -645,11 +727,13 @@ export default {
     openSubscriptionDialog() {
       this.incrementDialogRef();
       this.isSubscriptionDialogVisible = true;
+      this.disableBodyScroll();
     },
     closeSubscriptionDialog() {
       this.isClosingSubDialog = true;
       this.isSubscriptionDialogVisible = false;
       this.decrementDialogRef();
+      this.enableBodyScroll();
       // 延迟重置标识，防止连带关闭
       setTimeout(() => {
         this.isClosingSubDialog = false;
@@ -666,6 +750,10 @@ export default {
       try {
         const response = await apifetchAgentDetail(agentId);
         this.robot = response.data;
+        // 确保机器人对象有所需积分属性，默认为1
+        if (!this.robot.requiredPoints) {
+          this.robot.requiredPoints = 1;
+        }
       } catch (error) {
         console.error('获取机器人详情失败:', error);
         this.$message.error('无法加载机器人详情');
@@ -681,6 +769,7 @@ export default {
           agent_id: this.robot.id,
           startime: currentTime,
           duration: Duration,
+          subscriptionType: 1,
         };
         console.log('请求 payload:', payload);
         const response = await apisubscribeAgent(payload);
@@ -742,6 +831,16 @@ export default {
   align-items: center;
   justify-content: center;
   padding: 2vh;
+  overflow: hidden; // 防止滚动穿透
+
+  // 确保完全阻止滚动穿透
+  &::-webkit-scrollbar {
+    display: none;
+  }
+
+  // 禁用滚动
+  overscroll-behavior: contain;
+  touch-action: none;
 }
 
 // 弹窗主体样式
@@ -765,6 +864,15 @@ export default {
     opacity: 0.5;
     filter: grayscale(30%);
     pointer-events: none;
+    user-select: none;
+    overflow: hidden;
+
+    // 禁用所有滚动
+    * {
+      overflow: hidden !important;
+      pointer-events: none !important;
+      user-select: none !important;
+    }
   }
 }
 
@@ -856,6 +964,22 @@ export default {
           color: $text-color;
           line-height: 1.6;
           margin-bottom: 2vh;
+        }
+
+        .robot-developer {
+          color: $text-color;
+          margin-bottom: 2vh;
+          font-size: 0.95rem;
+
+          .developer-label {
+            font-weight: 500;
+            color: #666;
+          }
+
+          .developer-name {
+            color: $accent-color;
+            font-weight: 500;
+          }
         }
 
         .robot-stats {
@@ -1071,6 +1195,7 @@ export default {
           display: flex;
           gap: 1.5vw;
 
+          /* 点赞/点踩功能相关样式已注释
           .comment-action {
             background: none;
             border: none;
@@ -1093,6 +1218,7 @@ export default {
               color: #dc3545;
             }
           }
+          */
         }
       }
     }
@@ -1192,6 +1318,15 @@ export default {
               align-items: center;
               gap: 0.5vw;
               color: #ffc107;
+              font-size: 0.8rem;
+              margin-bottom: 0.5vh;
+            }
+
+            .recommendation-card-points {
+              display: flex;
+              align-items: center;
+              gap: 0.5vw;
+              color: #f39c12;
               font-size: 0.8rem;
             }
           }

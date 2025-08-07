@@ -60,7 +60,9 @@
               <i class="el-icon-star-on" style="color: #ffc107"></i>
               {{ robot.rating || 4.5 }}
             </div>
-            <div class="robot-price">{{ formatPrice(robot.price) }}</div>
+            <div class="robot-price">
+              {{ formatRequiredPoints(robot.requiredPoints) }}
+            </div>
           </div>
           <div class="robot-actions">
             <el-button size="mini" @click.stop="showRobotDetail(robot.id)">
@@ -115,7 +117,9 @@
                 <i class="el-icon-star-on" style="color: #ffc107"></i>
                 {{ robot.rating || 4.5 }}
               </div>
-              <div class="robot-price">{{ formatPrice(robot.price) }}</div>
+              <div class="robot-price">
+                {{ formatRequiredPoints(robot.requiredPoints) }}
+              </div>
             </div>
             <div class="robot-actions">
               <el-button size="mini" @click.stop="showRobotDetail(robot.id)">
@@ -168,7 +172,9 @@
                 <i class="el-icon-star-on" style="color: #ffc107"></i>
                 {{ robot.rating || 4.5 }}
               </div>
-              <div class="robot-price">{{ formatPrice(robot.price) }}</div>
+              <div class="robot-price">
+                {{ formatRequiredPoints(robot.requiredPoints) }}
+              </div>
             </div>
             <div class="robot-actions">
               <el-button size="mini" @click.stop="showRobotDetail(robot.id)">
@@ -221,7 +227,9 @@
                 <i class="el-icon-star-on" style="color: #ffc107"></i>
                 {{ robot.rating || 4.5 }}
               </div>
-              <div class="robot-price">{{ formatPrice(robot.price) }}</div>
+              <div class="robot-price">
+                {{ formatRequiredPoints(robot.requiredPoints) }}
+              </div>
             </div>
             <div class="robot-actions">
               <el-button size="mini" @click.stop="showRobotDetail(robot.id)">
@@ -274,7 +282,9 @@
                 <i class="el-icon-star-on" style="color: #ffc107"></i>
                 {{ robot.rating || 4.5 }}
               </div>
-              <div class="robot-price">{{ formatPrice(robot.price) }}</div>
+              <div class="robot-price">
+                {{ formatRequiredPoints(robot.requiredPoints) }}
+              </div>
             </div>
             <div class="robot-actions">
               <el-button size="mini" @click.stop="showRobotDetail(robot.id)">
@@ -326,7 +336,9 @@
               <i class="el-icon-star-on" style="color: #ffc107"></i>
               {{ robot.rating || 4.5 }}
             </div>
-            <div class="robot-price">{{ formatPrice(robot.price) }}</div>
+            <div class="robot-price">
+              {{ formatRequiredPoints(robot.requiredPoints) }}
+            </div>
           </div>
           <div class="robot-actions">
             <el-button size="mini" @click.stop="showRobotDetail(robot.id)">
@@ -358,8 +370,13 @@
         :robotId="
           currentRobotForSubscription ? currentRobotForSubscription.id : 0
         "
+        :requiredPoints="
+          currentRobotForSubscription
+            ? currentRobotForSubscription.requiredPoints || 1
+            : 1
+        "
         :onConfirm="handleSubscriptionConfirm"
-        :onClose="() => (subscriptionDialogVisible = false)"
+        :onClose="closeSubscriptionDialog"
       />
     </el-dialog>
 
@@ -438,6 +455,8 @@ export default {
       this.loading = true;
       try {
         await this.fetchAllAgentsData();
+        // 确保所有机器人都有requiredPoints属性，默认为1
+        this.ensureRequiredPointsProperty();
         console.log('获取机器人数据成功');
       } catch (error) {
         console.error('获取机器人数据失败:', error);
@@ -445,6 +464,16 @@ export default {
       } finally {
         this.loading = false;
       }
+    },
+    ensureRequiredPointsProperty() {
+      // 确保所有机器人都有requiredPoints属性，默认为1
+      [...this.textRobots, ...this.imageRobots, ...this.videoRobots].forEach(
+        (robot) => {
+          if (!robot.requiredPoints) {
+            robot.requiredPoints = 1;
+          }
+        }
+      );
     },
     async getUserSubscriptions() {
       if (!this.userId) return;
@@ -501,11 +530,10 @@ export default {
       this.robotDetailVisible = true;
     },
     subscribeRobot(robotId) {
-      if (!this.isLoggedIn) {
-        this.$message.warning('请先登录');
-        return;
-      }
-
+      //if (!this.isLoggedIn) {
+      //  this.$message.warning('请先登录');
+      //  return;
+      //}
       // 如果已订阅，则进入对话页面
       if (this.isSubscribed(robotId)) {
         this.enterChatWithRobot(robotId);
@@ -536,6 +564,7 @@ export default {
           agent_id: this.currentRobotForSubscription.id,
           startime: currentTime,
           duration: duration,
+          subscriptionType: 1,
         };
 
         console.log('请求 payload:', payload);
@@ -544,7 +573,7 @@ export default {
         const response = await apiSubscribeAgent(payload);
         if (response.status === 200) {
           this.$message.success('订阅成功！');
-          this.subscriptionDialogVisible = false;
+          this.closeSubscriptionDialog();
           this.getUserSubscriptions();
           console.log('订阅成功!!!:', response);
         } else {
@@ -554,6 +583,10 @@ export default {
         console.error('订阅失败:', error);
         this.$message.error('订阅失败，请稍后重试');
       }
+    },
+    closeSubscriptionDialog() {
+      this.subscriptionDialogVisible = false;
+      this.currentRobotForSubscription = null;
     },
     formatDateTime(date) {
       const year = date.getFullYear();
@@ -597,8 +630,8 @@ export default {
       if (!text) return '';
       return text.length > length ? text.slice(0, length) + '...' : text;
     },
-    formatPrice(price) {
-      return price ? `${price} 积分` : '免费';
+    formatRequiredPoints(points) {
+      return `${points || 1} 积分`;
     },
   },
 };

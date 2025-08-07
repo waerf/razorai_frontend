@@ -49,6 +49,10 @@ export default {
       type: Number,
       required: true,
     },
+    requiredPoints: {
+      type: Number,
+      default: 1,
+    },
     onClose: {
       type: Function,
       required: true,
@@ -62,7 +66,7 @@ export default {
     return {
       form: {
         duration: 1, // 默认选择1天
-        points: 1.5, // 默认积分
+        points: this.requiredPoints, // 使用机器人的积分费率
         customDays: null, // 自定义天数
       },
       rules: {
@@ -76,19 +80,23 @@ export default {
       },
     };
   },
+  mounted() {
+    // 组件挂载时初始化积分
+    this.updatePoints();
+  },
   methods: {
     // 更新积分
     updatePoints() {
       // 如果是自定义天数
       if (this.form.duration === 0) {
         if (this.form.customDays && this.form.customDays > 0) {
-          this.form.points = this.form.customDays * 1.5; // 每天1.5积分
+          this.form.points = this.form.customDays * this.requiredPoints; // 使用机器人的积分费率
         } else {
           this.form.points = 0;
         }
       } else if (this.form.duration) {
         // 默认选择的时长，自动计算积分
-        this.form.points = this.form.duration * 1.5; // 每天1.5积分
+        this.form.points = this.form.duration * this.requiredPoints; // 使用机器人的积分费率
       }
     },
 
