@@ -1,0 +1,58 @@
+/* src/assets/styles/variables.scss */
+// 统一管理颜色、字体等基本样式变量
+@use 'sass:color';// 引入颜色函数
+
+// 颜色变量 
+$primary-color: #FFFFFF; // 主背景色（白色）
+$secondary-color: #F6F6F6; // 次要背景色（浅灰）
+$text-color: #121212; // 主要文字颜色（深灰）
+$hover-text-color: color.adjust($text-color, $lightness: -10%); // 文字悬停颜色（加深）
+$additional-color: #8590A6; // 次要文字颜色（中灰）
+$hover-background-color: #F0F2F7; // 背景悬停颜色（浅灰蓝）
+$background-color: #F6F6F6; // 页面背景色
+$border-color: #E5E6EB; // 边框颜色
+$divider-color: #E5E6EB; // 分割线颜色
+$selected-background-color: #c0e1fd; // 选中背景色
+$selected-text-color: #165DFF; // 选中文字颜色
+$title-text-color: color.adjust($selected-text-color, $lightness: 10%); // 标题文字颜色
+$accent-color: #0F88EB; // 强调色（知乎蓝）
+$accent-hover-color: color.adjust($accent-color, $lightness: 10%); // 强调色悬停（深蓝）
+$primary-hover-color: color.adjust($primary-color, $lightness: -5%); // 主色悬停
+$card-background-color: #FFFFFF; // 卡片背景色
+
+// 阴影效果 - 保持原有
+$box-shadow-light: 0 2px 4px rgba(0, 0, 0, 0.1); /* 轻量级阴影 */
+$box-shadow-medium: 0 4px 8px rgba(0, 0, 0, 0.2); /* 中等级别阴影 */
+$box-shadow-heavy: 0 8px 16px rgba(0, 0, 0, 0.3); /* 重量级阴影 */
+
+// 渐变色 - 适配知乎风格
+$gradient-primary: linear-gradient(135deg, #0F88EB, #6BBBF7); // 主色调渐变
+$gradient-secondary: linear-gradient(135deg, #8590A6, #F6F6F6); // 次要渐变
+
+// 字体变量 - 保持原有结构
+$font-family: 'Inter', 'Roboto', 'Helvetica Neue', Arial, sans-serif; // 使用无衬线字体
+$heading-font-size: 1.5rem; // 标题字体大小
+$subheading-font-size: 1.25rem; // 副标题字体大小
+$body-font-size: 1rem; // 正文字体大小
+$base-font-size: 1rem; // 基础字体大小
+$extra-small-font-size: 0.75rem; // 超小号字体
+$small-font-size: 0.875rem; // 小号字体
+$medium-font-size: 1.125rem; // 中号字体
+$large-font-size: 1.5rem; // 大号字体
+$font-weight-light: 300;
+$font-weight-normal: 400;
+$font-weight-medium: 500;
+$font-weight-bold: 700;
+
+// 间距 - 保持原有
+$base-spacing: 16px;
+$small-spacing: 8px;
+$large-spacing: 32px;
+
+// 边框 - 修复重复定义问题
+$border-radius: 4px;
+$border-color: $divider-color; // 统一使用分割线颜色
+
+// 菜单图标
+$menu-icon-size: 2rem; // 菜单图标大小
+$menu-icon-margin: 1rem; // 菜单图标间距
