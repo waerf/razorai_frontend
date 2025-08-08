@@ -62,6 +62,7 @@
 import { mapState, mapActions } from 'vuex';
 import user from '@/store/user';
 import RobotDetailDialog from './RobotDetailPage.vue';
+import { UnsubscribeAgent as apiUnSubscribeAgent } from '../utils/api';
 
 export default {
   name: 'SubscribedBotsPage',
@@ -90,11 +91,22 @@ export default {
   },
   methods: {
     ...mapActions('agent', ['fetchUserSubscriptions']),
-    unsubscribe(robotId) {
-      this.$message({
-        message: `取消订阅机器人${robotId}成功！`,
-        type: 'success',
-      });
+    // 取消订阅机器人
+    async unsubscribe(robotId) {
+      const userId = this.$store.state.user.userId;
+      try {
+        const payload = { userId, robotId };
+        const response = await apiUnSubscribeAgent(payload);
+        if (response.status === 200) {
+          this.$message.success(`取消订阅机器人${robotId}成功！`);
+          this.getUserSubscriptions();
+        } else {
+          this.$message.error(`取消订阅机器人${robotId}失败，请稍后重试`);
+        }
+      } catch (error) {
+        console.error('取消订阅失败:', error);
+        this.$message.error(`取消订阅机器人${robotId}失败，请稍后重试`);
+      }
     },
     async getUserSubscriptions() {
       try {

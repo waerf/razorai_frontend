@@ -554,6 +554,7 @@ export default {
         params: { id: robotId },
       });
     },
+    // 订阅机器人
     async handleSubscriptionConfirm(duration, points) {
       if (!this.currentRobotForSubscription) return;
 

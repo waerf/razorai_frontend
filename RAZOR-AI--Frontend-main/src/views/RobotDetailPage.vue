@@ -96,17 +96,29 @@
           <div class="comments-header">
             <h3 class="comments-title">用户评论 ({{ comments.length }})</h3>
             <el-button
-              v-if="isLoggedIn"
+              v-if="isLoggedIn && isUserSubscribed"
               type="primary"
               class="add-comment-btn"
               @click="showAddCommentForm = !showAddCommentForm"
             >
               添加评论
             </el-button>
+            <el-button
+              v-else-if="isLoggedIn && !isUserSubscribed"
+              type="info"
+              class="add-comment-btn"
+              disabled
+              title="请先订阅该机器人后再发表评论"
+            >
+              请先订阅后评论
+            </el-button>
           </div>
 
           <!-- 添加评论表单 -->
-          <div v-if="showAddCommentForm && isLoggedIn" class="add-comment-form">
+          <div
+            v-if="showAddCommentForm && isLoggedIn && isUserSubscribed"
+            class="add-comment-form"
+          >
             <div class="comment-form-group">
               <label class="comment-form-label">评分</label>
               <div class="rating-input">
@@ -159,7 +171,7 @@
                 <div class="comment-menu">
                   <button
                     class="comment-delete-btn"
-                    v-if="comment.userId === userId && isLoggedIn"
+                    v-if="comment.user_id === userId && isLoggedIn"
                     @click="confirmDeleteComment(index)"
                     title="删除评论"
                   >
@@ -312,6 +324,11 @@
 import { mapState } from 'vuex';
 import { fetchAgentDetail as apifetchAgentDetail } from '../utils/api';
 import { subscribeAgent as apisubscribeAgent } from '../utils/api';
+import {
+  getAgentComment as apiGetAgentComment,
+  sendAgentComment as apiSendAgentComment,
+  deleteAgentComment as apiDeleteAgentComment,
+} from '../utils/api';
 import SubscriptionSelector from '@/components/SubscriptionSelector.vue';
 
 export default {
@@ -352,24 +369,10 @@ export default {
       robotStats: {
         rating: 4.7,
         subscriptions: 1234,
-        comments: 89,
+        comments: 0,
       },
-      // 模拟数据 - 评论列表
-      comments: [
-        {
-          id: 1,
-          userName: '用户A',
-          userId: 'user1',
-          rating: 5,
-          text: '这个机器人非常好用，回答问题很准确，强烈推荐！',
-          // 点赞/点踩功能已注释
-          // likes: 15,
-          // dislikes: 2,
-          // userLiked: false,
-          // userDisliked: false,
-          timestamp: '2024-01-15 14:30',
-        },
-      ],
+      // 评论列表 - 从后端获取
+      comments: [],
       // 模拟数据 - 推荐机器人分类
       recommendationCategories: [
         {
@@ -419,11 +422,19 @@ export default {
     shouldListenToClicks() {
       return this.dialogRefCount === 0 && !this.isClosingSubDialog;
     },
+    // 检查用户是否已订阅该机器人
+    isUserSubscribed() {
+      const subscribedRobot = this.$store.state.agent.haveSubscribed.find(
+        (r) => r.agent_id === this.robot.id
+      );
+      return subscribedRobot && subscribedRobot.status;
+    },
   },
   watch: {
     visible(newVal) {
       if (newVal && this.robotId) {
         this.fetchRobotDetail(this.robotId);
+        this.loadComments(this.robotId);
       }
       // 监听弹窗显示状态变化，添加或移除键盘事件监听
       if (newVal) {
@@ -437,6 +448,7 @@ export default {
     robotId(newVal) {
       if (newVal && this.visible) {
         this.fetchRobotDetail(newVal);
+        this.loadComments(newVal);
       }
     },
   },
@@ -558,29 +570,40 @@ export default {
         return;
       }
 
-      const newComment = {
-        id: Date.now(),
-        userName: this.userName || '当前用户',
-        userId: this.userId,
-        rating: this.currentRating,
-        text: this.newComment.text,
-        // 点赞/点踩功能已注释
-        // likes: 0,
-        // dislikes: 0,
-        // userLiked: false,
-        // userDisliked: false,
-        timestamp: new Date().toLocaleString(),
-      };
+      // 检查用户是否已订阅该机器人
+      if (!this.isUserSubscribed) {
+        this.$message.warning('请先订阅该机器人后再发表评论');
+        return;
+      }
 
-      this.comments.unshift(newComment);
-      this.robotStats.comments = this.comments.length;
+      try {
+        const commentLoad = {
+          user_id: this.userId,
+          agentId: this.robot.id,
+          comment: this.newComment.text,
+          created_at: new Date().toISOString(),
+          rating: this.currentRating,
+        };
 
-      // 重置表单
-      this.newComment.text = '';
-      this.currentRating = 5;
-      this.showAddCommentForm = false;
+        const response = await apiSendAgentComment(commentLoad);
 
-      this.$message.success('评论添加成功！');
+        if (response.status === 200) {
+          this.$message.success('评论发布成功！');
+
+          // 重置表单
+          this.newComment.text = '';
+          this.currentRating = 5;
+          this.showAddCommentForm = false;
+
+          // 重新加载评论列表
+          await this.loadComments(this.robot.id);
+        } else {
+          this.$message.error('评论发布失败，请稍后重试');
+        }
+      } catch (error) {
+        console.error('发布评论失败:', error);
+        this.$message.error('评论发布失败，请稍后重试');
+      }
     },
     // 点赞/点踩功能已注释
     /*
@@ -624,7 +647,7 @@ export default {
       const comment = this.comments[index];
 
       // 检查权限：只能删除自己的评论
-      if (comment.userId !== this.userId) {
+      if (comment.user_id !== this.userId) {
         this.$message.error('您只能删除自己的评论');
         return;
       }
@@ -635,23 +658,35 @@ export default {
       console.log('删除确认弹窗已显示，引用计数:', this.dialogRefCount);
     },
     // 执行删除评论
-    executeDeleteComment() {
+    async executeDeleteComment() {
       if (
         this.deleteCommentIndex >= 0 &&
         this.deleteCommentIndex < this.comments.length
       ) {
-        const deletedComment = this.comments.splice(
-          this.deleteCommentIndex,
-          1
-        )[0];
-        this.robotStats.comments = this.comments.length;
+        try {
+          const comment = this.comments[this.deleteCommentIndex];
+          const commentLoad = {
+            id: comment.id,
+          };
 
-        this.$message.success('评论删除成功！');
-        console.log('已删除评论:', deletedComment);
+          const response = await apiDeleteAgentComment(commentLoad);
 
-        // 如果删除的是最后一条评论，可以显示提示
-        if (this.comments.length === 0) {
-          this.$message.info('已删除所有评论，快来添加第一条评论吧！');
+          if (response.status === 200) {
+            this.$message.success('评论删除成功！');
+
+            // 重新加载评论列表
+            await this.loadComments(this.robot.id);
+
+            // 如果删除后没有评论了，显示提示
+            if (this.comments.length === 0) {
+              this.$message.info('已删除所有评论，快来添加第一条评论吧！');
+            }
+          } else {
+            this.$message.error('评论删除失败，请稍后重试');
+          }
+        } catch (error) {
+          console.error('删除评论失败:', error);
+          this.$message.error('评论删除失败，请稍后重试');
         }
       }
       this.closeDeleteCommentDialog();
@@ -806,6 +841,43 @@ export default {
         this.openSubscriptionDialog();
       }
     },
+    // 加载机器人评论
+    async loadComments(agentId) {
+      try {
+        const response = await apiGetAgentComment(agentId);
+        if (response.status === 200 && response.data) {
+          // 后端返回的数据格式：id, user_id, userName, comment, created_at, rating
+          this.comments = response.data.map((comment) => ({
+            id: comment.id,
+            user_id: comment.user_id,
+            userName: comment.userName || '匿名用户',
+            rating: comment.rating || 5,
+            text: comment.comment,
+            timestamp: new Date(comment.created_at).toLocaleString('zh-CN'),
+          }));
+
+          // 更新评论统计
+          this.robotStats.comments = this.comments.length;
+
+          // 计算平均评分
+          if (this.comments.length > 0) {
+            const avgRating =
+              this.comments.reduce(
+                (sum, comment) => sum + (comment.rating || 0),
+                0
+              ) / this.comments.length;
+            this.robotStats.rating = Math.round(avgRating * 10) / 10; // 保留一位小数
+          }
+        } else {
+          this.comments = [];
+          this.robotStats.comments = 0;
+        }
+      } catch (error) {
+        console.error('加载评论失败:', error);
+        this.comments = [];
+        this.robotStats.comments = 0;
+      }
+    },
   },
   // 组件销毁时移除键盘事件监听
   beforeDestroy() {
@@ -825,7 +897,7 @@ export default {
   left: 0;
   width: 100vw;
   height: 100vh;
-  background-color: rgba(0, 0, 0, 0.8); // 使用完全覆盖下层
+  background-color: rgba(0, 0, 0, 0.95); // 使用完全覆盖下层
   z-index: 9999;
   display: flex;
   align-items: center;
@@ -847,7 +919,7 @@ export default {
 .robot-detail-content {
   background: white;
   border-radius: 12px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);
   max-width: 90vw;
   max-height: 90vh;
   width: 80vw;

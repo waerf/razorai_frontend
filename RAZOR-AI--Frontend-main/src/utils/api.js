@@ -5,7 +5,7 @@ import MyStorage from './storage'; // 引入 Storage 工具类
 
 const api = axios.create({
   baseURL: '/api',
-  timeout: 1000,
+  timeout: 10000,
 });
 
 // 请求拦截器
@@ -89,6 +89,11 @@ export const subscribeAgent = (payload) =>
     headers: { skipAuth: false },
   });
 
+export const UnsubscribeAgent = (payload) =>
+  api.post('/market/user/agent/subscribe', payload, {
+    headers: { skipAuth: false },
+  });
+
 export const createAI = (payload) =>
   api.post('/agent/user/creation', payload, {
     headers: { skipAuth: false },
@@ -121,5 +126,20 @@ export const closeChat = (chatId) =>
 
 export const deleteChat = (chatId) =>
   api.delete(`/agent/user/chat/delete/${chatId.chat_id}`, {
+    headers: { skipAuth: false },
+  });
+
+export const getAgentComment = (agentId) =>
+  api.get(`/market/user/agent/comment/${agentId}`, {
+    headers: { skipAuth: false },
+  });
+
+export const sendAgentComment = (commentLoad) =>
+  api.post('/market/user/agent/comment', commentLoad, {
+    headers: { skipAuth: false },
+  });
+
+export const deleteAgentComment = (commentLoad) =>
+  api.delete(`/market/user/agent/comment`, commentLoad, {
     headers: { skipAuth: false },
   });
