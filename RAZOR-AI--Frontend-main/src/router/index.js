@@ -8,15 +8,18 @@ import Setting from '@/views/UserSettingPage.vue';
 import PersonalHome from '@/views/PersonalHomePage.vue';
 import Test from '@/views/TestPage.vue';
 import ChatRobot from '@/views/ChatRobotPage.vue';
-import SubscribedBots from '@/views/SubscribedBotsPage.vue';
+import SubscribedBots from '@/views/MyBotsPage.vue';
 import DeveloperCenter from '@/views/DeveloperCenterPage.vue';
 import Rgister from '@/views/RegisterPage.vue';
 import RobotDetail from '@/views/RobotDetailPage.vue';
 import Explorer from '@/views/ExplorerPage.vue';
-import CreateBots from '@/views/CreateBotsPage.vue';
+import CreateBots from '@/views/CreateBotsPage_information.vue';
+import CreateBotsPageFunctionality from '@/views/CreateBotsPage_functionality.vue';
 import HelperCenter from '@/views/HelperCenterPage.vue';
 import ConversationHistory from '@/views/ConversationHistory.vue';
 import RobotMarket from '@/views/RobotMarketPage.vue';
+import community from '@/views/CommunityPage.vue';
+import PostDetail from '@/views/PostDetail.vue';
 //import { component } from 'vue/types/umd';
 
 Vue.use(VueRouter);
@@ -32,7 +35,7 @@ const routes = [
         name: 'Home',
         component: Home,
         meta: {
-          title: 'RazorAI-首页', // 首页标题
+          title: 'Razor-AI-首页', // 首页标题
         },
       },
       {
@@ -40,7 +43,7 @@ const routes = [
         name: 'SubscribedBots',
         component: SubscribedBots,
         meta: {
-          title: 'RazorAI-已订阅的机器人', // 已订阅的机器人页标题
+          title: 'Razor-AI-我的机器人', // 我的机器人页标题
         },
       },
       {
@@ -48,7 +51,7 @@ const routes = [
         name: 'DeveloperCenter',
         component: DeveloperCenter,
         meta: {
-          title: 'RazorAI-开发者中心', // 开发者中心页标题
+          title: 'Razor-AI-开发者中心', // 开发者中心页标题
         },
       },
       {
@@ -56,7 +59,15 @@ const routes = [
         name: 'CreateBots',
         component: CreateBots,
         meta: {
-          title: 'RazorAI-创建机器人', // 创建机器人页标题
+          title: 'Razor-AI-基本信息', // 创建机器人页标题
+        },
+      },
+      {
+        path: '/create/features',
+        name: 'CreateBotFeatures',
+        component: CreateBotsPageFunctionality, // 创建机器人功能组件
+        meta: {
+          title: 'Razor-AI-功能配置', // 创建机器人功能页标题
         },
       },
       {
@@ -64,7 +75,7 @@ const routes = [
         name: 'RobotMarket',
         component: RobotMarket,
         meta: {
-          title: 'RazorAI-机器人市场', // 机器人市场页标题
+          title: 'Razor-AI-机器人市场', // 机器人市场页标题
         },
       },
       {
@@ -72,7 +83,7 @@ const routes = [
         name: 'About',
         component: About,
         meta: {
-          title: 'RazorAI-关于我们', // 关于页面标题
+          title: 'Razor-AI-关于我们', // 关于页面标题
         },
       },
       {
@@ -80,7 +91,7 @@ const routes = [
         name: 'Setting',
         component: Setting,
         meta: {
-          title: 'RazorAI-系统设置', // 系统设置页面标题
+          title: 'Razor-AI-系统设置', // 系统设置页面标题
         },
       },
       {
@@ -88,7 +99,7 @@ const routes = [
         name: 'PersonalHome',
         component: PersonalHome,
         meta: {
-          title: 'RazorAI-个人主页', // 个人主页标题
+          title: 'Razor-AI-个人主页', // 个人主页标题
         },
       },
       {
@@ -96,7 +107,7 @@ const routes = [
         name: 'Test',
         component: Test,
         meta: {
-          title: 'RazorAI-测试页面', // 测试页面标题
+          title: 'Razor-AI-测试页面', // 测试页面标题
         },
       },
       {
@@ -104,7 +115,7 @@ const routes = [
         name: 'ChatRobot',
         component: ChatRobot,
         meta: {
-          title: 'RazorAI-聊天',
+          title: '聊天',
         },
       },
       {
@@ -112,7 +123,7 @@ const routes = [
         name: 'Register',
         component: Rgister,
         meta: {
-          title: 'RazorAI-注册',
+          title: '注册',
         },
       },
       {
@@ -120,7 +131,7 @@ const routes = [
         name: 'RobotDetail',
         component: RobotDetail,
         meta: {
-          title: 'RazorAI-机器人详情',
+          title: '机器人详情',
         },
       },
       {
@@ -128,7 +139,7 @@ const routes = [
         name: 'Explorer',
         component: Explorer,
         meta: {
-          title: 'RazorAI-探索',
+          title: '探索',
         },
       },
       {
@@ -136,7 +147,7 @@ const routes = [
         name: 'HelperCenter',
         component: HelperCenter,
         meta: {
-          title: 'RazorAI-帮助中心',
+          title: '帮助中心',
         },
       },
       {
@@ -144,7 +155,39 @@ const routes = [
         name: 'ConversationHistory',
         component: ConversationHistory,
         meta: {
-          title: 'RazorAI-对话历史',
+          title: 'Razor-AI-对话历史',
+        },
+      },
+      {
+        path: '/community',
+        name: 'Community',
+        component: community,
+        meta: {
+          title: '社区动态',
+        },
+      },
+      {
+        path: '/community/news',
+        name: 'CommunityNews',
+        component: () => import('@/views/CommunityPage.vue'),
+        meta: {
+          title: '社区动态',
+        },
+      },
+      {
+        path: '/community/my-posts',
+        name: 'MyPosts',
+        component: () => import('@/views/MyPostsPage.vue'),
+        meta: {
+          title: '我的帖子',
+        },
+      },
+      {
+        path: '/community/post',
+        name: 'PostDetail',
+        component: PostDetail,
+        meta: {
+          title: '帖子详情',
         },
       },
     ],
@@ -162,7 +205,7 @@ router.beforeEach((to, from, next) => {
   if (to.meta.title) {
     document.title = to.meta.title;
   } else {
-    document.title = 'RazorAI'; // 这里可以设置一个默认的标题
+    document.title = 'RazorAI';
   }
   next(); // 继续导航
 });
