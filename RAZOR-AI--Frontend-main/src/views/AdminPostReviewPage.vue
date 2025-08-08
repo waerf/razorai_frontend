@@ -332,7 +332,7 @@ export default {
       this.currentPage = page;
     },
     logout() {
-      this.$router.push('/login');
+      this.$router.push('/');
     },
   },
 };

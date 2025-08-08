@@ -15,7 +15,7 @@
           <i class="el-icon-menu"></i>
           <span>控制台概览</span>
         </div>
-        <div class="nav-item" @click="$router.push('/admin/review')">
+        <div class="nav-item active">
           <i class="el-icon-cpu"></i>
           <span>机器人审核</span>
         </div>
@@ -23,7 +23,7 @@
           <i class="el-icon-document"></i>
           <span>帖子审核</span>
         </div>
-        <div class="nav-item active">
+        <div class="nav-item" @click="$router.push('/admin/feedback')">
           <i class="el-icon-chat-dot-round"></i>
           <span>用户反馈</span>
         </div>
@@ -34,38 +34,35 @@
     <main class="main-content">
       <!-- 顶部导航栏 -->
       <header class="header">
-        <h1 class="title">用户反馈管理</h1>
+        <h1 class="title">机器人审核列表</h1>
         <el-button type="primary" @click="logout">退出登录</el-button>
       </header>
 
       <!-- 主要内容 -->
       <div class="content">
+        <!-- 机器人列表 -->
         <el-card class="post-list-card" shadow="hover">
           <div class="card-header">
-            <h2 class="card-title">用户反馈列表</h2>
+            <h2 class="card-title">待审核机器人</h2>
             <span class="text-sm text-gray-500"
-              >共 {{ feedbackList.length }} 条反馈</span
+              >共 {{ pendingRobots.length }} 个待审核</span
             >
           </div>
           <div class="p-6">
             <div class="space-y-4">
               <div
-                v-for="(feedback, index) in feedbackList"
+                v-for="(robot, index) in pendingRobots"
                 :key="index"
                 class="p-4 border border-gray-100 rounded-lg card-hover cursor-pointer"
-                @click="$router.push('/admin/feedback/detail')"
+                @click="goToReviewPage(robot.id)"
               >
                 <div class="flex items-center justify-between mb-2">
-                  <p class="font-medium">{{ feedback.name }}</p>
-                  <p class="text-sm text-gray-500">{{ feedback.createdAt }}</p>
+                  <p class="font-medium">{{ robot.name }}</p>
+                  <p class="text-sm text-gray-500">{{ robot.createdAt }}</p>
                 </div>
-                <el-tag
-                  :type="feedback.status === 'pending' ? 'warning' : 'success'"
-                >
-                  {{ feedback.status === 'pending' ? '待处理' : '已解决' }}
-                </el-tag>
+                <el-tag type="warning">待审核</el-tag>
                 <p class="text-gray-600 text-sm mt-2">
-                  {{ feedback.content }}
+                  {{ robot.description }}
                 </p>
               </div>
             </div>
@@ -78,24 +75,21 @@
 
 <script>
 export default {
-  name: 'AdminFeedbackPage',
+  name: 'AdminReviewPage',
   data() {
     return {
-      feedbackList: [
+      pendingRobots: [
         {
           id: 1,
-          name: '李四',
-          createdAt: '2025-1-10 3:14',
-          content:
-            '机器人无法正确识别"退款"相关的问题，总是将用户引导到错误的页面。',
-          status: 'pending',
+          name: '智能客服机器人 v2.1',
+          createdAt: '2025-07-20 14:30',
+          description: '智能客服机器人，能够处理常见客户咨询问题',
         },
         {
           id: 2,
-          name: '王五',
-          createdAt: '2025-1-9 16:53',
-          content: '数据分析机器人导出报表功能有时会出错。',
-          status: 'resolved',
+          name: '数据分析助手',
+          createdAt: '2025-07-19 11:45',
+          description: '数据分析助手，提供数据可视化与分析功能',
         },
       ],
     };
@@ -103,7 +97,10 @@ export default {
   methods: {
     logout() {
       // 退出登录逻辑
-      this.$router.push('/login');
+      this.$router.push('/');
+    },
+    goToReviewPage(id) {
+      this.$router.push(`/admin/robots/${id}`);
     },
   },
 };

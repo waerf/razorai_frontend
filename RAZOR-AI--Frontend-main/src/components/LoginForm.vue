@@ -40,6 +40,9 @@
         >登录</el-button
       >
       <el-button class="login-button" @click="closeDialog">取消</el-button>
+      <el-button type="text" @click="handleAdminLogin" style="margin-left: 10px"
+        >管理员登录</el-button
+      >
     </el-form-item>
   </el-form>
 </template>
@@ -121,6 +124,10 @@ export default {
     handleRegister() {
       this.closeDialog(); // 关闭对话框
       this.navigateTo('Register'); // 跳转到注册页面
+    },
+    handleAdminLogin() {
+      this.closeDialog(); // 关闭对话框
+      this.navigateTo('AdminLogin'); // 跳转到管理员登录页面
     },
   },
 };

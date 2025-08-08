@@ -4,6 +4,7 @@ import Vuex from 'vuex';
 import user from './user';
 import agent from './agent';
 import chat from './chat';
+import admin from './admin';
 
 Vue.use(Vuex);
 
@@ -13,6 +14,7 @@ export default new Vuex.Store({
     user, // 注册 user 模块
     agent, // 注册 agent 模块
     chat, // 注册 chat 模块
+    admin, // 注册 admin 模块
   },
   // actions: {
   //   logout({ commit }) {

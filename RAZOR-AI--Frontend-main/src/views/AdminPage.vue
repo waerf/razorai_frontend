@@ -216,7 +216,7 @@ export default {
   methods: {
     logout() {
       // 退出登录逻辑
-      this.$router.push('/login');
+      this.$router.push('/');
     },
   },
 };

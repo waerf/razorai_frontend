@@ -18,3 +18,15 @@ html, body {
     width: 15px; /* 滚动条宽度 */
   }
 }
+
+/* 确保消息通知在所有弹窗之上 */
+.el-message {
+  z-index: 10500 !important;
+}
+
+.el-message--success,
+.el-message--warning,
+.el-message--info,
+.el-message--error {
+  z-index: 10500 !important;
+}
