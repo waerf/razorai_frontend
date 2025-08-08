@@ -76,7 +76,7 @@
           @click="navigateTo('SubscribedBots')"
         >
           <el-icon name="s-opportunity" class="menu-item-icon"></el-icon>
-          已订阅机器人
+          我的机器人
         </div>
         <div
           class="menu-item"
@@ -97,7 +97,7 @@
           :class="{ active: $route.name === 'ConversationHistory' }"
           @click="navigateTo('ConversationHistory')"
         >
-          <el-icon name="time" class="menu-item-icon"></el-icon>历史记录
+          <el-icon name="time" class="menu-item-icon"></el-icon>对话历史
         </div>
         <!-- <div class="menu-item" @click="navigateTo('PersonalHome')">
           <el-icon name="s-custom" class="menu-item-icon"></el-icon>个人主页
@@ -145,9 +145,44 @@
         class="sidebar"
         :class="{ hidden: isSidebarHidden }"
       >
+        <!-- 侧边栏显示隐藏按键 -->
+        <div
+          v-if="!isSidebarHidden"
+          class="sidebar-button"
+          @click="toggleSidebar"
+        >
+          <el-icon name="s-fold" class="sidebar-button-icon"></el-icon>
+        </div>
+        <div
+          v-if="isSidebarHidden"
+          class="sidebar-button"
+          @click="toggleSidebar"
+        >
+          <el-icon name="s-unfold" class="sidebar-button-icon"></el-icon>
+        </div>
         <!-- 主要功能区域 -->
-        <div class="menu-item" @click="navigateTo('Home')">
+        <div
+          class="menu-item"
+          :class="{ active: $route.name === 'Home' }"
+          @click="navigateTo('Home')"
+        >
           <el-icon name="s-home" class="menu-item-icon"></el-icon>首页
+        </div>
+        <!-- 新增功能：社区动态 -->
+        <div
+          class="menu-item"
+          :class="{ active: $route.name === 'Community' }"
+          @click="navigateTo('Community')"
+        >
+          <el-icon name="bell" class="menu-item-icon"></el-icon>社区动态
+        </div>
+        <!-- 新增功能：我的帖子 -->
+        <div
+          class="menu-item"
+          :class="{ active: $route.name === 'MyPosts' }"
+          @click="navigateTo('MyPosts')"
+        >
+          <el-icon name="document" class="menu-item-icon"></el-icon>我的帖子
         </div>
       </aside>
 
@@ -258,7 +293,7 @@ export default {
       } else if (navigation === 'Community') {
         // 如果有Community页面的话
         console.log('切换到Community页面');
-        // this.navigateTo('Community');
+        this.navigateTo('Community');
       }
 
       // 重置侧边栏状态

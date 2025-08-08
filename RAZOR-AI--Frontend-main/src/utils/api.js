@@ -5,7 +5,7 @@ import MyStorage from './storage'; // 引入 Storage 工具类
 
 const api = axios.create({
   baseURL: '/api',
-  timeout: 10000,
+  timeout: 5000,
 });
 
 const adminApi = axios.create({

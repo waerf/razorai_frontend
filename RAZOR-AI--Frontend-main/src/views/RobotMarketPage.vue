@@ -10,7 +10,6 @@
               <i class="el-icon-arrow-down"></i>
             </el-button>
             <el-dropdown-menu slot="dropdown">
-              <el-dropdown-item command="tag">按标签搜索</el-dropdown-item>
               <el-dropdown-item command="name">按名称搜索</el-dropdown-item>
               <el-dropdown-item command="description"
                 >按描述搜索</el-dropdown-item
@@ -428,7 +427,6 @@ export default {
     }),
     currentSearchModeText() {
       const modes = {
-        tag: '按标签搜索',
         name: '按名称搜索',
         description: '按描述搜索',
       };
