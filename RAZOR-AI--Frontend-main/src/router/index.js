@@ -17,7 +17,10 @@ import CreateBots from '@/views/CreateBotsPage.vue';
 import HelperCenter from '@/views/HelperCenterPage.vue';
 import ConversationHistory from '@/views/ConversationHistory.vue';
 import RobotMarket from '@/views/RobotMarketPage.vue';
-//import { component } from 'vue/types/umd';
+import AdminPage from '@/views/AdminPage.vue';
+import AdminLogin from '@/views/AdminLoginPage.vue';
+import AdminFeedback from '@/views/AdminFeedbackPage.vue';
+import AdminNotifications from '@/views/AdminNotificationsPage.vue';
 
 Vue.use(VueRouter);
 
@@ -154,7 +157,62 @@ const routes = [
 const router = new VueRouter({
   mode: 'history',
   base: process.env.BASE_URL,
-  routes,
+  routes: [
+    ...routes,
+    {
+      path: '/admin/login',
+      name: 'AdminLogin',
+      component: AdminLogin,
+      meta: {
+        title: 'RazorAI-管理员登录',
+      },
+    },
+    {
+      path: '/admin',
+      name: 'Admin',
+      component: AdminPage,
+      meta: {
+        title: 'RazorAI-管理员控制台',
+        requiresAdmin: true,
+      },
+    },
+    {
+      path: '/admin/review',
+      name: 'AdminReview',
+      component: () => import('@/views/AdminReviewPage.vue'),
+      meta: {
+        title: 'RazorAI-机器人审核',
+        requiresAdmin: true,
+      },
+    },
+    {
+      path: '/admin/feedback',
+      name: 'AdminFeedback',
+      component: AdminFeedback,
+      meta: {
+        title: 'RazorAI-用户反馈',
+        requiresAdmin: true,
+      },
+    },
+    {
+      path: '/admin/notifications',
+      name: 'AdminNotifications',
+      component: AdminNotifications,
+      meta: {
+        title: 'RazorAI-通知管理',
+        requiresAdmin: true,
+      },
+    },
+    {
+      path: '/admin/posts',
+      name: 'PostReview',
+      component: () => import('@/views/AdminPostReviewPage.vue'),
+      meta: {
+        title: 'RazorAI-帖子审核',
+        requiresAdmin: true,
+      },
+    },
+  ],
 });
 
 router.beforeEach((to, from, next) => {
@@ -164,6 +222,7 @@ router.beforeEach((to, from, next) => {
   } else {
     document.title = 'RazorAI'; // 这里可以设置一个默认的标题
   }
+
   next(); // 继续导航
 });
 
