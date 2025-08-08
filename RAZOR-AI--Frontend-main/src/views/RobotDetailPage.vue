@@ -51,12 +51,14 @@
               <p class="robot-developer">
                 <span class="developer-label">开发者：</span>
                 <span class="developer-name">{{
-                  robot.developer || '未知开发者'
+                  robot.creatorName || '未知开发者'
                 }}</span>
               </p>
               <div class="robot-stats">
                 <div class="stat-item">
-                  <div class="stat-value">{{ robotStats.rating }}</div>
+                  <div class="stat-value">
+                    {{ formatRating(robotStats.rating) }}
+                  </div>
                   <div class="stat-label">评分</div>
                 </div>
                 <div class="stat-item">
@@ -68,7 +70,7 @@
                   <div class="stat-label">评论数</div>
                 </div>
                 <div class="stat-item">
-                  <div class="stat-value">{{ robot.requiredPoints || 1 }}</div>
+                  <div class="stat-value">{{ formatPrice(robot.price) }}</div>
                   <div class="stat-label">所需积分</div>
                 </div>
               </div>
@@ -260,7 +262,7 @@
                   </div>
                   <div class="recommendation-card-points">
                     <i class="el-icon-coin" style="color: #f39c12"></i>
-                    {{ recRobot.requiredPoints || 1 }}积分
+                    {{ formatPrice(recRobot.price) }}
                   </div>
                 </div>
                 <el-button
@@ -289,8 +291,11 @@
       center
     >
       <subscription-selector
+        v-if="robot.id"
         :robotId="robot.id"
-        :requiredPoints="robot.requiredPoints || 1"
+        :price="
+          robot.price !== undefined && robot.price !== null ? robot.price : 1
+        "
         :onConfirm="handleSubscriptionConfirm"
         :onClose="closeSubscriptionDialog"
       />
@@ -324,6 +329,7 @@
 import { mapState } from 'vuex';
 import { fetchAgentDetail as apifetchAgentDetail } from '../utils/api';
 import { subscribeAgent as apisubscribeAgent } from '../utils/api';
+import { getSubscriptionCnt } from '../utils/api';
 import {
   getAgentComment as apiGetAgentComment,
   sendAgentComment as apiSendAgentComment,
@@ -365,11 +371,11 @@ export default {
       // 删除评论确认弹窗
       deleteCommentDialogVisible: false,
       deleteCommentIndex: -1,
-      // 模拟数据 - 机器人统计信息
+      // 机器人统计信息
       robotStats: {
-        rating: 4.7,
-        subscriptions: 1234,
-        comments: 0,
+        rating: 0, // 初始为0，将通过评论计算
+        subscriptions: 0, // 将通过API获取
+        comments: 0, // 将通过评论数量设置
       },
       // 评论列表 - 从后端获取
       comments: [],
@@ -386,7 +392,7 @@ export default {
               description: '专业的对话机器人，支持多种语言',
               rating: 4.8,
               developer: '开发者A',
-              requiredPoints: 1,
+              price: 1,
             },
           ],
         },
@@ -401,7 +407,7 @@ export default {
               description: '强大的图像生成工具',
               rating: 4.9,
               developer: '开发者C',
-              requiredPoints: 1,
+              price: 1,
             },
           ],
         },
@@ -435,6 +441,7 @@ export default {
       if (newVal && this.robotId) {
         this.fetchRobotDetail(this.robotId);
         this.loadComments(this.robotId);
+        this.loadSubscriptionCount(this.robotId);
       }
       // 监听弹窗显示状态变化，添加或移除键盘事件监听
       if (newVal) {
@@ -449,6 +456,7 @@ export default {
       if (newVal && this.visible) {
         this.fetchRobotDetail(newVal);
         this.loadComments(newVal);
+        this.loadSubscriptionCount(newVal);
       }
     },
   },
@@ -559,6 +567,20 @@ export default {
       if (!text) return '';
       return text.length > length ? text.slice(0, length) + '...' : text;
     },
+    formatPrice(points) {
+      // 当points为0时，返回"免费"
+      if (points === 0) {
+        return '免费';
+      }
+      return `${points} 积分`;
+    },
+    formatRating(rating) {
+      // 当rating为0时，返回"暂无评分"
+      if (rating === 0) {
+        return '暂无评分';
+      }
+      return rating.toString();
+    },
     // 评论相关方法
     setRating(rating) {
       this.currentRating = rating;
@@ -578,11 +600,9 @@ export default {
 
       try {
         const commentLoad = {
-          user_id: this.userId,
           agentId: this.robot.id,
           comment: this.newComment.text,
-          created_at: new Date().toISOString(),
-          rating: this.currentRating,
+          score: this.currentRating,
         };
 
         const response = await apiSendAgentComment(commentLoad);
@@ -665,11 +685,7 @@ export default {
       ) {
         try {
           const comment = this.comments[this.deleteCommentIndex];
-          const commentLoad = {
-            id: comment.id,
-          };
-
-          const response = await apiDeleteAgentComment(commentLoad);
+          const response = await apiDeleteAgentComment(comment.id);
 
           if (response.status === 200) {
             this.$message.success('评论删除成功！');
@@ -785,15 +801,26 @@ export default {
       try {
         const response = await apifetchAgentDetail(agentId);
         this.robot = response.data;
-        // 确保机器人对象有所需积分属性，默认为1
-        if (!this.robot.requiredPoints) {
-          this.robot.requiredPoints = 1;
+        // 确保机器人对象有price属性，当price为undefined或null时默认为1，但保留0值
+        if (this.robot.price === undefined || this.robot.price === null) {
+          this.robot.price = 1;
         }
       } catch (error) {
         console.error('获取机器人详情失败:', error);
         this.$message.error('无法加载机器人详情');
       } finally {
         this.loading = false;
+      }
+    },
+    async loadSubscriptionCount(agentId) {
+      try {
+        const response = await getSubscriptionCnt(agentId);
+        if (response.status === 200) {
+          this.robotStats.subscriptions = response.data.subscriptionCnt;
+        }
+      } catch (error) {
+        console.warn('获取订阅数失败:', error);
+        this.robotStats.subscriptions = 0;
       }
     },
     async subscribeRobot(Duration) {
@@ -867,15 +894,20 @@ export default {
                 0
               ) / this.comments.length;
             this.robotStats.rating = Math.round(avgRating * 10) / 10; // 保留一位小数
+          } else {
+            // 没有评论时显示暂无评分
+            this.robotStats.rating = 0;
           }
         } else {
           this.comments = [];
           this.robotStats.comments = 0;
+          this.robotStats.rating = 0;
         }
       } catch (error) {
         console.error('加载评论失败:', error);
         this.comments = [];
         this.robotStats.comments = 0;
+        this.robotStats.rating = 0;
       }
     },
   },

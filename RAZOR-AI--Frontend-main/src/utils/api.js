@@ -152,6 +152,11 @@ export const subscribeAgent = (payload) =>
     headers: { skipAuth: false },
   });
 
+export const UnsubscribeAgent = (subId) =>
+  api.delete(`/market/subscription/${subId}`, {
+    headers: { skipAuth: false },
+  });
+
 export const createAI = (payload) =>
   api.post('/agent/user/creation', payload, {
     headers: { skipAuth: false },
@@ -184,5 +189,25 @@ export const closeChat = (chatId) =>
 
 export const deleteChat = (chatId) =>
   api.delete(`/agent/user/chat/delete/${chatId.chat_id}`, {
+    headers: { skipAuth: false },
+  });
+
+export const getSubscriptionCnt = (agentId) =>
+  api.get(`/market/subscription/count/${agentId}`, {
+    headers: { skipAuth: true },
+  });
+
+export const getAgentComment = (agentId) =>
+  api.get(`/market/feedback/${agentId}`, {
+    headers: { skipAuth: true },
+  });
+
+export const sendAgentComment = (feedback) =>
+  api.post('/market/feedback', feedback, {
+    headers: { skipAuth: false },
+  });
+
+export const deleteAgentComment = (feedbackId) =>
+  api.delete(`/market/feedback/${feedbackId}`, {
     headers: { skipAuth: false },
   });

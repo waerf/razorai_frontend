@@ -28,7 +28,7 @@
         </el-form-item>
 
         <el-form-item label="积分消耗">
-          <el-input :value="form.points + ' 积分'" disabled />
+          <el-input :value="formatPrice(form.points)" disabled />
         </el-form-item>
       </el-form>
     </div>
@@ -49,7 +49,7 @@ export default {
       type: Number,
       required: true,
     },
-    requiredPoints: {
+    price: {
       type: Number,
       default: 1,
     },
@@ -66,7 +66,7 @@ export default {
     return {
       form: {
         duration: 1, // 默认选择1天
-        points: this.requiredPoints, // 使用机器人的积分费率
+        points: this.price, // 使用机器人的积分费率
         customDays: null, // 自定义天数
       },
       rules: {
@@ -90,13 +90,13 @@ export default {
       // 如果是自定义天数
       if (this.form.duration === 0) {
         if (this.form.customDays && this.form.customDays > 0) {
-          this.form.points = this.form.customDays * this.requiredPoints; // 使用机器人的积分费率
+          this.form.points = this.form.customDays * this.price; // 使用机器人的积分费率
         } else {
           this.form.points = 0;
         }
       } else if (this.form.duration) {
         // 默认选择的时长，自动计算积分
-        this.form.points = this.form.duration * this.requiredPoints; // 使用机器人的积分费率
+        this.form.points = this.form.duration * this.price; // 使用机器人的积分费率
       }
     },
 
@@ -133,6 +133,15 @@ export default {
     // 关闭弹窗
     handleClose() {
       this.onClose();
+    },
+
+    // 格式化积分显示
+    formatPrice(points) {
+      // 当points为0时，返回"免费"
+      if (points === 0) {
+        return '免费';
+      }
+      return `${points} 积分`;
     },
   },
 };

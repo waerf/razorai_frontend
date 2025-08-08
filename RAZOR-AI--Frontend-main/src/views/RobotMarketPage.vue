@@ -55,12 +55,12 @@
             {{ truncate(robot.description, 80) }}
           </div>
           <div class="robot-rating-price">
-            <div class="robot-rating">
-              <i class="el-icon-star-on" style="color: #ffc107"></i>
-              {{ robot.rating || 4.5 }}
+            <div class="robot-subscription">
+              <i class="el-icon-user" style="color: #409eff"></i>
+              {{ subscriptionCounts[robot.id] || 0 }} 人订阅
             </div>
             <div class="robot-price">
-              {{ formatRequiredPoints(robot.requiredPoints) }}
+              {{ formatprice(robot.price) }}
             </div>
           </div>
           <div class="robot-actions">
@@ -112,12 +112,12 @@
               {{ truncate(robot.description, 80) }}
             </div>
             <div class="robot-rating-price">
-              <div class="robot-rating">
-                <i class="el-icon-star-on" style="color: #ffc107"></i>
-                {{ robot.rating || 4.5 }}
+              <div class="robot-subscription">
+                <i class="el-icon-user" style="color: #409eff"></i>
+                {{ subscriptionCounts[robot.id] || 0 }} 人订阅
               </div>
               <div class="robot-price">
-                {{ formatRequiredPoints(robot.requiredPoints) }}
+                {{ formatprice(robot.price) }}
               </div>
             </div>
             <div class="robot-actions">
@@ -167,12 +167,12 @@
               {{ truncate(robot.description, 80) }}
             </div>
             <div class="robot-rating-price">
-              <div class="robot-rating">
-                <i class="el-icon-star-on" style="color: #ffc107"></i>
-                {{ robot.rating || 4.5 }}
+              <div class="robot-subscription">
+                <i class="el-icon-user" style="color: #409eff"></i>
+                {{ subscriptionCounts[robot.id] || 0 }} 人订阅
               </div>
               <div class="robot-price">
-                {{ formatRequiredPoints(robot.requiredPoints) }}
+                {{ formatprice(robot.price) }}
               </div>
             </div>
             <div class="robot-actions">
@@ -222,12 +222,12 @@
               {{ truncate(robot.description, 80) }}
             </div>
             <div class="robot-rating-price">
-              <div class="robot-rating">
-                <i class="el-icon-star-on" style="color: #ffc107"></i>
-                {{ robot.rating || 4.5 }}
+              <div class="robot-subscription">
+                <i class="el-icon-user" style="color: #409eff"></i>
+                {{ subscriptionCounts[robot.id] || 0 }} 人订阅
               </div>
               <div class="robot-price">
-                {{ formatRequiredPoints(robot.requiredPoints) }}
+                {{ formatprice(robot.price) }}
               </div>
             </div>
             <div class="robot-actions">
@@ -277,12 +277,12 @@
               {{ truncate(robot.description, 80) }}
             </div>
             <div class="robot-rating-price">
-              <div class="robot-rating">
-                <i class="el-icon-star-on" style="color: #ffc107"></i>
-                {{ robot.rating || 4.5 }}
+              <div class="robot-subscription">
+                <i class="el-icon-user" style="color: #409eff"></i>
+                {{ subscriptionCounts[robot.id] || 0 }} 人订阅
               </div>
               <div class="robot-price">
-                {{ formatRequiredPoints(robot.requiredPoints) }}
+                {{ formatprice(robot.price) }}
               </div>
             </div>
             <div class="robot-actions">
@@ -331,12 +331,12 @@
             {{ truncate(robot.description, 80) }}
           </div>
           <div class="robot-rating-price">
-            <div class="robot-rating">
-              <i class="el-icon-star-on" style="color: #ffc107"></i>
-              {{ robot.rating || 4.5 }}
+            <div class="robot-subscription">
+              <i class="el-icon-user" style="color: #409eff"></i>
+              {{ subscriptionCounts[robot.id] || 0 }} 人订阅
             </div>
             <div class="robot-price">
-              {{ formatRequiredPoints(robot.requiredPoints) }}
+              {{ formatprice(robot.price) }}
             </div>
           </div>
           <div class="robot-actions">
@@ -369,9 +369,12 @@
         :robotId="
           currentRobotForSubscription ? currentRobotForSubscription.id : 0
         "
-        :requiredPoints="
+        :price="
           currentRobotForSubscription
-            ? currentRobotForSubscription.requiredPoints || 1
+            ? currentRobotForSubscription.price !== undefined &&
+              currentRobotForSubscription.price !== null
+              ? currentRobotForSubscription.price
+              : 1
             : 1
         "
         :onConfirm="handleSubscriptionConfirm"
@@ -391,7 +394,10 @@
 
 <script>
 import { mapActions, mapState } from 'vuex';
-import { subscribeAgent as apiSubscribeAgent } from '../utils/api';
+import {
+  subscribeAgent as apiSubscribeAgent,
+  getSubscriptionCnt,
+} from '../utils/api';
 import RobotDetailDialog from './RobotDetailPage.vue';
 import SubscriptionSelector from '@/components/SubscriptionSelector.vue';
 
@@ -404,7 +410,7 @@ export default {
   data() {
     return {
       searchKeyword: '',
-      currentSearchMode: 'tag',
+      currentSearchMode: 'name',
       showSearchResults: false,
       searchResults: [],
       categoryDialogVisible: false,
@@ -415,6 +421,7 @@ export default {
       loading: false,
       robotDetailVisible: false,
       currentRobotId: null,
+      subscriptionCounts: {}, // 存储每个机器人的订阅数
     };
   },
   computed: {
@@ -453,8 +460,10 @@ export default {
       this.loading = true;
       try {
         await this.fetchAllAgentsData();
-        // 确保所有机器人都有requiredPoints属性，默认为1
-        this.ensureRequiredPointsProperty();
+        // 确保所有机器人都有price属性，默认为1
+        this.ensurepriceProperty();
+        // 获取所有机器人的订阅数
+        await this.getSubscriptionCounts();
         console.log('获取机器人数据成功');
       } catch (error) {
         console.error('获取机器人数据失败:', error);
@@ -463,15 +472,42 @@ export default {
         this.loading = false;
       }
     },
-    ensureRequiredPointsProperty() {
-      // 确保所有机器人都有requiredPoints属性，默认为1
+    ensurepriceProperty() {
+      // 确保所有机器人都有price属性，当price为undefined或null时默认为1，但保留0值
       [...this.textRobots, ...this.imageRobots, ...this.videoRobots].forEach(
         (robot) => {
-          if (!robot.requiredPoints) {
-            robot.requiredPoints = 1;
+          if (robot.price === undefined || robot.price === null) {
+            robot.price = 1;
           }
         }
       );
+    },
+    async getSubscriptionCounts() {
+      const allRobots = [
+        ...this.textRobots,
+        ...this.imageRobots,
+        ...this.videoRobots,
+      ];
+      const counts = {};
+
+      // 并行获取所有机器人的订阅数
+      try {
+        const promises = allRobots.map(async (robot) => {
+          try {
+            const response = await getSubscriptionCnt(robot.id);
+            counts[robot.id] = response.data.count || 0;
+          } catch (error) {
+            console.warn(`获取机器人 ${robot.id} 订阅数失败:`, error);
+            counts[robot.id] = 0;
+          }
+        });
+
+        await Promise.all(promises);
+        this.subscriptionCounts = counts;
+        console.log('订阅数获取完成:', this.subscriptionCounts);
+      } catch (error) {
+        console.error('获取订阅数失败:', error);
+      }
     },
     async getUserSubscriptions() {
       if (!this.userId) return;
@@ -502,7 +538,6 @@ export default {
               robot.description &&
               robot.description.toLowerCase().includes(keyword)
             );
-          case 'tag':
           default:
             return (
               (robot.name && robot.name.toLowerCase().includes(keyword)) ||
@@ -629,8 +664,12 @@ export default {
       if (!text) return '';
       return text.length > length ? text.slice(0, length) + '...' : text;
     },
-    formatRequiredPoints(points) {
-      return `${points || 1} 积分`;
+    formatprice(points) {
+      // 当points为0时，返回"免费"
+      if (points === 0) {
+        return '免费';
+      }
+      return `${points} 积分`;
     },
   },
 };
@@ -794,11 +833,11 @@ export default {
       margin-bottom: 15px;
       font-size: 0.9rem;
 
-      .robot-rating {
+      .robot-subscription {
         display: flex;
         align-items: center;
         gap: 4px;
-        color: #ffc107;
+        color: #409eff;
       }
 
       .robot-price {
