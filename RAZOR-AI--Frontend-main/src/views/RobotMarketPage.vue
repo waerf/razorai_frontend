@@ -57,7 +57,7 @@
           <div class="robot-rating-price">
             <div class="robot-subscription">
               <i class="el-icon-user" style="color: #409eff"></i>
-              {{ subscriptionCounts[robot.id] || 0 }} 人订阅
+              {{ subscriptionCounts[robot.id] }} 人订阅
             </div>
             <div class="robot-price">
               {{ formatprice(robot.price) }}
@@ -114,7 +114,7 @@
             <div class="robot-rating-price">
               <div class="robot-subscription">
                 <i class="el-icon-user" style="color: #409eff"></i>
-                {{ subscriptionCounts[robot.id] || 0 }} 人订阅
+                {{ subscriptionCounts[robot.id] }} 人订阅
               </div>
               <div class="robot-price">
                 {{ formatprice(robot.price) }}
@@ -169,7 +169,7 @@
             <div class="robot-rating-price">
               <div class="robot-subscription">
                 <i class="el-icon-user" style="color: #409eff"></i>
-                {{ subscriptionCounts[robot.id] || 0 }} 人订阅
+                {{ subscriptionCounts[robot.id] }} 人订阅
               </div>
               <div class="robot-price">
                 {{ formatprice(robot.price) }}
@@ -224,7 +224,7 @@
             <div class="robot-rating-price">
               <div class="robot-subscription">
                 <i class="el-icon-user" style="color: #409eff"></i>
-                {{ subscriptionCounts[robot.id] || 0 }} 人订阅
+                {{ subscriptionCounts[robot.id] }} 人订阅
               </div>
               <div class="robot-price">
                 {{ formatprice(robot.price) }}
@@ -279,7 +279,7 @@
             <div class="robot-rating-price">
               <div class="robot-subscription">
                 <i class="el-icon-user" style="color: #409eff"></i>
-                {{ subscriptionCounts[robot.id] || 0 }} 人订阅
+                {{ subscriptionCounts[robot.id] }} 人订阅
               </div>
               <div class="robot-price">
                 {{ formatprice(robot.price) }}
@@ -333,7 +333,7 @@
           <div class="robot-rating-price">
             <div class="robot-subscription">
               <i class="el-icon-user" style="color: #409eff"></i>
-              {{ subscriptionCounts[robot.id] || 0 }} 人订阅
+              {{ subscriptionCounts[robot.id] }} 人订阅
             </div>
             <div class="robot-price">
               {{ formatprice(robot.price) }}
@@ -495,7 +495,7 @@ export default {
         const promises = allRobots.map(async (robot) => {
           try {
             const response = await getSubscriptionCnt(robot.id);
-            counts[robot.id] = response.data.count || 0;
+            counts[robot.id] = response.data.subscriptionCnt;
           } catch (error) {
             console.warn(`获取机器人 ${robot.id} 订阅数失败:`, error);
             counts[robot.id] = 0;
