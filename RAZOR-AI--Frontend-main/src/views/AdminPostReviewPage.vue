@@ -2,6 +2,9 @@
   <div class="admin-post-review">
     <!-- 侧边导航栏 -->
     <aside class="sidebar">
+      <button class="toggle-sidebar-btn" @click="toggleSidebar">
+        <i class="el-icon-s-fold"></i>
+      </button>
       <div class="user-info">
         <div class="avatar">张</div>
         <div>
@@ -164,6 +167,7 @@ export default {
   name: 'AdminPostReviewPage',
   data() {
     return {
+      isSidebarCollapsed: false,
       searchQuery: '',
       statusFilter: 'all',
       typeFilter: 'all',
@@ -331,8 +335,13 @@ export default {
     handleCurrentChange(page) {
       this.currentPage = page;
     },
+    toggleSidebar() {
+      this.isSidebarCollapsed = !this.isSidebarCollapsed;
+      const sidebar = document.querySelector('.sidebar');
+      sidebar.classList.toggle('hidden');
+    },
     logout() {
-      this.$router.push('/login');
+      this.$router.push('/');
     },
   },
 };
@@ -345,6 +354,55 @@ export default {
   background-color: #f5f5f5;
 
   .sidebar {
+    position: relative;
+    transition: all 0.3s ease;
+
+    .toggle-sidebar-btn {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      cursor: pointer;
+      font-size: 16px;
+      background: none;
+      border: none;
+      color: #606266;
+      padding: 5px;
+
+      &:hover {
+        background-color: rgba(0, 0, 0, 0.05);
+        border-radius: 4px;
+      }
+    }
+
+    &.hidden {
+      width: 60px !important;
+
+      .nav-item {
+        span {
+          display: none;
+        }
+
+        i {
+          margin-right: 0;
+        }
+      }
+
+      .user-info {
+        flex-direction: column;
+        align-items: center;
+        padding: 10px;
+
+        .avatar {
+          margin-right: 0;
+          margin-bottom: 5px;
+        }
+
+        .username,
+        .role {
+          display: none;
+        }
+      }
+    }
     width: 250px;
     background-color: white;
     border-right: 1px solid #e6e6e6;

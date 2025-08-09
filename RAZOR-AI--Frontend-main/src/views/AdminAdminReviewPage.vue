@@ -18,6 +18,10 @@
           <i class="el-icon-menu"></i>
           <span>控制台概览</span>
         </div>
+        <div class="nav-item active">
+          <i class="el-icon-user-solid"></i>
+          <span>管理员审核</span>
+        </div>
         <div class="nav-item" @click="$router.push('/admin/review')">
           <i class="el-icon-cpu"></i>
           <span>机器人审核</span>
@@ -26,7 +30,7 @@
           <i class="el-icon-document"></i>
           <span>帖子审核</span>
         </div>
-        <div class="nav-item active">
+        <div class="nav-item" @click="$router.push('/admin/feedback')">
           <i class="el-icon-chat-dot-round"></i>
           <span>用户反馈</span>
         </div>
@@ -37,39 +41,50 @@
     <main class="main-content">
       <!-- 顶部导航栏 -->
       <header class="header">
-        <h1 class="title">用户反馈管理</h1>
+        <h1 class="title">管理员审核列表</h1>
         <el-button type="primary" @click="logout">退出登录</el-button>
       </header>
 
       <!-- 主要内容 -->
       <div class="content">
+        <!-- 管理员列表 -->
         <el-card class="post-list-card" shadow="hover">
           <div class="card-header">
-            <h2 class="card-title">用户反馈列表</h2>
+            <h2 class="card-title">待审核管理员</h2>
             <span class="text-sm text-gray-500"
-              >共 {{ feedbackList.length }} 条反馈</span
+              >共 {{ pendingAdmins.length }} 个待审核</span
             >
           </div>
           <div class="p-6">
             <div class="space-y-4">
               <div
-                v-for="(feedback, index) in feedbackList"
+                v-for="(admin, index) in pendingAdmins"
                 :key="index"
                 class="p-4 border border-gray-100 rounded-lg card-hover cursor-pointer"
-                @click="$router.push('/admin/feedback/detail')"
               >
                 <div class="flex items-center justify-between mb-2">
-                  <p class="font-medium">{{ feedback.name }}</p>
-                  <p class="text-sm text-gray-500">{{ feedback.createdAt }}</p>
+                  <p class="font-medium">{{ admin.username }}</p>
+                  <p class="text-sm text-gray-500">{{ admin.registeredAt }}</p>
                 </div>
-                <el-tag
-                  :type="feedback.status === 'pending' ? 'warning' : 'success'"
-                >
-                  {{ feedback.status === 'pending' ? '待处理' : '已解决' }}
-                </el-tag>
+                <el-tag type="warning">待审核</el-tag>
                 <p class="text-gray-600 text-sm mt-2">
-                  {{ feedback.content }}
+                  邮箱：{{ admin.email }}<br />
+                  申请理由：{{ admin.reason }}
                 </p>
+                <div class="mt-3 flex gap-2">
+                  <el-button
+                    type="success"
+                    size="mini"
+                    @click="approveAdmin(admin.id)"
+                    >通过</el-button
+                  >
+                  <el-button
+                    type="danger"
+                    size="mini"
+                    @click="rejectAdmin(admin.id)"
+                    >拒绝</el-button
+                  >
+                </div>
               </div>
             </div>
           </div>
@@ -81,25 +96,24 @@
 
 <script>
 export default {
-  name: 'AdminFeedbackPage',
+  name: 'AdminAdminReviewPage',
   data() {
     return {
       isSidebarCollapsed: false,
-      feedbackList: [
+      pendingAdmins: [
         {
           id: 1,
-          name: '李四',
-          createdAt: '2025-1-10 3:14',
-          content:
-            '机器人无法正确识别"退款"相关的问题，总是将用户引导到错误的页面。',
-          status: 'pending',
+          username: 'admin_test1',
+          registeredAt: '2025-08-08 10:30',
+          email: 'admin1@example.com',
+          reason: '需要管理机器人审核流程',
         },
         {
           id: 2,
-          name: '王五',
-          createdAt: '2025-1-9 16:53',
-          content: '数据分析机器人导出报表功能有时会出错。',
-          status: 'resolved',
+          username: 'admin_test2',
+          registeredAt: '2025-08-07 16:45',
+          email: 'admin2@example.com',
+          reason: '负责内容安全管理',
         },
       ],
     };
@@ -111,8 +125,15 @@ export default {
       sidebar.classList.toggle('hidden');
     },
     logout() {
-      // 退出登录逻辑
       this.$router.push('/');
+    },
+    approveAdmin(id) {
+      this.$message.success('已通过管理员申请（模拟操作）');
+      this.pendingAdmins = this.pendingAdmins.filter((a) => a.id !== id);
+    },
+    rejectAdmin(id) {
+      this.$message.error('已拒绝管理员申请（模拟操作）');
+      this.pendingAdmins = this.pendingAdmins.filter((a) => a.id !== id);
     },
   },
 };

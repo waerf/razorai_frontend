@@ -4,16 +4,20 @@ import axios from 'axios';
 import MyStorage from './storage'; // 引入 Storage 工具类
 
 const api = axios.create({
-  baseURL: process.env.VUE_APP_API_BASE_URL || 'http://localhost:8000',
-  timeout: 5000,
+  baseURL: '/api' || 'http://localhost:8000',
+  timeout: 500000,
 });
 
 const adminApi = axios.create({
-  baseURL: process.env.VUE_APP_API_BASE_URL || 'http://localhost:8000',
-  timeout: 5000,
+  baseURL: '/api' || 'http://localhost:5253',
+  timeout: 500000,
 });
 
 // 为adminApi添加请求拦截器
+// 管理员登出
+export const adminLogout = () => {
+  return adminApi.post('http://localhost:5253/api/admin/logout');
+};
 adminApi.interceptors.request.use(
   (config) => {
     const token = MyStorage.get('admin_token');
@@ -67,6 +71,11 @@ api.interceptors.response.use(
 );
 
 // API 请求方法
+// 修改管理员密码
+export const changeAdminPassword = (payload) => {
+  // payload: { oldPassword, newPassword }
+  return adminApi.put('http://localhost:5253/api/admin/password', payload);
+};
 export const login = (payload) =>
   api.post('/user/login', payload, {
     headers: { skipAuth: true }, // 跳过 Authorization 头
@@ -89,8 +98,11 @@ export const rejectRobot = (robotId) => {
   return adminApi.post(`/admin/robots/${robotId}/reject`);
 };
 
-export const getPendingRobots = () => {
-  return adminApi.get('/admin/robots/pending');
+export const getPendingRobots = (params = {}) => {
+  // params: { page, pageSize }
+  return adminApi.get('http://localhost:5253/admin/agent-review/pending', {
+    params,
+  });
 };
 
 export const getFeedbacks = () => {

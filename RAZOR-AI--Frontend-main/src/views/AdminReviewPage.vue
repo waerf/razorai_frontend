@@ -2,6 +2,9 @@
   <div class="admin-home">
     <!-- 侧边导航栏 -->
     <aside class="sidebar">
+      <button class="toggle-sidebar-btn" @click="toggleSidebar">
+        <i class="el-icon-s-fold"></i>
+      </button>
       <div class="user-info">
         <div class="avatar">张</div>
         <div>
@@ -45,7 +48,7 @@
           <div class="card-header">
             <h2 class="card-title">待审核机器人</h2>
             <span class="text-sm text-gray-500"
-              >共 {{ pendingRobots.length }} 个待审核</span
+              >共 {{ totalCount }} 个待审核</span
             >
           </div>
           <div class="p-6">
@@ -66,6 +69,18 @@
                 </p>
               </div>
             </div>
+            <div class="mt-6 text-center">
+              <el-button
+                v-if="hasPrevPage"
+                type="default"
+                @click="loadPrevPage"
+                style="margin-right: 12px"
+                >上一页</el-button
+              >
+              <el-button v-if="hasNextPage" type="primary" @click="loadNextPage"
+                >下一页</el-button
+              >
+            </div>
           </div>
         </el-card>
       </div>
@@ -74,33 +89,103 @@
 </template>
 
 <script>
+import { getPendingRobots } from '@/utils/api';
 export default {
   name: 'AdminReviewPage',
   data() {
     return {
-      pendingRobots: [
-        {
-          id: 1,
-          name: '智能客服机器人 v2.1',
-          createdAt: '2025-07-20 14:30',
-          description: '智能客服机器人，能够处理常见客户咨询问题',
-        },
-        {
-          id: 2,
-          name: '数据分析助手',
-          createdAt: '2025-07-19 11:45',
-          description: '数据分析助手，提供数据可视化与分析功能',
-        },
-      ],
+      isSidebarCollapsed: false,
+      pendingRobots: [], // 当前页显示的机器人
+      currentPage: 1,
+      pageSize: 3,
+      totalCount: 0,
+      loading: false,
     };
   },
   methods: {
+    toggleSidebar() {
+      this.isSidebarCollapsed = !this.isSidebarCollapsed;
+      const sidebar = document.querySelector('.sidebar');
+      sidebar.classList.toggle('hidden');
+    },
     logout() {
-      // 退出登录逻辑
-      this.$router.push('/login');
+      this.$router.push('/');
     },
     goToReviewPage(id) {
-      this.$router.push(`/admin/robots/${id}`);
+      // 跳转详情页，监听返回时的状态
+      this.$router.push({
+        path: `/admin/robots/${id}`,
+        query: { fromList: true },
+      });
+    },
+    async fetchPendingRobots(page = 1) {
+      this.loading = true;
+      try {
+        const res = await getPendingRobots({ page, pageSize: this.pageSize });
+        if (res.data && res.data.success) {
+          this.pendingRobots = res.data.data.map((robot) => ({
+            id: robot.id,
+            name: robot.name,
+            createdAt: robot.createdAt,
+            description: robot.description,
+          }));
+          this.totalCount =
+            res.data.pagination?.totalCount || this.pendingRobots.length;
+        } else {
+          this.$message.error(res.data.message || '获取待审核机器人失败');
+        }
+      } catch (err) {
+        this.$message.error(err.message || '获取待审核机器人失败');
+      }
+      this.loading = false;
+    },
+    loadNextPage() {
+      if (this.hasNextPage && !this.loading) {
+        this.currentPage++;
+        this.fetchPendingRobots(this.currentPage);
+      }
+    },
+    loadPrevPage() {
+      if (this.hasPrevPage && !this.loading) {
+        this.currentPage--;
+        this.fetchPendingRobots(this.currentPage);
+      }
+    },
+  },
+  mounted() {
+    this.fetchPendingRobots(1);
+    // 监听页面返回，更新状态
+    this.$watch(
+      () => this.$route,
+      (to, from) => {
+        // 仅在从详情页返回列表页时触发
+        if (
+          to.path === '/admin/review' &&
+          from.path.startsWith('/admin/robots/')
+        ) {
+          // 获取详情页返回的审核结果
+          const reviewedId = from.params.id;
+          const reviewedStatus = from.query && from.query.status;
+          if (reviewedId && reviewedStatus) {
+            const idx = this.pendingRobots.findIndex((r) => r.id == reviewedId);
+            if (idx !== -1) {
+              // 更新状态（可根据实际字段调整）
+              this.$set(this.pendingRobots, idx, {
+                ...this.pendingRobots[idx],
+                status: reviewedStatus,
+              });
+            }
+          }
+        }
+      }
+    );
+  },
+  computed: {
+    hasNextPage() {
+      return this.currentPage * this.pageSize < this.totalCount;
+    },
+    hasPrevPage() {
+      return this.currentPage > 1;
     },
   },
 };
@@ -113,6 +198,55 @@ export default {
   background-color: #f5f5f5;
 
   .sidebar {
+    position: relative;
+    transition: all 0.3s ease;
+
+    .toggle-sidebar-btn {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      cursor: pointer;
+      font-size: 16px;
+      background: none;
+      border: none;
+      color: #606266;
+      padding: 5px;
+
+      &:hover {
+        background-color: rgba(0, 0, 0, 0.05);
+        border-radius: 4px;
+      }
+    }
+
+    &.hidden {
+      width: 60px !important;
+
+      .nav-item {
+        span {
+          display: none;
+        }
+
+        i {
+          margin-right: 0;
+        }
+      }
+
+      .user-info {
+        flex-direction: column;
+        align-items: center;
+        padding: 10px;
+
+        .avatar {
+          margin-right: 0;
+          margin-bottom: 5px;
+        }
+
+        .username,
+        .role {
+          display: none;
+        }
+      }
+    }
     width: 250px;
     background-color: white;
     border-right: 1px solid #e6e6e6;
