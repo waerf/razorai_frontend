@@ -42,6 +42,7 @@
 
 <script>
 import MyStorage from '@/utils/storage';
+import { adminLogin } from '@/utils/api';
 export default {
   name: 'AdminLoginPage',
   data() {
@@ -75,13 +76,10 @@ export default {
         if (valid) {
           this.isLoading = true;
           try {
-            const response = await this.$axios.post(
-              'http://localhost:5253/api/admin/login',
-              {
-                identifier: this.loginForm.identifier,
-                password: this.loginForm.password,
-              }
-            );
+            const response = await adminLogin({
+              identifier: this.loginForm.identifier,
+              password: this.loginForm.password,
+            });
 
             if (response.data.success) {
               this.$message.success('登录成功！');

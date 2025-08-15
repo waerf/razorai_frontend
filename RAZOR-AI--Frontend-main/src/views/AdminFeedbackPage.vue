@@ -18,6 +18,10 @@
           <i class="el-icon-menu"></i>
           <span>控制台概览</span>
         </div>
+        <div class="nav-item" @click="$router.push('/admin/admin-review')">
+          <i class="el-icon-user-solid"></i>
+          <span>管理员审核</span>
+        </div>
         <div class="nav-item" @click="$router.push('/admin/review')">
           <i class="el-icon-cpu"></i>
           <span>机器人审核</span>
@@ -38,7 +42,56 @@
       <!-- 顶部导航栏 -->
       <header class="header">
         <h1 class="title">用户反馈管理</h1>
-        <el-button type="primary" @click="logout">退出登录</el-button>
+        <div style="display: flex; align-items: center; margin-left: auto">
+          <el-button
+            type="warning"
+            style="margin-right: 8px"
+            @click="showChangePwd = true"
+            >修改密码</el-button
+          >
+          <el-button type="primary" @click="logout">退出登录</el-button>
+        </div>
+        <el-dialog
+          title="修改密码"
+          :visible.sync="showChangePwd"
+          width="400px"
+          @close="resetPwdForm"
+        >
+          <el-form
+            :model="pwdForm"
+            :rules="pwdRules"
+            ref="pwdFormRef"
+            label-width="90px"
+          >
+            <el-form-item label="旧密码" prop="oldPwd">
+              <el-input
+                v-model="pwdForm.oldPwd"
+                type="password"
+                autocomplete="off"
+              />
+            </el-form-item>
+            <el-form-item label="新密码" prop="newPwd">
+              <el-input
+                v-model="pwdForm.newPwd"
+                type="password"
+                autocomplete="off"
+              />
+            </el-form-item>
+            <el-form-item label="确认新密码" prop="confirmPwd">
+              <el-input
+                v-model="pwdForm.confirmPwd"
+                type="password"
+                autocomplete="off"
+              />
+            </el-form-item>
+          </el-form>
+          <span slot="footer" class="dialog-footer">
+            <el-button @click="showChangePwd = false">取消</el-button>
+            <el-button type="primary" @click="submitPwdForm"
+              >确认修改</el-button
+            >
+          </span>
+        </el-dialog>
       </header>
 
       <!-- 主要内容 -->
@@ -80,11 +133,38 @@
 </template>
 
 <script>
+import { changeAdminPassword, adminLogout } from '@/utils/api';
 export default {
   name: 'AdminFeedbackPage',
   data() {
     return {
       isSidebarCollapsed: false,
+      showChangePwd: false,
+      pwdForm: {
+        oldPwd: '',
+        newPwd: '',
+        confirmPwd: '',
+      },
+      pwdRules: {
+        oldPwd: [{ required: true, message: '请输入旧密码', trigger: 'blur' }],
+        newPwd: [
+          { required: true, message: '请输入新密码', trigger: 'blur' },
+          { min: 6, message: '新密码至少6位', trigger: 'blur' },
+        ],
+        confirmPwd: [
+          { required: true, message: '请确认新密码', trigger: 'blur' },
+          {
+            validator: (rule, value, callback) => {
+              if (value !== this.pwdForm.newPwd) {
+                callback(new Error('两次输入的新密码不一致'));
+              } else {
+                callback();
+              }
+            },
+            trigger: 'blur',
+          },
+        ],
+      },
       feedbackList: [
         {
           id: 1,
@@ -111,8 +191,65 @@ export default {
       sidebar.classList.toggle('hidden');
     },
     logout() {
-      // 退出登录逻辑
-      this.$router.push('/');
+      this.$confirm('确定要退出登录吗？', '提示', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning',
+      })
+        .then(async () => {
+          try {
+            const res = await adminLogout();
+            if (res.data && res.data.success) {
+              this.$message.success(res.data.message || '登出成功');
+              if (window.localStorage) {
+                localStorage.removeItem('admin_token');
+              }
+              this.$router.push('/');
+            } else {
+              this.$message.error(res.data.message || '登出失败');
+            }
+          } catch (err) {
+            this.$message.error(err.message || '登出失败，请重试');
+          }
+        })
+        .catch(() => {
+          // 用户取消
+        });
+    },
+    async submitPwdForm() {
+      this.$refs.pwdFormRef.validate(async (valid) => {
+        if (!valid) return;
+        try {
+          const res = await changeAdminPassword({
+            oldPassword: this.pwdForm.oldPwd,
+            newPassword: this.pwdForm.newPwd,
+          });
+          if (res.data && res.data.success) {
+            this.$message({
+              type: 'success',
+              message: res.data.message || '密码修改成功',
+            });
+            this.showChangePwd = false;
+            this.resetPwdForm();
+          } else {
+            this.$message({
+              type: 'error',
+              message: res.data.message || '密码修改失败',
+            });
+          }
+        } catch (err) {
+          this.$message({
+            type: 'error',
+            message: err.response?.data?.message || '密码修改失败，请重试',
+          });
+        }
+      });
+    },
+    resetPwdForm() {
+      this.pwdForm.oldPwd = '';
+      this.pwdForm.newPwd = '';
+      this.pwdForm.confirmPwd = '';
+      if (this.$refs.pwdFormRef) this.$refs.pwdFormRef.clearValidate();
     },
   },
 };

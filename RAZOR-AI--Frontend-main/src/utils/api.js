@@ -1,22 +1,27 @@
 // src/utils/api.js
 //api.js 文件用于封装 API 请求，方便在项目中进行统一管理和调用。
+
 import axios from 'axios';
 import MyStorage from './storage'; // 引入 Storage 工具类
 
+// 统一管理后端 API 地址
+const BASE_API_URL = 'http://localhost:5253';
+const BASE_ADMIN_API_URL = 'http://localhost:5253';
+
 const api = axios.create({
-  baseURL: '/api' || 'http://localhost:8000',
+  baseURL: BASE_API_URL,
   timeout: 500000,
 });
 
 const adminApi = axios.create({
-  baseURL: '/api' || 'http://localhost:5253',
+  baseURL: BASE_ADMIN_API_URL,
   timeout: 500000,
 });
 
 // 为adminApi添加请求拦截器
 // 管理员登出
 export const adminLogout = () => {
-  return adminApi.post('http://localhost:5253/api/admin/logout');
+  return adminApi.post('api/admin/logout');
 };
 adminApi.interceptors.request.use(
   (config) => {
@@ -74,7 +79,7 @@ api.interceptors.response.use(
 // 修改管理员密码
 export const changeAdminPassword = (payload) => {
   // payload: { oldPassword, newPassword }
-  return adminApi.put('http://localhost:5253/api/admin/password', payload);
+  return adminApi.put('api/admin/password', payload);
 };
 export const login = (payload) =>
   api.post('/user/login', payload, {
@@ -100,7 +105,7 @@ export const rejectRobot = (robotId) => {
 
 export const getPendingRobots = (params = {}) => {
   // params: { page, pageSize }
-  return adminApi.get('http://localhost:5253/admin/agent-review/pending', {
+  return adminApi.get('/admin/agent-review/pending', {
     params,
   });
 };
