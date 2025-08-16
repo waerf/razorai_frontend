@@ -10,7 +10,6 @@
               <i class="el-icon-arrow-down"></i>
             </el-button>
             <el-dropdown-menu slot="dropdown">
-              <el-dropdown-item command="tag">按标签搜索</el-dropdown-item>
               <el-dropdown-item command="name">按名称搜索</el-dropdown-item>
               <el-dropdown-item command="description"
                 >按描述搜索</el-dropdown-item
@@ -60,7 +59,9 @@
               <i class="el-icon-star-on" style="color: #ffc107"></i>
               {{ robot.rating || 4.5 }}
             </div>
-            <div class="robot-price">{{ formatPrice(robot.price) }}</div>
+            <div class="robot-price">
+              {{ formatRequiredPoints(robot.requiredPoints) }}
+            </div>
           </div>
           <div class="robot-actions">
             <el-button size="mini" @click.stop="showRobotDetail(robot.id)">
@@ -72,7 +73,7 @@
               :class="{ subscribed: isSubscribed(robot.id) }"
               @click.stop="subscribeRobot(robot.id)"
             >
-              {{ isSubscribed(robot.id) ? '已订阅' : '订阅' }}
+              {{ isSubscribed(robot.id) ? '开始对话' : '订阅' }}
             </el-button>
           </div>
         </el-card>
@@ -115,7 +116,9 @@
                 <i class="el-icon-star-on" style="color: #ffc107"></i>
                 {{ robot.rating || 4.5 }}
               </div>
-              <div class="robot-price">{{ formatPrice(robot.price) }}</div>
+              <div class="robot-price">
+                {{ formatRequiredPoints(robot.requiredPoints) }}
+              </div>
             </div>
             <div class="robot-actions">
               <el-button size="mini" @click.stop="showRobotDetail(robot.id)">
@@ -127,7 +130,7 @@
                 :class="{ subscribed: isSubscribed(robot.id) }"
                 @click.stop="subscribeRobot(robot.id)"
               >
-                {{ isSubscribed(robot.id) ? '已订阅' : '订阅' }}
+                {{ isSubscribed(robot.id) ? '开始对话' : '订阅' }}
               </el-button>
             </div>
           </el-card>
@@ -168,7 +171,9 @@
                 <i class="el-icon-star-on" style="color: #ffc107"></i>
                 {{ robot.rating || 4.5 }}
               </div>
-              <div class="robot-price">{{ formatPrice(robot.price) }}</div>
+              <div class="robot-price">
+                {{ formatRequiredPoints(robot.requiredPoints) }}
+              </div>
             </div>
             <div class="robot-actions">
               <el-button size="mini" @click.stop="showRobotDetail(robot.id)">
@@ -180,7 +185,7 @@
                 :class="{ subscribed: isSubscribed(robot.id) }"
                 @click.stop="subscribeRobot(robot.id)"
               >
-                {{ isSubscribed(robot.id) ? '已订阅' : '订阅' }}
+                {{ isSubscribed(robot.id) ? '开始对话' : '订阅' }}
               </el-button>
             </div>
           </el-card>
@@ -221,7 +226,9 @@
                 <i class="el-icon-star-on" style="color: #ffc107"></i>
                 {{ robot.rating || 4.5 }}
               </div>
-              <div class="robot-price">{{ formatPrice(robot.price) }}</div>
+              <div class="robot-price">
+                {{ formatRequiredPoints(robot.requiredPoints) }}
+              </div>
             </div>
             <div class="robot-actions">
               <el-button size="mini" @click.stop="showRobotDetail(robot.id)">
@@ -233,7 +240,7 @@
                 :class="{ subscribed: isSubscribed(robot.id) }"
                 @click.stop="subscribeRobot(robot.id)"
               >
-                {{ isSubscribed(robot.id) ? '已订阅' : '订阅' }}
+                {{ isSubscribed(robot.id) ? '开始对话' : '订阅' }}
               </el-button>
             </div>
           </el-card>
@@ -274,7 +281,9 @@
                 <i class="el-icon-star-on" style="color: #ffc107"></i>
                 {{ robot.rating || 4.5 }}
               </div>
-              <div class="robot-price">{{ formatPrice(robot.price) }}</div>
+              <div class="robot-price">
+                {{ formatRequiredPoints(robot.requiredPoints) }}
+              </div>
             </div>
             <div class="robot-actions">
               <el-button size="mini" @click.stop="showRobotDetail(robot.id)">
@@ -286,7 +295,7 @@
                 :class="{ subscribed: isSubscribed(robot.id) }"
                 @click.stop="subscribeRobot(robot.id)"
               >
-                {{ isSubscribed(robot.id) ? '已订阅' : '订阅' }}
+                {{ isSubscribed(robot.id) ? '开始对话' : '订阅' }}
               </el-button>
             </div>
           </el-card>
@@ -300,6 +309,8 @@
       :visible.sync="categoryDialogVisible"
       width="80%"
       center
+      :close-on-click-modal="false"
+      :close-on-press-escape="false"
     >
       <div class="category-detail-grid">
         <el-card
@@ -324,7 +335,9 @@
               <i class="el-icon-star-on" style="color: #ffc107"></i>
               {{ robot.rating || 4.5 }}
             </div>
-            <div class="robot-price">{{ formatPrice(robot.price) }}</div>
+            <div class="robot-price">
+              {{ formatRequiredPoints(robot.requiredPoints) }}
+            </div>
           </div>
           <div class="robot-actions">
             <el-button size="mini" @click.stop="showRobotDetail(robot.id)">
@@ -336,7 +349,7 @@
               :class="{ subscribed: isSubscribed(robot.id) }"
               @click.stop="subscribeRobot(robot.id)"
             >
-              {{ isSubscribed(robot.id) ? '已订阅' : '订阅' }}
+              {{ isSubscribed(robot.id) ? '开始对话' : '订阅' }}
             </el-button>
           </div>
         </el-card>
@@ -349,48 +362,45 @@
       :visible.sync="subscriptionDialogVisible"
       width="400px"
       center
+      :close-on-click-modal="false"
+      :close-on-press-escape="false"
     >
-      <div v-if="currentRobotForSubscription" class="subscription-info">
-        <div class="subscription-robot-name">
-          {{ currentRobotForSubscription.name }}
-        </div>
-        <el-form :model="subscriptionForm" label-width="80px">
-          <el-form-item label="订阅类型">
-            <el-select v-model="subscriptionForm.type" @change="calculateCost">
-              <el-option label="月度订阅" value="monthly"></el-option>
-              <el-option label="年度订阅" value="yearly"></el-option>
-            </el-select>
-          </el-form-item>
-          <el-form-item label="订阅时长">
-            <el-input-number
-              v-model="subscriptionForm.duration"
-              :min="1"
-              :max="12"
-              @change="calculateCost"
-            ></el-input-number>
-          </el-form-item>
-        </el-form>
-        <div class="subscription-cost">
-          <div class="subscription-cost-label">总费用</div>
-          <div class="subscription-cost-value">{{ subscriptionCost }} 积分</div>
-        </div>
-      </div>
-      <div slot="footer" class="dialog-footer">
-        <el-button @click="subscriptionDialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="confirmSubscription">
-          确认订阅
-        </el-button>
-      </div>
+      <subscription-selector
+        :robotId="
+          currentRobotForSubscription ? currentRobotForSubscription.id : 0
+        "
+        :requiredPoints="
+          currentRobotForSubscription
+            ? currentRobotForSubscription.requiredPoints || 1
+            : 1
+        "
+        :onConfirm="handleSubscriptionConfirm"
+        :onClose="closeSubscriptionDialog"
+      />
     </el-dialog>
+
+    <!-- 机器人详情弹窗 -->
+    <robot-detail-dialog
+      :visible="robotDetailVisible"
+      :robotId="currentRobotId"
+      @close="robotDetailVisible = false"
+      @show-robot="showRobotDetail"
+    />
   </div>
 </template>
 
 <script>
 import { mapActions, mapState } from 'vuex';
 import { subscribeAgent as apiSubscribeAgent } from '../utils/api';
+import RobotDetailDialog from './RobotDetailPage.vue';
+import SubscriptionSelector from '@/components/SubscriptionSelector.vue';
 
 export default {
   name: 'RobotMarketPage',
+  components: {
+    RobotDetailDialog,
+    SubscriptionSelector,
+  },
   data() {
     return {
       searchKeyword: '',
@@ -402,12 +412,9 @@ export default {
       categoryDetailRobots: [],
       subscriptionDialogVisible: false,
       currentRobotForSubscription: null,
-      subscriptionForm: {
-        type: 'monthly',
-        duration: 1,
-      },
-      subscriptionCost: 0,
       loading: false,
+      robotDetailVisible: false,
+      currentRobotId: null,
     };
   },
   computed: {
@@ -420,7 +427,6 @@ export default {
     }),
     currentSearchModeText() {
       const modes = {
-        tag: '按标签搜索',
         name: '按名称搜索',
         description: '按描述搜索',
       };
@@ -434,6 +440,9 @@ export default {
     this.getAllAgentsData();
     this.getUserSubscriptions();
   },
+  beforeDestroy() {
+    // 组件销毁前清理
+  },
   methods: {
     ...mapActions('agent', [
       'fetchAllAgentsData',
@@ -444,6 +453,8 @@ export default {
       this.loading = true;
       try {
         await this.fetchAllAgentsData();
+        // 确保所有机器人都有requiredPoints属性，默认为1
+        this.ensureRequiredPointsProperty();
         console.log('获取机器人数据成功');
       } catch (error) {
         console.error('获取机器人数据失败:', error);
@@ -451,6 +462,16 @@ export default {
       } finally {
         this.loading = false;
       }
+    },
+    ensureRequiredPointsProperty() {
+      // 确保所有机器人都有requiredPoints属性，默认为1
+      [...this.textRobots, ...this.imageRobots, ...this.videoRobots].forEach(
+        (robot) => {
+          if (!robot.requiredPoints) {
+            robot.requiredPoints = 1;
+          }
+        }
+      );
     },
     async getUserSubscriptions() {
       if (!this.userId) return;
@@ -503,42 +524,57 @@ export default {
       this.categoryDialogVisible = true;
     },
     showRobotDetail(robotId) {
-      this.$router.push({ name: 'RobotDetail', params: { id: robotId } });
+      this.currentRobotId = robotId;
+      this.robotDetailVisible = true;
     },
     subscribeRobot(robotId) {
-      if (!this.isLoggedIn) {
-        this.$message.warning('请先登录');
-        return;
-      }
-
+      //if (!this.isLoggedIn) {
+      //  this.$message.warning('请先登录');
+      //  return;
+      //}
+      // 如果已订阅，则进入对话页面
       if (this.isSubscribed(robotId)) {
-        this.$message.info('您已订阅该机器人');
+        this.enterChatWithRobot(robotId);
         return;
       }
 
       const robot = this.allRobots.find((r) => r.id === robotId);
       if (robot) {
         this.currentRobotForSubscription = robot;
-        this.calculateCost();
         this.subscriptionDialogVisible = true;
       }
     },
-    async confirmSubscription() {
+
+    // 新增方法：进入与机器人的对话
+    enterChatWithRobot(robotId) {
+      this.$router.push({
+        name: 'ConversationHistory',
+        params: { id: robotId },
+      });
+    },
+    // 订阅机器人
+    async handleSubscriptionConfirm(duration, points) {
       if (!this.currentRobotForSubscription) return;
 
       try {
+        const currentTime = this.formatDateTime(new Date());
         const payload = {
-          agent_id: this.currentRobotForSubscription.id,
           user_id: this.userId,
-          subscription_type: this.subscriptionForm.type,
-          duration: this.subscriptionForm.duration,
+          agent_id: this.currentRobotForSubscription.id,
+          startime: currentTime,
+          duration: duration,
+          subscriptionType: 1,
         };
 
+        console.log('请求 payload:', payload);
+        console.log('订阅时长:', duration);
+        console.log('所需积分:', points);
         const response = await apiSubscribeAgent(payload);
         if (response.status === 200) {
           this.$message.success('订阅成功！');
-          this.subscriptionDialogVisible = false;
+          this.closeSubscriptionDialog();
           this.getUserSubscriptions();
+          console.log('订阅成功!!!:', response);
         } else {
           this.$message.error('订阅失败，请稍后重试');
         }
@@ -547,13 +583,18 @@ export default {
         this.$message.error('订阅失败，请稍后重试');
       }
     },
-    calculateCost() {
-      if (!this.currentRobotForSubscription) return;
-
-      const basePrice = this.currentRobotForSubscription.price || 100;
-      const multiplier = this.subscriptionForm.type === 'yearly' ? 10 : 1;
-      this.subscriptionCost =
-        basePrice * multiplier * this.subscriptionForm.duration;
+    closeSubscriptionDialog() {
+      this.subscriptionDialogVisible = false;
+      this.currentRobotForSubscription = null;
+    },
+    formatDateTime(date) {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      const hours = String(date.getHours()).padStart(2, '0');
+      const minutes = String(date.getMinutes()).padStart(2, '0');
+      const seconds = String(date.getSeconds()).padStart(2, '0');
+      return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
     },
     isSubscribed(robotId) {
       return this.haveSubscribed.some(
@@ -588,8 +629,8 @@ export default {
       if (!text) return '';
       return text.length > length ? text.slice(0, length) + '...' : text;
     },
-    formatPrice(price) {
-      return price ? `${price} 积分` : '免费';
+    formatRequiredPoints(points) {
+      return `${points || 1} 积分`;
     },
   },
 };
@@ -739,7 +780,7 @@ export default {
     }
 
     .robot-description {
-      color: $secondary-color;
+      color: $text-color;
       font-size: 0.9rem;
       line-height: 1.4;
       margin-bottom: 15px;
@@ -774,8 +815,14 @@ export default {
         flex: 1;
 
         &.subscribed {
-          background: #28a745;
-          border-color: #28a745;
+          background: #17a2b8;
+          border-color: #17a2b8;
+          color: white;
+
+          &:hover {
+            background: #138496;
+            border-color: #117a8b;
+          }
         }
       }
     }
@@ -787,34 +834,6 @@ export default {
     gap: 15px;
     max-height: 60vh;
     overflow-y: auto;
-  }
-
-  .subscription-info {
-    .subscription-robot-name {
-      font-size: 1.2rem;
-      font-weight: 600;
-      margin-bottom: 20px;
-      color: $text-color;
-    }
-
-    .subscription-cost {
-      background: $background-color;
-      padding: 15px;
-      border-radius: 6px;
-      margin-top: 20px;
-
-      .subscription-cost-label {
-        font-weight: 500;
-        color: $secondary-color;
-        margin-bottom: 5px;
-      }
-
-      .subscription-cost-value {
-        font-size: 1.2rem;
-        font-weight: 600;
-        color: $accent-color;
-      }
-    }
   }
 }
 
@@ -857,5 +876,14 @@ export default {
       gap: 15px;
     }
   }
+}
+
+/* 订阅对话框机器人名称样式 */
+.subscription-robot-name {
+  font-size: 16px;
+  font-weight: 500;
+  margin-bottom: 20px;
+  text-align: center;
+  color: #333;
 }
 </style>

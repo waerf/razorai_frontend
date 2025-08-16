@@ -84,7 +84,7 @@ export default {
         Password: '',
         Email: '',
         Phone: '',
-        Gender: 0, // 默认选择"其他"
+        Gender: null,
         Age: null,
       },
       registerRules: {
@@ -157,19 +157,11 @@ export default {
           Password: this.registerForm.Password,
           Email: this.registerForm.Email,
           Phone: this.registerForm.Phone,
-          Gender:
-            this.registerForm.Gender !== null ? this.registerForm.Gender : '',
+          Gender: this.registerForm.Gender || '',
           Age: this.registerForm.Age || 0,
         };
 
-        console.log('原始表单数据:', this.registerForm);
         console.log('准备发送的注册数据:', registerData);
-        console.log('性别值详情:', {
-          原始值: this.registerForm.Gender,
-          类型: typeof this.registerForm.Gender,
-          处理后的值: registerData.Gender,
-          处理后的类型: typeof registerData.Gender,
-        });
 
         // 调用注册API
         const result = await this.$store.dispatch(
@@ -179,14 +171,16 @@ export default {
         console.log('注册API返回结果:', result);
 
         if (result.success) {
-          // 显示注册成功弹窗
-          await this.showInfoformRegister(result);
+          // 显示注册成功的详细信息弹窗
+          this.showRegistrationSuccessDialog(result);
 
           // 清空表单
           this.resetForm();
 
-          // 跳转到首页
-          this.$router.push('/');
+          // 延迟跳转到首页
+          setTimeout(() => {
+            this.$router.push('/');
+          }, 3000);
         } else {
           console.error('注册失败，错误信息:', result.message);
           throw new Error(result.message || '注册失败');
@@ -215,53 +209,133 @@ export default {
       }
     },
 
-    showInfoformRegister(result) {
+    showRegistrationSuccessDialog(result) {
       const h = this.$createElement;
 
-      // 返回一个Promise
-      return new Promise((resolve) => {
-        this.$msgbox({
-          title: '注册成功！',
-          message: h('p', null, [
-            h('span', null, `🎉 欢迎加入RAZOR-AI！`),
-            h('p', null, [
+      this.$msgbox({
+        title: '注册成功！',
+        message: h('div', { style: 'text-align: left; line-height: 1.6;' }, [
+          h(
+            'p',
+            {
+              style: 'color: #67C23A; font-weight: bold; margin-bottom: 15px;',
+            },
+            '🎉 欢迎加入RAZOR-AI！'
+          ),
+
+          h(
+            'div',
+            {
+              style:
+                'background: #f5f7fa; padding: 15px; border-radius: 8px; margin: 10px 0;',
+            },
+            [
               h(
-                'span',
-                { style: 'font-weight: bold; color: #409EFF;' },
-                `用户名: ${this.registerForm.UserName}`
+                'p',
+                { style: 'margin: 5px 0; font-weight: bold; color: #303133;' },
+                '您的账户信息：'
               ),
-            ]),
-            h('p', null, [
+              h('p', { style: 'margin: 5px 0;' }, [
+                h('span', { style: 'color: #909399;' }, '用户名: '),
+                h(
+                  'span',
+                  { style: 'font-weight: bold; color: #409EFF;' },
+                  this.registerForm.UserName
+                ),
+              ]),
+              h('p', { style: 'margin: 5px 0;' }, [
+                h('span', { style: 'color: #909399;' }, '账号ID: '),
+                h(
+                  'span',
+                  {
+                    style:
+                      'font-weight: bold; color: #E6A23C; font-size: 18px;',
+                  },
+                  result.user_id || '待分配'
+                ),
+              ]),
+              h('p', { style: 'margin: 5px 0;' }, [
+                h('span', { style: 'color: #909399;' }, '邮箱: '),
+                h(
+                  'span',
+                  { style: 'color: #303133;' },
+                  this.registerForm.Email
+                ),
+              ]),
+              h('p', { style: 'margin: 5px 0;' }, [
+                h('span', { style: 'color: #909399;' }, '注册时间: '),
+                h(
+                  'span',
+                  { style: 'color: #303133;' },
+                  new Date().toLocaleString()
+                ),
+              ]),
+            ]
+          ),
+
+          h(
+            'div',
+            {
+              style:
+                'background: #e8f4fd; padding: 12px; border-radius: 6px; border-left: 4px solid #409EFF; margin: 10px 0;',
+            },
+            [
               h(
-                'span',
-                { style: 'font-weight: bold; color: #67C23A;' },
-                `注册状态: ${result.success ? '成功' : '失败'}`
+                'p',
+                { style: 'margin: 0; color: #409EFF; font-weight: bold;' },
+                '💡 重要提示：'
               ),
-            ]),
-            h('p', null, [
               h(
-                'span',
-                { style: 'color: #909399; font-size: 14px;' },
-                `🎁 您已获得100积分的新用户注册奖励！`
+                'p',
+                {
+                  style: 'margin: 5px 0 0 0; color: #606266; font-size: 14px;',
+                },
+                result.user_id
+                  ? '请牢记您的账号ID，这将是您登录和找回密码的重要凭证！'
+                  : '您的账号ID将在系统处理完成后分配，请稍后查看个人中心。'
               ),
-            ]),
-          ]),
-          confirmButtonText: '确定',
-          beforeClose: (action, instance, done) => {
-            if (action === 'confirm') {
-              instance.confirmButtonLoading = true; // 开启确定按钮的加载状态
-              instance.confirmButtonText = '注册成功，正在跳转首页'; // 修改确定按钮的文字
-              setTimeout(() => {
-                done(); // 关闭弹窗
-                resolve(); // 执行resolve，标记Promise完成
-                instance.confirmButtonLoading = false; // 恢复按钮状态
-              }, 500); // 延迟0.5秒，等待弹窗的用户交互
-            } else {
-              done();
-            }
-          },
+            ]
+          ),
+
+          h(
+            'div',
+            {
+              style:
+                'background: #f0f9ff; padding: 12px; border-radius: 6px; border-left: 4px solid #67C23A; margin: 10px 0;',
+            },
+            [
+              h(
+                'p',
+                { style: 'margin: 0; color: #67C23A; font-weight: bold;' },
+                '🎁 新用户福利：'
+              ),
+              h(
+                'p',
+                {
+                  style: 'margin: 5px 0 0 0; color: #606266; font-size: 14px;',
+                },
+                '您已获得100积分的新用户注册奖励！'
+              ),
+            ]
+          ),
+
+          h(
+            'p',
+            { style: 'margin-top: 15px; text-align: center; color: #909399;' },
+            '页面将在3秒后自动跳转到首页...'
+          ),
+        ]),
+        showCancelButton: false,
+        confirmButtonText: '我知道了',
+        confirmButtonClass: 'el-button--success',
+        customClass: 'registration-success-dialog',
+      })
+        .then(() => {
+          this.$router.push('/');
+        })
+        .catch(() => {
+          this.$router.push('/');
         });
-      });
     },
 
     resetForm() {
@@ -390,5 +464,39 @@ export default {
   font-weight: bold;
   color: $text-color;
   margin-bottom: 10px;
+}
+
+/* 注册成功弹窗自定义样式 */
+:deep(.registration-success-dialog) {
+  .el-message-box {
+    width: 480px;
+    border-radius: 12px;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.15);
+  }
+
+  .el-message-box__title {
+    font-size: 20px;
+    font-weight: bold;
+    color: #67c23a;
+  }
+
+  .el-message-box__content {
+    padding: 20px 25px;
+  }
+
+  .el-button--success {
+    background: #67c23a;
+    border-color: #67c23a;
+    padding: 12px 30px;
+    font-size: 16px;
+    border-radius: 25px;
+    transition: all 0.3s ease;
+  }
+
+  .el-button--success:hover {
+    background: #85ce61;
+    border-color: #85ce61;
+    transform: translateY(-2px);
+  }
 }
 </style>

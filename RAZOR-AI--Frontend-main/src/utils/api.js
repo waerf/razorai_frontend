@@ -5,8 +5,27 @@ import MyStorage from './storage'; // 引入 Storage 工具类
 
 const api = axios.create({
   baseURL: '/api',
-  timeout: 1000,
+  timeout: 5000,
 });
+
+const adminApi = axios.create({
+  baseURL: process.env.VUE_APP_API_BASE_URL || 'http://localhost:8000',
+  timeout: 5000,
+});
+
+// 为adminApi添加请求拦截器
+adminApi.interceptors.request.use(
+  (config) => {
+    const token = MyStorage.get('admin_token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
 
 // 请求拦截器
 api.interceptors.request.use(
@@ -41,8 +60,20 @@ api.interceptors.response.use(
       console.log('Error response in api.js:', error.response);
       const { status, data } = error.response;
       return Promise.reject({ code: status, message: data.message }); // 返回错误状态码和消息
+    } else if (error.request) {
+      // 请求已发出但没有收到响应
+      console.error('No response received:', error.request);
+      return Promise.reject({
+        code: 'NETWORK_ERROR',
+        message: '网络连接失败，请检查后端服务是否正常运行',
+      });
     } else {
-      return Promise.reject({ code: 500, message: '哈哈哈出错咯，debug咯' }); // 返回默认错误消息
+      // 请求配置错误
+      console.error('Request setup error:', error.message);
+      return Promise.reject({
+        code: 'REQUEST_ERROR',
+        message: '请求配置错误: ' + error.message,
+      });
     }
   }
 );
@@ -57,6 +88,103 @@ export const register = (payload) =>
   api.post('/user/register', payload, {
     headers: { skipAuth: true }, // 跳过 Authorization 头
   });
+
+// 获取用户信息
+export const getUserInfo = (userId) => api.get(`/user/${userId}`);
+
+// 更新用户信息
+export const updateUserInfo = (userId, payload) =>
+  api.put(`/user/${userId}`, payload);
+
+// 获取用户积分余额
+export const getUserPoints = () => api.get('/points/balance');
+
+// 获取积分历史记录
+export const getPointsHistory = (page = 1, pageSize = 20) =>
+  api.get(`/points/history?page=${page}&pageSize=${pageSize}`);
+
+// 获取积分统计信息
+export const getPointsStats = () => api.get('/points/stats');
+
+// 检查积分是否足够
+export const checkPointsEnough = (requiredPoints) =>
+  api.post('/points/check', { requiredPoints });
+
+// 管理员增加积分
+export const addUserPoints = (
+  userId,
+  points,
+  actionType,
+  description,
+  relatedId = null
+) =>
+  api.post('/points/add', {
+    userId,
+    points,
+    actionType,
+    description,
+    relatedId,
+  });
+
+// 管理员扣除积分
+export const deductUserPoints = (
+  userId,
+  points,
+  actionType,
+  description,
+  relatedId = null
+) =>
+  api.post('/points/deduct', {
+    userId,
+    points,
+    actionType,
+    description,
+    relatedId,
+  });
+
+export const adminLogin = (data) => {
+  return adminApi.post('/admin/login', data);
+};
+
+export const approveRobot = (robotId) => {
+  return adminApi.post(`/admin/robots/${robotId}/approve`);
+};
+
+export const rejectRobot = (robotId) => {
+  return adminApi.post(`/admin/robots/${robotId}/reject`);
+};
+
+export const getPendingRobots = () => {
+  return adminApi.get('/admin/robots/pending');
+};
+
+export const getFeedbacks = () => {
+  return adminApi.get('/admin/feedbacks');
+};
+
+export const markFeedbackAsRead = (feedbackId) => {
+  return adminApi.post(`/admin/feedbacks/${feedbackId}/read`);
+};
+
+export const deleteFeedback = (feedbackId) => {
+  return adminApi.delete(`/admin/feedbacks/${feedbackId}`);
+};
+
+export const getNotifications = () => {
+  return adminApi.get('/admin/notifications');
+};
+
+export const sendNotification = (notificationId) => {
+  return adminApi.post(`/admin/notifications/${notificationId}/send`);
+};
+
+export const createNotification = (data) => {
+  return adminApi.post('/admin/notifications', data);
+};
+
+export const deleteNotification = (notificationId) => {
+  return adminApi.delete(`/admin/notifications/${notificationId}`);
+};
 
 export const fetchAllAgentsData = () =>
   api.get('/market', { headers: { skipAuth: true } }); // 跳过 Authorization 头

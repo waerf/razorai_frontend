@@ -42,8 +42,9 @@ const actions = {
     try {
       console.log('payload:', payload);
       const response = await apiLogin(payload); // 调用登录接口 response是来自api.js的login函数的返回值
-      const { token, message, username } = response.data; // 从响应中解构出 token 和 user_id 和userName
-      commit('SET_USER_INFO', { token, userId: payload.user_id, username }); // 保存 token 和 userId 和userName 到 store
+      console.log('登录API响应:', response.data);
+      const { token, message, username, user_id } = response.data; // 从响应中解构出 token、user_id 和userName
+      commit('SET_USER_INFO', { token, userId: user_id, username }); // 保存后端返回的真实 userId
       return { success: true, message }; // 返回成功信息给LoginForm组件
     } catch (error) {
       console.log('Error occurred in user.js:', error);
@@ -61,15 +62,44 @@ const actions = {
   // 注册逻辑
   async register({ commit }, payload) {
     try {
-      console.log('payload:', payload);
+      console.log('Vuex register action 收到payload:', payload);
       const response = await apiRegister(payload);
-      console.log('response:', response);
-      const { user_id, message } = response.data;
-      commit('REGISTER', {}); // 进行一个空的commit，否则payload不会被提交
-      return { success: true, message, user_id }; // 返回成功信息给RegisterPage
+      console.log('API注册响应:', response);
+
+      if (response && response.data) {
+        const { user_id, message } = response.data;
+        console.log('解析的响应数据:', { user_id, message });
+        commit('REGISTER', {}); // 进行一个空的commit，否则payload不会被提交
+        return { success: true, message, user_id }; // 返回成功信息给RegisterPage
+      } else {
+        console.error('响应格式异常:', response);
+        return { success: false, message: '服务器响应格式异常' };
+      }
     } catch (error) {
-      console.log('Error occurred in user.js:', error);
-      return { success: false, message: error.message };
+      console.log('Vuex register action 发生错误:', error);
+      console.log('错误类型:', typeof error);
+      console.log('错误详情:', {
+        message: error.message,
+        response: error.response,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+      });
+
+      let errorMessage = '注册失败';
+      if (error.response && error.response.data) {
+        if (typeof error.response.data === 'string') {
+          errorMessage = error.response.data;
+        } else if (error.response.data.message) {
+          errorMessage = error.response.data.message;
+        } else if (error.response.data.error) {
+          errorMessage = error.response.data.error;
+        }
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
+      return { success: false, message: errorMessage };
     }
   },
 };

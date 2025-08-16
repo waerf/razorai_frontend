@@ -35,20 +35,6 @@
               <span class="value">{{ userInfo.age || '未设置' }}</span>
             </div>
             <div class="info-item">
-              <span class="label">生日:</span>
-              <span class="value">{{ formatBirthday(userInfo.birthday) }}</span>
-            </div>
-            <div class="info-item">
-              <span class="label">机构:</span>
-              <span class="value">{{ userInfo.organization || '未设置' }}</span>
-            </div>
-            <div class="info-item">
-              <span class="label">个人简介:</span>
-              <span class="value profile-text">{{
-                userInfo.profile || '未设置'
-              }}</span>
-            </div>
-            <div class="info-item">
               <span class="label">注册时间:</span>
               <span class="value">{{ formatDate(userInfo.created_at) }}</span>
             </div>
@@ -81,15 +67,40 @@
             <span class="points-label">当前积分:</span>
             <span class="points-value">{{ userInfo.points || 0 }}</span>
           </div>
+          <div class="points-item">
+            <span class="points-label">会员等级:</span>
+            <span class="points-level">
+              {{ getPointsLevel(userInfo.points || 0) }}
+            </span>
+          </div>
+          <div
+            class="points-item"
+            v-if="getPointsToNextLevel(userInfo.points || 0) > 0"
+          >
+            <span class="points-label">升级还需:</span>
+            <span class="points-next">
+              {{ getPointsToNextLevel(userInfo.points || 0) }} 积分
+            </span>
+          </div>
+        </div>
+
+        <!-- 积分进度条 -->
+        <div class="progress-section">
+          <el-progress
+            :percentage="getPointsProgress(userInfo.points || 0)"
+            :color="getProgressColor(userInfo.points || 0)"
+            :stroke-width="10"
+            class="points-progress"
+          ></el-progress>
         </div>
 
         <!-- 积分操作按钮 -->
         <div class="points-actions">
-          <el-button size="small" type="primary" @click="earnPointsDialog">
-            积分说明
+          <el-button size="small" type="success" @click="earnPointsDialog">
+            赚取积分
           </el-button>
-          <el-button size="small" type="info" @click="viewPointsHistory">
-            积分明细
+          <el-button size="small" type="info" @click="viewPointsStats">
+            积分统计
           </el-button>
         </div>
       </div>
@@ -163,37 +174,6 @@
             style="width: 100%"
           />
         </el-form-item>
-
-        <el-form-item label="生日" prop="Birthday">
-          <el-date-picker
-            v-model="editForm.Birthday"
-            type="date"
-            placeholder="请选择生日"
-            style="width: 100%"
-            format="yyyy-MM-dd"
-            value-format="yyyy-MM-dd"
-          />
-        </el-form-item>
-
-        <el-form-item label="机构" prop="Organization">
-          <el-input
-            v-model="editForm.Organization"
-            placeholder="请输入所属机构"
-            maxlength="100"
-            show-word-limit
-          />
-        </el-form-item>
-
-        <el-form-item label="个人简介" prop="Profile">
-          <el-input
-            type="textarea"
-            v-model="editForm.Profile"
-            placeholder="请输入个人简介"
-            :rows="3"
-            maxlength="500"
-            show-word-limit
-          />
-        </el-form-item>
       </el-form>
 
       <div slot="footer" class="dialog-footer">
@@ -207,8 +187,17 @@
 </template>
 
 <script>
+import { MessageBox } from 'element-ui';
 import { mapActions, mapState } from 'vuex';
-import { getUserInfo, updateUserInfo, getUserPoints } from '@/utils/api';
+import {
+  getUserInfo,
+  updateUserInfo,
+  getUserPoints,
+  getPointsHistory,
+  getPointsStats,
+  checkPointsEnough,
+  addUserPoints,
+} from '@/utils/api';
 
 export default {
   name: 'UserProfile',
@@ -223,9 +212,6 @@ export default {
         phone: '',
         gender: null,
         age: null,
-        birthday: null,
-        organization: '',
-        profile: '',
         points: 0,
         created_at: null,
         updated_at: null,
@@ -244,9 +230,6 @@ export default {
         Phone: '',
         Gender: null,
         Age: null,
-        Birthday: null,
-        Organization: '',
-        Profile: '',
       },
       editRules: {
         UserName: [
@@ -271,20 +254,6 @@ export default {
           {
             pattern: /^1[3-9]\d{9}$/,
             message: '请输入有效的手机号',
-            trigger: 'blur',
-          },
-        ],
-        Organization: [
-          {
-            max: 100,
-            message: '机构名称不能超过100个字符',
-            trigger: 'blur',
-          },
-        ],
-        Profile: [
-          {
-            max: 500,
-            message: '个人简介不能超过500个字符',
             trigger: 'blur',
           },
         ],
@@ -361,37 +330,120 @@ export default {
       return new Date(dateString).toLocaleString('zh-CN');
     },
 
-    formatBirthday(dateString) {
-      if (!dateString) return '未设置';
-      return new Date(dateString).toLocaleDateString('zh-CN');
+    // 积分相关方法
+    getPointsLevel(points) {
+      if (points < 100) return '青铜会员';
+      if (points < 500) return '白银会员';
+      if (points < 1000) return '黄金会员';
+      if (points < 2000) return '铂金会员';
+      if (points < 5000) return '钻石会员';
+      return '至尊会员';
     },
 
-    // 积分相关方法 - 仅用于购买机器人
-    // 已删除会员等级相关方法
+    getPointsToNextLevel(points) {
+      if (points < 100) return 100 - points;
+      if (points < 500) return 500 - points;
+      if (points < 1000) return 1000 - points;
+      if (points < 2000) return 2000 - points;
+      if (points < 5000) return 5000 - points;
+      return 0; // 已达到最高级
+    },
+
+    getPointsProgress(points) {
+      if (points < 100) return (points / 100) * 100;
+      if (points < 500) return ((points - 100) / 400) * 100;
+      if (points < 1000) return ((points - 500) / 500) * 100;
+      if (points < 2000) return ((points - 1000) / 1000) * 100;
+      if (points < 5000) return ((points - 2000) / 3000) * 100;
+      return 100; // 最高级
+    },
+
+    getProgressColor(points) {
+      if (points < 100) return '#cd7f32'; // 青铜色
+      if (points < 500) return '#c0c0c0'; // 白银色
+      if (points < 1000) return '#ffd700'; // 黄金色
+      if (points < 2000) return '#e5e4e2'; // 铂金色
+      if (points < 5000) return '#b9f2ff'; // 钻石色
+      return '#ff6b6b'; // 至尊红色
+    },
 
     async viewPointsHistory() {
-      // 跳转到积分明细页面，传递当前积分数据
-      this.$router.push({
-        name: 'ScoreMessage',
-        params: {
-          points: this.userInfo.points || 0,
-        },
+      try {
+        this.loading = true;
+        const response = await getPointsHistory(1, 50); // 获取前50条记录
+        const history = response.data;
+
+        // 显示积分历史对话框
+        this.showPointsHistoryDialog(history);
+      } catch (error) {
+        console.error('获取积分历史失败:', error);
+        // 如果API不存在或失败，显示提示信息
+        this.$message({
+          type: 'info',
+          message: '积分记录功能暂未开放，敬请期待！',
+        });
+      } finally {
+        this.loading = false;
+      }
+    },
+
+    showPointsHistoryDialog(history) {
+      const historyHtml = history
+        .map(
+          (item) =>
+            `<p><strong>${item.type}</strong>: ${item.points} 积分 (${new Date(
+              item.created_at
+            ).toLocaleString()})</p>`
+        )
+        .join('');
+
+      this.$msgbox({
+        title: '积分历史',
+        dangerouslyUseHTMLString: true,
+        message: historyHtml || '<p>暂无积分记录</p>',
+        showCancelButton: false,
+        confirmButtonText: '关闭',
       });
+    },
+
+    async viewPointsStats() {
+      try {
+        this.loading = true;
+        const response = await getPointsStats();
+        const stats = response.data;
+
+        const statsHtml = `
+          <div>
+            <p><strong>总获得积分:</strong> ${stats.totalEarned || 0}</p>
+            <p><strong>总消费积分:</strong> ${stats.totalSpent || 0}</p>
+            <p><strong>当前余额:</strong> ${stats.currentBalance || 0}</p>
+          </div>
+        `;
+
+        this.$msgbox({
+          title: '积分统计',
+          dangerouslyUseHTMLString: true,
+          message: statsHtml,
+          showCancelButton: false,
+          confirmButtonText: '关闭',
+        });
+      } catch (error) {
+        console.error('获取积分统计失败:', error);
+        this.$message({
+          type: 'info',
+          message: '积分统计功能暂未开放，敬请期待！',
+        });
+      } finally {
+        this.loading = false;
+      }
     },
 
     earnPointsDialog() {
       this.$msgbox({
-        title: '积分用途',
+        title: '赚取积分',
         message: `
           <div>
-            <p>� <strong>积分可用于：</strong></p>
-            <ul>
-              <li>🤖 购买机器人功能</li>
-              <li>🛒 机器人市场消费</li>
-              <li>⭐ 解锁高级机器人</li>
-            </ul>
-            <br>
-            <p>�💡 <strong>如何获取积分：</strong></p>
+            <p>💡 <strong>如何赚取积分：</strong></p>
             <ul>
               <li>🤖 创建机器人：+50积分</li>
               <li>💬 发表评论：+10积分</li>
@@ -415,9 +467,6 @@ export default {
         Phone: this.userInfo.phone || '',
         Gender: this.userInfo.gender,
         Age: this.userInfo.age,
-        Birthday: this.userInfo.birthday || null,
-        Organization: this.userInfo.organization || '',
-        Profile: this.userInfo.profile || '',
       };
       this.editDialogVisible = true;
     },
@@ -434,62 +483,18 @@ export default {
         this.saveLoading = true;
 
         const updateData = { ...this.editForm };
-        console.log('准备更新的数据:', updateData);
-        console.log('用户ID:', this.userId);
-
         const response = await updateUserInfo(this.userId, updateData);
-        console.log('API响应:', response);
 
-        // 检查不同的响应格式
-        if (response && response.data) {
-          // 如果有data字段，检查data中的success
-          if (response.data.success !== false) {
-            this.$message.success('个人信息更新成功！');
-            this.editDialogVisible = false;
-            await this.loadUserInfo(); // 重新加载用户信息
-            return;
-          } else {
-            throw new Error(
-              response.data.message || response.data.error || '更新失败'
-            );
-          }
-        } else if (
-          response &&
-          response.success !== false &&
-          response.status !== 'error'
-        ) {
-          // 直接检查响应对象
+        if (response.success) {
           this.$message.success('个人信息更新成功！');
           this.editDialogVisible = false;
-          await this.loadUserInfo();
-          return;
+          await this.loadUserInfo(); // 重新加载用户信息
         } else {
-          throw new Error(
-            response.message || response.error || '服务器返回更新失败'
-          );
+          throw new Error(response.message || '更新失败');
         }
       } catch (error) {
-        console.error('保存用户信息详细错误:', error);
-        console.error('错误响应:', error.response);
-
-        let errorMessage = '请检查网络连接';
-
-        if (error.response) {
-          // 服务器返回了错误状态码
-          if (error.response.data) {
-            errorMessage =
-              error.response.data.message ||
-              error.response.data.error ||
-              `服务器错误 (${error.response.status})`;
-          } else {
-            errorMessage = `网络错误 (${error.response.status})`;
-          }
-        } else if (error.message) {
-          // 其他错误（包括我们手动抛出的错误）
-          errorMessage = error.message;
-        }
-
-        this.$message.error('保存失败：' + errorMessage);
+        console.error('保存用户信息失败:', error);
+        this.$message.error('保存失败：' + (error.message || '请检查网络连接'));
       } finally {
         this.saveLoading = false;
       }
@@ -503,7 +508,7 @@ export default {
   max-width: 1200px;
   margin: 0 auto;
   padding: 20px;
-  background: #f5f7fa;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   min-height: 100vh;
 }
 
@@ -511,10 +516,11 @@ export default {
 .points-card,
 .interest-card {
   margin-bottom: 20px;
-  border-radius: 8px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
-  border: 1px solid #e4e7ed;
-  background: #ffffff;
+  border-radius: 15px;
+  box-shadow: 0 8px 32px rgba(31, 38, 135, 0.37);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .profile-header {
@@ -536,12 +542,12 @@ export default {
   height: 120px;
   border-radius: 50%;
   object-fit: cover;
-  border: 4px solid #409eff;
-  box-shadow: 0 2px 8px rgba(64, 158, 255, 0.3);
+  border: 4px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
 }
 
 .change-avatar-btn {
-  color: #409eff;
+  color: #fff;
   font-size: 12px;
 }
 
@@ -551,10 +557,11 @@ export default {
 }
 
 .username {
-  color: #303133;
+  color: #fff;
   margin-bottom: 20px;
   font-size: 2em;
   font-weight: bold;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 .user-details {
@@ -567,32 +574,21 @@ export default {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 12px;
-  background: #f8f9fa;
-  border-radius: 6px;
-  border: 1px solid #e4e7ed;
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  backdrop-filter: blur(5px);
 }
 
 .label {
   font-weight: bold;
-  color: #606266;
+  color: #e8e8e8;
   min-width: 80px;
 }
 
 .value {
-  color: #303133;
+  color: #fff;
   flex: 1;
-}
-
-.profile-text {
-  word-wrap: break-word;
-  white-space: pre-wrap;
-  max-height: 60px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
 }
 
 .action-buttons {
@@ -604,18 +600,31 @@ export default {
 
 // 积分卡片样式
 .points-card {
-  background: #ffffff;
-  border-left: 4px solid #409eff;
+  background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
 }
 
 .card-title {
   font-size: 1.2em;
   font-weight: bold;
-  color: #303133;
+  color: #333;
 }
 
 .points-info {
   padding: 10px 0;
+}
+
+.progress-section {
+  margin: 20px 0;
+  animation: borderGlow 2s ease-in-out infinite alternate;
+}
+
+@keyframes borderGlow {
+  0% {
+    opacity: 0.5;
+  }
+  100% {
+    opacity: 1;
+  }
 }
 
 .points-details {
@@ -627,19 +636,32 @@ export default {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 8px;
-  padding: 8px 0;
-  border-bottom: 1px solid #f0f0f0;
+  padding: 5px 0;
 }
 
 .points-label {
-  color: #606266;
+  color: #666;
   font-size: 1em;
 }
 
 .points-value {
-  color: #409eff;
+  color: #f39c12;
   font-weight: bold;
   font-size: 1.2em;
+}
+
+.points-level {
+  color: #e74c3c;
+  font-weight: bold;
+  background: linear-gradient(45deg, #e74c3c, #f39c12);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.points-next {
+  color: #3498db;
+  font-weight: bold;
 }
 
 .points-actions {
@@ -655,8 +677,7 @@ export default {
 
 // 兴趣模块样式
 .interest-card {
-  background: #ffffff;
-  border-left: 4px solid #67c23a;
+  background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
 }
 
 .interest-content {
@@ -667,11 +688,10 @@ export default {
 
 .interest-tag {
   margin: 0;
-  border-radius: 4px;
-  padding: 6px 12px;
-  background: #ecf5ff;
-  border: 1px solid #d9ecff;
-  color: #409eff;
+  border-radius: 20px;
+  padding: 8px 16px;
+  background: rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(0, 0, 0, 0.1);
 }
 
 // 响应式设计
@@ -697,7 +717,7 @@ export default {
 
 // 对话框样式优化
 .el-dialog {
-  border-radius: 8px;
+  border-radius: 15px;
 }
 
 .dialog-footer {
