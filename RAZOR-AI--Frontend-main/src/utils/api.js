@@ -10,12 +10,12 @@ const BASE_ADMIN_API_URL = 'http://localhost:5253';
 
 const api = axios.create({
   baseURL: BASE_API_URL,
-  timeout: 500000,
+  timeout: 10000,
 });
 
 const adminApi = axios.create({
   baseURL: BASE_ADMIN_API_URL,
-  timeout: 500000,
+  timeout: 10000,
 });
 
 // 为adminApi添加请求拦截器
@@ -92,7 +92,7 @@ export const register = (payload) =>
   });
 
 export const adminLogin = (data) => {
-  return adminApi.post('/admin/login', data);
+  return adminApi.post('/api/admin/login', data);
 };
 
 export const approveRobot = (robotId) => {
@@ -112,6 +112,11 @@ export const getPendingRobots = (params = {}) => {
 
 export const getFeedbacks = () => {
   return adminApi.get('/admin/feedbacks');
+};
+
+// 获取待审核管理员列表
+export const getPendingAdmins = () => {
+  return adminApi.get('/api/admin/pending');
 };
 
 export const markFeedbackAsRead = (feedbackId) => {
@@ -203,3 +208,8 @@ export const deleteChat = (chatId) =>
   api.delete(`/agent/user/chat/delete/${chatId.chat_id}`, {
     headers: { skipAuth: false },
   });
+
+// 获取管理员信息
+export const getAdminInfo = () => {
+  return adminApi.get('/api/admin/info');
+};

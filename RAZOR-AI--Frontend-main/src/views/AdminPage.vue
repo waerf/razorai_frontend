@@ -6,9 +6,9 @@
         <i class="el-icon-s-fold"></i>
       </button>
       <div class="user-info">
-        <div class="avatar">张</div>
+        <div class="avatar">{{ adminName.charAt(0) }}</div>
         <div>
-          <p class="username">张三</p>
+          <p class="username">{{ adminName }}</p>
           <p class="role">系统管理员</p>
         </div>
       </div>
@@ -227,6 +227,7 @@ import {
   changeAdminPassword,
   getPendingRobots,
   adminLogout,
+  getAdminInfo, // 新增获取管理员信息的API
 } from '@/utils/api';
 
 export default {
@@ -264,6 +265,7 @@ export default {
       pendingRobots: [],
       pendingRobotsLoading: false,
       pendingRobotsTotal: 0, // 新增总数量
+      adminName: '', // 新增管理员名称
       pendingPosts: [
         { id: 1, name: '违规内容举报', time: '2025-07-15 14:30' },
         { id: 2, name: '敏感词检测', time: '2025-07-15 10:45' },
@@ -286,6 +288,18 @@ export default {
     };
   },
   methods: {
+    async fetchAdminInfo() {
+      try {
+        const res = await getAdminInfo();
+        if (res.data && res.data.success) {
+          this.adminName = res.data.adminInfo.adminName;
+        } else {
+          this.$message.error(res.data.message || '获取管理员信息失败');
+        }
+      } catch (err) {
+        this.$message.error(err.message || '获取管理员信息失败');
+      }
+    },
     logout() {
       // 管理员登出逻辑
       this.$confirm('确定要退出登录吗？', '提示', {
@@ -379,6 +393,7 @@ export default {
   },
   mounted() {
     this.fetchPendingRobots();
+    this.fetchAdminInfo(); // 新增调用获取管理员信息的方法
   },
 };
 </script>

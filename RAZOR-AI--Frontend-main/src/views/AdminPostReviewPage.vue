@@ -6,9 +6,9 @@
         <i class="el-icon-s-fold"></i>
       </button>
       <div class="user-info">
-        <div class="avatar">张</div>
+        <div class="avatar">{{ adminName ? adminName.charAt(0) : '管' }}</div>
         <div>
-          <p class="username">张三</p>
+          <p class="username">{{ adminName || '管理员' }}</p>
           <p class="role">系统管理员</p>
         </div>
       </div>
@@ -216,13 +216,14 @@
 </template>
 
 <script>
-import { changeAdminPassword, adminLogout } from '@/utils/api';
+import { changeAdminPassword, adminLogout, getAdminInfo } from '@/utils/api';
 export default {
   name: 'AdminPostReviewPage',
   data() {
     return {
       isSidebarCollapsed: false,
       showChangePwd: false,
+      adminName: '',
       pwdForm: {
         oldPwd: '',
         newPwd: '',
@@ -415,6 +416,18 @@ export default {
     handleCurrentChange(page) {
       this.currentPage = page;
     },
+    async fetchAdminInfo() {
+      try {
+        const res = await getAdminInfo();
+        if (res.data && res.data.success) {
+          this.adminName = res.data.adminInfo.adminName;
+        } else {
+          this.$message.error(res.data.message || '获取管理员信息失败');
+        }
+      } catch (err) {
+        this.$message.error(err.message || '获取管理员信息失败');
+      }
+    },
     toggleSidebar() {
       this.isSidebarCollapsed = !this.isSidebarCollapsed;
       const sidebar = document.querySelector('.sidebar');
@@ -481,6 +494,9 @@ export default {
       this.pwdForm.confirmPwd = '';
       if (this.$refs.pwdFormRef) this.$refs.pwdFormRef.clearValidate();
     },
+  },
+  mounted() {
+    this.fetchAdminInfo();
   },
 };
 </script>

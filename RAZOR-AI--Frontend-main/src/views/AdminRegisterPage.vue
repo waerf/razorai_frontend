@@ -22,6 +22,13 @@
             prefix-icon="el-icon-message"
           ></el-input>
         </el-form-item>
+        <el-form-item label="电话号码（可选）" prop="phone">
+          <el-input
+            v-model="registerForm.phone"
+            placeholder="可不填"
+            prefix-icon="el-icon-phone"
+          ></el-input>
+        </el-form-item>
         <el-form-item label="密码" prop="password">
           <el-input
             v-model="registerForm.password"
@@ -65,7 +72,7 @@ export default {
         email: '',
         password: '',
         confirmPassword: '',
-        phone: '', // 可选，后端支持
+        phone: '',
       },
       registerRules: {
         adminName: [
@@ -109,24 +116,33 @@ export default {
         if (valid) {
           this.isLoading = true;
           try {
+            const payload = {
+              AdminName: this.registerForm.adminName,
+              Email: this.registerForm.email,
+              Password: this.registerForm.password,
+            };
+            if (this.registerForm.phone) {
+              payload.Phone = this.registerForm.phone;
+            }
             const response = await this.$axios.post(
-              'http://localhost:5253/api/admin/initial-register',
-              {
-                adminName: this.registerForm.adminName,
-                email: this.registerForm.email,
-                password: this.registerForm.password,
-                phone: this.registerForm.phone,
-              }
+              'http://localhost:5253/api/admin/register',
+              payload
             );
-
             if (response.data.success) {
-              this.$message.success('注册成功！');
-              this.$router.push('/admin/login');
+              this.$message.success(response.data.message || '注册成功');
+              this.registerForm = {
+                adminName: '',
+                email: '',
+                password: '',
+                confirmPassword: '',
+                phone: '',
+              };
             } else {
               this.$message.error(response.data.message || '注册失败');
             }
           } catch (error) {
             console.error(error);
+            console.error(error.response?.data);
             this.$message.error(error.message || '注册失败，请检查控制台');
           } finally {
             this.isLoading = false;

@@ -6,9 +6,9 @@
         <i class="el-icon-s-fold"></i>
       </button>
       <div class="user-info">
-        <div class="avatar">张</div>
+        <div class="avatar">{{ adminName ? adminName.charAt(0) : '管' }}</div>
         <div>
-          <p class="username">张三</p>
+          <p class="username">{{ adminName || '管理员' }}</p>
           <p class="role">系统管理员</p>
         </div>
       </div>
@@ -161,29 +161,27 @@
 
           <div class="mb-6">
             <label class="block text-sm font-medium text-gray-500 mb-2"
-              >测试机器人</label
+              >拒绝理由</label
             >
             <el-input
               type="textarea"
-              :rows="4"
-              placeholder="输入测试问题..."
-              v-model="testInput"
+              :rows="3"
+              placeholder="请输入拒绝理由"
+              v-model="rejectReason"
               class="test-input"
+              maxlength="200"
+              show-word-limit
             ></el-input>
-            <el-button type="primary" @click="testRobot" class="mt-2">
-              测试
-            </el-button>
-            <div class="bg-gray-50 p-4 rounded-lg mt-4" v-if="testResult">
-              <p class="font-medium text-gray-800">测试问题:</p>
-              <p class="mb-3">"{{ testInput }}"</p>
-              <p class="font-medium text-gray-800">测试结果:</p>
-              <p>{{ testResult }}</p>
-            </div>
           </div>
 
           <div class="flex space-x-4">
             <el-button type="success" @click="approveRobot">通过审核</el-button>
-            <el-button type="danger" @click="rejectRobot">拒绝审核</el-button>
+            <el-button
+              type="danger"
+              :disabled="!rejectReason"
+              @click="rejectRobot"
+              >拒绝审核</el-button
+            >
             <el-button type="primary" @click="$router.push('/admin/review')"
               >返回列表</el-button
             >
@@ -196,7 +194,7 @@
 
 <script>
 import MyStorage from '@/utils/storage';
-import { changeAdminPassword, adminLogout } from '@/utils/api';
+import { changeAdminPassword, adminLogout, getAdminInfo } from '@/utils/api';
 
 export default {
   name: 'AdminRobotReviewDetail',
@@ -204,6 +202,7 @@ export default {
     return {
       isSidebarCollapsed: false,
       showChangePwd: false,
+      adminName: '',
       pwdForm: {
         oldPwd: '',
         newPwd: '',
@@ -230,12 +229,23 @@ export default {
         ],
       },
       robot: null,
-      testInput: '',
-      testResult: '',
+      rejectReason: '',
       loading: false,
     };
   },
   methods: {
+    async fetchAdminInfo() {
+      try {
+        const res = await getAdminInfo();
+        if (res.data && res.data.success) {
+          this.adminName = res.data.adminInfo.adminName;
+        } else {
+          this.$message.error(res.data.message || '获取管理员信息失败');
+        }
+      } catch (err) {
+        this.$message.error(err.message || '获取管理员信息失败');
+      }
+    },
     toggleSidebar() {
       this.isSidebarCollapsed = !this.isSidebarCollapsed;
       const sidebar = document.querySelector('.sidebar');
@@ -377,6 +387,10 @@ export default {
     },
     rejectRobot() {
       if (!this.robot) return;
+      if (!this.rejectReason) {
+        this.$message.warning('请输入拒绝理由');
+        return;
+      }
       const token = MyStorage.get('admin_token');
       fetch(
         `http://localhost:5253/admin/agent-review/${this.robot.id}/reject`,
@@ -387,7 +401,7 @@ export default {
             Accept: 'application/json',
             Authorization: `Bearer ${token}`,
           },
-          body: JSON.stringify({ remarks: '审核拒绝，机器人内容不符合规范' }),
+          body: JSON.stringify({ remarks: this.rejectReason }),
         }
       )
         .then((res) => res.json())
@@ -395,6 +409,7 @@ export default {
           if (data.success) {
             this.robot.status = 'rejected';
             this.$message.error(data.message || '审核已拒绝');
+            this.rejectReason = '';
           } else {
             this.$message.error(data.message || '审核失败');
           }
@@ -403,16 +418,10 @@ export default {
           this.$message.error(err.message || '审核失败');
         });
     },
-    testRobot() {
-      if (!this.testInput) {
-        this.$message.warning('请输入测试问题');
-        return;
-      }
-      this.testResult = '机器人响应示例 - 这是对您问题的模拟回答。';
-    },
   },
   mounted() {
     this.fetchRobotDetail();
+    this.fetchAdminInfo();
   },
 };
 </script>

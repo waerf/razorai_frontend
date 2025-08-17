@@ -6,9 +6,9 @@
         <i class="el-icon-s-fold"></i>
       </button>
       <div class="user-info">
-        <div class="avatar">张</div>
+        <div class="avatar">{{ adminName ? adminName.charAt(0) : '管' }}</div>
         <div>
-          <p class="username">张三</p>
+          <p class="username">{{ adminName || '管理员' }}</p>
           <p class="role">系统管理员</p>
         </div>
       </div>
@@ -117,8 +117,7 @@
                 </div>
                 <el-tag type="warning">待审核</el-tag>
                 <p class="text-gray-600 text-sm mt-2">
-                  邮箱：{{ admin.email }}<br />
-                  申请理由：{{ admin.reason }}
+                  邮箱：{{ admin.email }}
                 </p>
                 <div class="mt-3 flex gap-2">
                   <el-button
@@ -144,13 +143,19 @@
 </template>
 
 <script>
-import { changeAdminPassword, adminLogout } from '@/utils/api';
+import {
+  changeAdminPassword,
+  adminLogout,
+  getPendingAdmins,
+  getAdminInfo,
+} from '@/utils/api';
 export default {
   name: 'AdminAdminReviewPage',
   data() {
     return {
       isSidebarCollapsed: false,
       showChangePwd: false,
+      adminName: '',
       pwdForm: {
         oldPwd: '',
         newPwd: '',
@@ -176,25 +181,44 @@ export default {
           },
         ],
       },
-      pendingAdmins: [
-        {
-          id: 1,
-          username: 'admin_test1',
-          registeredAt: '2025-08-08 10:30',
-          email: 'admin1@example.com',
-          reason: '需要管理机器人审核流程',
-        },
-        {
-          id: 2,
-          username: 'admin_test2',
-          registeredAt: '2025-08-07 16:45',
-          email: 'admin2@example.com',
-          reason: '负责内容安全管理',
-        },
-      ],
+      pendingAdmins: [],
     };
   },
+  created() {
+    this.fetchPendingAdmins();
+    this.fetchAdminInfo();
+  },
   methods: {
+    async fetchAdminInfo() {
+      try {
+        const res = await getAdminInfo();
+        if (res.data && res.data.success) {
+          this.adminName = res.data.adminInfo.adminName;
+        } else {
+          this.$message.error(res.data.message || '获取管理员信息失败');
+        }
+      } catch (err) {
+        this.$message.error(err.message || '获取管理员信息失败');
+      }
+    },
+    async fetchPendingAdmins() {
+      try {
+        const res = await getPendingAdmins();
+        if (res.data && res.data.success) {
+          // 兼容后端返回的字段
+          this.pendingAdmins = (res.data.data || []).map((a) => ({
+            id: a.adminId || a.id,
+            username: a.adminName || a.username,
+            registeredAt: a.createdAt || a.registeredAt,
+            email: a.email,
+          }));
+        } else {
+          this.$message.error(res.data.message || '获取待审核管理员失败');
+        }
+      } catch (err) {
+        this.$message.error(err.message || '获取待审核管理员失败');
+      }
+    },
     toggleSidebar() {
       this.isSidebarCollapsed = !this.isSidebarCollapsed;
       const sidebar = document.querySelector('.sidebar');
@@ -226,13 +250,17 @@ export default {
           // 用户取消
         });
     },
-    approveAdmin(id) {
-      this.$message.success('已通过管理员申请（模拟操作）');
-      this.pendingAdmins = this.pendingAdmins.filter((a) => a.id !== id);
+    approveAdmin() {
+      // TODO: 调用后端接口通过管理员申请
+      this.$message.info('请实现通过管理员申请的后端调用');
+      // 审核成功后可刷新列表
+      // await this.fetchPendingAdmins();
     },
-    rejectAdmin(id) {
-      this.$message.error('已拒绝管理员申请（模拟操作）');
-      this.pendingAdmins = this.pendingAdmins.filter((a) => a.id !== id);
+    rejectAdmin() {
+      // TODO: 调用后端接口拒绝管理员申请
+      this.$message.info('请实现拒绝管理员申请的后端调用');
+      // 审核成功后可刷新列表
+      // await this.fetchPendingAdmins();
     },
     async submitPwdForm() {
       this.$refs.pwdFormRef.validate(async (valid) => {

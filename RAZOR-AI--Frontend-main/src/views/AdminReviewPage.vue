@@ -6,9 +6,9 @@
         <i class="el-icon-s-fold"></i>
       </button>
       <div class="user-info">
-        <div class="avatar">张</div>
+        <div class="avatar">{{ adminName ? adminName.charAt(0) : '管' }}</div>
         <div>
-          <p class="username">张三</p>
+          <p class="username">{{ adminName || '管理员' }}</p>
           <p class="role">系统管理员</p>
         </div>
       </div>
@@ -95,7 +95,11 @@
       </header>
 
       <!-- 主要内容 -->
-      <div class="content">
+      <div class="content" style="position: relative; min-height: 300px">
+        <!-- loading 遮罩 -->
+        <div v-if="loading" class="loading-mask">
+          <div class="spinner"></div>
+        </div>
         <!-- 机器人列表 -->
         <el-card class="post-list-card" shadow="hover">
           <div class="card-header">
@@ -146,6 +150,7 @@ import {
   getPendingRobots,
   changeAdminPassword,
   adminLogout,
+  getAdminInfo,
 } from '@/utils/api';
 export default {
   name: 'AdminReviewPage',
@@ -153,6 +158,7 @@ export default {
     return {
       isSidebarCollapsed: false,
       showChangePwd: false,
+      adminName: '',
       pwdForm: {
         oldPwd: '',
         newPwd: '',
@@ -186,6 +192,18 @@ export default {
     };
   },
   methods: {
+    async fetchAdminInfo() {
+      try {
+        const res = await getAdminInfo();
+        if (res.data && res.data.success) {
+          this.adminName = res.data.adminInfo.adminName;
+        } else {
+          this.$message.error(res.data.message || '获取管理员信息失败');
+        }
+      } catch (err) {
+        this.$message.error(err.message || '获取管理员信息失败');
+      }
+    },
     toggleSidebar() {
       this.isSidebarCollapsed = !this.isSidebarCollapsed;
       const sidebar = document.querySelector('.sidebar');
@@ -295,6 +313,7 @@ export default {
   },
   mounted() {
     this.fetchPendingRobots(1);
+    this.fetchAdminInfo();
     // 监听页面返回，更新状态
     this.$watch(
       () => this.$route,
@@ -484,6 +503,35 @@ export default {
         box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
       }
     }
+  }
+}
+/* loading 遮罩样式 */
+.loading-mask {
+  position: absolute;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+.spinner {
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #409eff;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  animation: spin 1s linear infinite;
+}
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
   }
 }
 </style>
