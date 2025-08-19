@@ -1,5 +1,22 @@
 <template>
   <div class="community-container">
+    <!-- 调试信息 -->
+    <div style="padding: 20px; background: #f0f0f0; margin: 10px">
+      <h3>调试信息:</h3>
+      <p>路由参数ID: {{ $route.params.id }}</p>
+      <p>Props ID: {{ id }}</p>
+      <p>帖子标题: {{ post.title || '未加载' }}</p>
+      <p>组件状态: {{ post.title ? '已加载' : '未加载' }}</p>
+    </div>
+
+    <!-- 加载状态 -->
+    <div
+      v-if="!post.title"
+      style="padding: 20px; text-align: center; color: #666"
+    >
+      正在加载帖子详情... (ID: {{ $route.params.id || id || '未知' }})
+    </div>
+
     <!-- 主内容区 -->
     <main class="main-content container">
       <div class="content-layout">
@@ -333,6 +350,7 @@
 
 <script>
 export default {
+  props: ['id'],
   data() {
     return {
       // 帖子数据
@@ -436,6 +454,32 @@ export default {
       showDeleteModal: false,
       deleteTarget: null, // 存储要删除的目标信息 {type: 'comment'|'reply', commentIndex: number, replyIndex?: number}
     };
+  },
+  watch: {
+    // 监听路由参数变化，重新加载帖子数据
+    $route(to, from) {
+      if (to.params.id && to.params.id !== from.params.id) {
+        this.loadPostData(to.params.id);
+      }
+    },
+  },
+  created() {
+    console.log('PostDetail组件被创建');
+    // 获取路由参数中的帖子ID
+    const postId = this.$route.params.id || this.id;
+    console.log('获取到的帖子ID:', postId);
+    // 加载对应ID的帖子数据
+    if (postId) {
+      this.loadPostData(postId);
+    } else {
+      console.warn('没有获取到有效的帖子ID');
+    }
+  },
+  mounted() {
+    // 这里可以添加根据this.id加载帖子详情的逻辑
+    if (this.id) {
+      console.log('加载帖子ID:', this.id);
+    }
   },
   methods: {
     // 点赞功能
@@ -594,6 +638,77 @@ export default {
     cancelDelete() {
       this.showDeleteModal = false;
       this.deleteTarget = null;
+    },
+
+    // 根据帖子ID加载帖子数据
+    loadPostData(postId) {
+      // 根据postId获取帖子详情数据
+      console.log('加载帖子数据，ID:', postId);
+
+      // 模拟帖子数据库
+      const postsData = {
+        1: {
+          authorAvatar: 'https://picsum.photos/id/1005/48/48',
+          authorName: '张小明',
+          isAuthor: true,
+          postTime: '2小时前',
+          category: '订阅专栏',
+          title: '如何高效管理订阅内容？分享几个实用技巧',
+          tags: ['订阅管理', '效率工具', '信息整理'],
+          likes: 128,
+          comments: 32,
+          bookmarks: 45,
+          views: '5.2k',
+        },
+        2: {
+          authorAvatar: 'https://picsum.photos/id/1012/48/48',
+          authorName: '李华',
+          isAuthor: true,
+          postTime: '昨天',
+          category: '专栏推荐',
+          title: '2025年值得订阅的10个优质专栏推荐',
+          tags: ['专栏推荐', '2025精选', '内容推荐'],
+          likes: 356,
+          comments: 89,
+          bookmarks: 210,
+          views: '12.8k',
+        },
+        3: {
+          authorAvatar: 'https://picsum.photos/id/1025/48/48',
+          authorName: '科技前沿',
+          isAuthor: false,
+          postTime: '3天前',
+          category: '技术讨论',
+          title: 'AI辅助编程工具对比：GitHub Copilot vs. RAZOR-AI',
+          tags: ['AI编程', '工具对比', '编程技巧'],
+          likes: 247,
+          comments: 63,
+          bookmarks: 178,
+          views: '8.5k',
+        },
+      };
+
+      // 如果找到对应的帖子数据，则更新当前帖子
+      if (postsData[postId]) {
+        this.post = { ...this.post, ...postsData[postId] };
+        console.log('帖子数据加载成功:', this.post);
+      } else {
+        console.warn('未找到对应ID的帖子:', postId);
+        // 设置一个默认的错误帖子
+        this.post = {
+          ...this.post,
+          title: `帖子未找到 (ID: ${postId})`,
+          authorName: '未知作者',
+          authorAvatar: 'https://picsum.photos/id/1000/48/48',
+          postTime: '未知时间',
+          category: '未知分类',
+          tags: ['错误'],
+          likes: 0,
+          comments: 0,
+          bookmarks: 0,
+          views: '0',
+        };
+      }
     },
   },
 };

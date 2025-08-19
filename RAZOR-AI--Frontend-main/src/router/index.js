@@ -48,7 +48,7 @@ const routes = [
         name: 'SubscribedBots',
         component: SubscribedBots,
         meta: {
-          title: 'Razor-AI-我的机器人', // 我的机器人页标题
+          title: 'Razor-AI-已订阅的机器人', // 已订阅的机器人页标题
         },
       },
       {
@@ -196,7 +196,15 @@ const routes = [
         },
       },
       {
-        path: '/community/post',
+        path: '/community/createPost',
+        name: 'CreatePost',
+        component: () => import('@/views/CreatePost.vue'),
+        meta: {
+          title: '发布帖子',
+        },
+      },
+      {
+        path: '/community/post/:id', // 添加id参数用于识别不同帖子
         name: 'PostDetail',
         component: PostDetail,
         meta: {
