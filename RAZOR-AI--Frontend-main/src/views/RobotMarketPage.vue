@@ -112,17 +112,14 @@
     <!-- 机器人分类展示 -->
     <div v-else class="robots-container">
       <!-- 推荐机器人 -->
-      <div class="category-section">
+      <div v-if="isLoggedIn" class="category-section">
         <div class="category-header">
           <h3 class="category-title">
             <i class="el-icon-document"></i>
             推荐机器人
           </h3>
-          <el-button
-            class="view-more-btn"
-            @click="showCategoryDetail('recommended')"
-          >
-            查看更多
+          <el-button class="view-more-btn" @click="refreshRecommendedRobots">
+            换一批
           </el-button>
         </div>
         <div class="robots-grid">
@@ -460,6 +457,7 @@ import {
   subscribeAgent as apiSubscribeAgent,
   getRobotsByType as apiGetRobotsByType,
   searchAgent as apiSearchAgent,
+  getRecommendedRobots as apiGetRecommendedRobots,
 } from '../utils/api';
 import RobotDetailDialog from './RobotDetailPage.vue';
 import SubscriptionSelector from '@/components/SubscriptionSelector.vue';
@@ -574,20 +572,30 @@ export default {
     async loadInitialData() {
       this.loading = true;
       try {
-        // 并行加载所有类型的前4个机器人
-        const [recommendedData, rolePlayData, codingData, paperData] =
-          await Promise.all([
-            this.loadRobotsByType(1, 0), // 推荐机器人 type=1
-            this.loadRobotsByType(1, 0), // 角色扮演机器人 type=1 (暂时相同)
-            this.loadRobotsByType(2, 0), // 代码编程机器人 type=2
-            this.loadRobotsByType(3, 0), // 论文修改机器人 type=3
-          ]);
+        // 并行加载推荐机器人和其他类型的机器人
+        const promises = [
+          this.loadRobotsByType(1, 0), // 角色扮演机器人 type=1
+          this.loadRobotsByType(2, 0), // 代码编程机器人 type=2
+          this.loadRobotsByType(3, 0), // 论文修改机器人 type=3
+        ];
 
-        // 保存前4个机器人用于首页展示
-        this.recommendedRobots = recommendedData.slice(0, 4);
-        this.rolePlayRobots = rolePlayData.slice(0, 4);
-        this.codingRobots = codingData.slice(0, 4);
-        this.paperRobots = paperData.slice(0, 4);
+        // 如果用户已登录，加载推荐机器人
+        if (this.isLoggedIn && this.userId) {
+          promises.unshift(this.loadRecommendedRobots());
+          const [recommendedData, rolePlayData, codingData, paperData] =
+            await Promise.all(promises);
+          this.recommendedRobots = recommendedData;
+          this.rolePlayRobots = rolePlayData.slice(0, 4);
+          this.codingRobots = codingData.slice(0, 4);
+          this.paperRobots = paperData.slice(0, 4);
+        } else {
+          const [rolePlayData, codingData, paperData] =
+            await Promise.all(promises);
+          this.recommendedRobots = [];
+          this.rolePlayRobots = rolePlayData.slice(0, 4);
+          this.codingRobots = codingData.slice(0, 4);
+          this.paperRobots = paperData.slice(0, 4);
+        }
 
         console.log('初始数据加载成功');
       } catch (error) {
@@ -623,33 +631,49 @@ export default {
         throw error;
       }
     },
+
+    // 加载推荐机器人
+    async loadRecommendedRobots() {
+      try {
+        const response = await apiGetRecommendedRobots({ userId: this.userId });
+
+        if (response.status === 200 && response.data) {
+          const robots = Array.isArray(response.data)
+            ? response.data
+            : response.data.data || [];
+          // 确保只返回4个推荐机器人
+          return robots.slice(0, 4);
+        } else {
+          console.error('加载推荐机器人失败:', response);
+          return [];
+        }
+      } catch (error) {
+        console.error('加载推荐机器人失败:', error);
+        return [];
+      }
+    },
+
+    // 换一批推荐机器人
+    async refreshRecommendedRobots() {
+      if (!this.isLoggedIn || !this.userId) return;
+
+      try {
+        const newRecommendedRobots = await this.loadRecommendedRobots();
+        this.recommendedRobots = newRecommendedRobots;
+        console.log('推荐机器人已刷新');
+      } catch (error) {
+        console.error('刷新推荐机器人失败:', error);
+        this.$message.error('刷新推荐失败，请稍后重试');
+      }
+    },
+
     async getUserSubscriptions() {
       if (!this.userId) return;
       try {
         await this.fetchUserSubscriptions(this.userId);
         console.log('获取用户订阅信息成功');
-
-        // 检查并清理过期的订阅
-        this.checkExpiredSubscriptions();
       } catch (error) {
         console.error('获取用户订阅信息失败:', error);
-      }
-    },
-
-    // 检查过期的订阅
-    checkExpiredSubscriptions() {
-      const currentTime = new Date();
-      const expiredSubscriptions = this.haveSubscribed.filter((sub) => {
-        if (sub.end_time) {
-          const endTime = new Date(sub.end_time);
-          return currentTime > endTime && sub.status;
-        }
-        return false;
-      });
-
-      if (expiredSubscriptions.length > 0) {
-        console.log('发现过期订阅:', expiredSubscriptions);
-        // 可以在这里添加处理过期订阅的逻辑，比如通知用户
       }
     },
     setSearchMode(mode) {
@@ -937,30 +961,10 @@ export default {
       return date.toISOString();
     },
     isSubscribed(robotId) {
-      const subscription = this.haveSubscribed.find(
+      // 直接检查后端返回的订阅状态，不在前端进行过期检查
+      return this.haveSubscribed.some(
         (sub) => sub.agent_id === robotId && sub.status
       );
-
-      if (!subscription) {
-        return false;
-      }
-
-      // 检查订阅是否过期
-      if (subscription.end_time) {
-        const endTime = new Date(subscription.end_time);
-        const currentTime = new Date();
-
-        // 如果当前时间超过了结束时间，订阅已过期
-        if (currentTime > endTime) {
-          console.log(`机器人 ${robotId} 订阅已过期`, {
-            endTime: subscription.end_time,
-            currentTime: currentTime.toISOString(),
-          });
-          return false;
-        }
-      }
-
-      return true;
     },
     getRobotsByType(type) {
       // 这个方法现在主要用于搜索，返回相应类型的机器人
@@ -1119,7 +1123,6 @@ export default {
       gap: 20px;
     }
   }
-
   .robot-card {
     cursor: pointer;
     transition: all 0.3s ease;

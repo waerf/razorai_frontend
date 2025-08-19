@@ -284,3 +284,9 @@ export const getRobotsByType = (agentload) =>
   api.post(`/market/agents/by-type`, agentload, {
     headers: { skipAuth: true },
   });
+
+//获取推荐机器人
+export const getRecommendedRobots = (userId) =>
+  api.post(`/agent/recommend`, userId, {
+    headers: { skipAuth: true },
+  });
