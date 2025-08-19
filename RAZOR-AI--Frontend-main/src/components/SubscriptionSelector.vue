@@ -20,7 +20,7 @@
           prop="customDays"
         >
           <el-input
-            v-model="form.customDays"
+            v-model.number="form.customDays"
             placeholder="请输入天数"
             type="number"
             @input="updatePoints"
@@ -75,7 +75,18 @@ export default {
         ],
         customDays: [
           { required: true, message: '请输入自定义天数', trigger: 'blur' },
-          { type: 'number', min: 1, message: '天数必须大于0', trigger: 'blur' },
+          {
+            validator: (rule, value, callback) => {
+              if (value === null || value === undefined || value === '') {
+                callback(new Error('请输入自定义天数'));
+              } else if (isNaN(value) || Number(value) <= 0) {
+                callback(new Error('天数必须大于0'));
+              } else {
+                callback();
+              }
+            },
+            trigger: 'blur',
+          },
         ],
       },
     };
@@ -89,8 +100,9 @@ export default {
     updatePoints() {
       // 如果是自定义天数
       if (this.form.duration === 0) {
-        if (this.form.customDays && this.form.customDays > 0) {
-          this.form.points = this.form.customDays * this.price; // 使用机器人的积分费率
+        const customDays = Number(this.form.customDays);
+        if (this.form.customDays && customDays > 0) {
+          this.form.points = customDays * this.price; // 使用机器人的积分费率
         } else {
           this.form.points = 0;
         }
@@ -107,7 +119,8 @@ export default {
         if (valid) {
           // 如果是自定义模式，需要额外验证自定义天数
           if (this.form.duration === 0) {
-            if (!this.form.customDays || this.form.customDays <= 0) {
+            const customDays = Number(this.form.customDays);
+            if (!this.form.customDays || isNaN(customDays) || customDays <= 0) {
               this.$message.error('请输入有效的自定义天数');
               return;
             }
@@ -117,7 +130,7 @@ export default {
             // 获取实际的订阅天数
             const actualDuration =
               this.form.duration === 0
-                ? this.form.customDays
+                ? Number(this.form.customDays)
                 : this.form.duration;
             // 调用父组件的确认方法
             await this.onConfirm(actualDuration, this.form.points);

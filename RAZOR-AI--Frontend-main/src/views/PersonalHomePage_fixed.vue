@@ -187,6 +187,7 @@
 </template>
 
 <script>
+import { MessageBox } from 'element-ui';
 import { mapActions, mapState } from 'vuex';
 import {
   getUserInfo,
@@ -194,6 +195,8 @@ import {
   getUserPoints,
   getPointsHistory,
   getPointsStats,
+  checkPointsEnough,
+  addUserPoints,
 } from '@/utils/api';
 
 export default {

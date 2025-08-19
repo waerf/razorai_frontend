@@ -869,6 +869,9 @@ export default {
 
       // 查找机器人（包括搜索结果）
       let robot = this.allRobots.find((r) => r.id === robotId);
+      if (!robot && this.categoryDialogVisible) {
+        robot = this.categoryDetailRobots.find((r) => r.id === robotId);
+      }
       if (!robot && this.showSearchResults) {
         robot = this.searchResults.find((r) => r.id === robotId);
       }
@@ -904,6 +907,7 @@ export default {
         console.log('订阅时长:', duration);
         console.log('所需积分:', points);
         const response = await apiSubscribeAgent(payload);
+        console.log('订阅信息:', payload);
         if (response.status === 200) {
           this.$message.success('订阅成功！');
 
@@ -942,14 +946,16 @@ export default {
           // 4. 最后关闭弹窗
           this.closeSubscriptionDialog();
           console.log('订阅成功!!!:', response);
-        } else if (response.status === 300) {
-          this.$message.warning('您的积分不足，请充值后再试');
-        } else {
-          this.$message.error('订阅失败，请稍后重试');
         }
       } catch (error) {
         console.error('订阅失败:', error);
-        this.$message.error('订阅失败，请稍后重试');
+        if (error.code === 400) {
+          this.$message.error(error.message);
+        } else if (error.code === 401) {
+          this.$message.error('请先登录');
+        } else {
+          this.$message.error('订阅失败，请稍后重试');
+        }
       }
     },
     closeSubscriptionDialog() {

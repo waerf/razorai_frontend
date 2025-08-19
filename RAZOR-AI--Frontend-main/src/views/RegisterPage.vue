@@ -179,6 +179,11 @@ export default {
         console.log('注册API返回结果:', result);
 
         if (result.success) {
+          console.log('注册成功！');
+
+          // 注册成功消息
+          this.$message.success('注册成功！系统已为您发放100积分注册奖励');
+
           // 显示注册成功弹窗
           await this.showInfoformRegister(result);
 
@@ -238,13 +243,38 @@ export default {
                 `注册状态: ${result.success ? '成功' : '失败'}`
               ),
             ]),
-            h('p', null, [
-              h(
-                'span',
-                { style: 'color: #909399; font-size: 14px;' },
-                `🎁 您已获得100积分的新用户注册奖励！`
-              ),
-            ]),
+            h(
+              'div',
+              {
+                style:
+                  'margin: 15px 0; padding: 10px; background: #f0f9ff; border-left: 4px solid #409eff; border-radius: 4px;',
+              },
+              [
+                h(
+                  'p',
+                  {
+                    style:
+                      'margin: 0 0 8px 0; font-weight: bold; color: #409eff;',
+                  },
+                  '🎁 新用户注册奖励'
+                ),
+                h(
+                  'p',
+                  { style: 'margin: 0 0 5px 0; font-size: 14px; color: #333;' },
+                  '✨ 您已获得 100 积分奖励'
+                ),
+                h(
+                  'p',
+                  { style: 'margin: 0 0 5px 0; font-size: 12px; color: #666;' },
+                  '积分可用于购买机器人功能、解锁高级服务等'
+                ),
+                h(
+                  'p',
+                  { style: 'margin: 0; font-size: 12px; color: #409eff;' },
+                  '💡 登录后可在个人主页查看积分明细'
+                ),
+              ]
+            ),
           ]),
           confirmButtonText: '确定',
           beforeClose: (action, instance, done) => {
