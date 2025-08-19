@@ -638,11 +638,8 @@ export default {
         const response = await apiGetRecommendedRobots({ userId: this.userId });
 
         if (response.status === 200 && response.data) {
-          const robots = Array.isArray(response.data)
-            ? response.data
-            : response.data.data || [];
-          // 确保只返回4个推荐机器人
-          return robots.slice(0, 4);
+          const robots = response.data.agents;
+          return robots;
         } else {
           console.error('加载推荐机器人失败:', response);
           return [];
