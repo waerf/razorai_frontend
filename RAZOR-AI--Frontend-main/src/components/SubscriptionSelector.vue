@@ -20,7 +20,7 @@
           prop="customDays"
         >
           <el-input
-            v-model="form.customDays"
+            v-model.number="form.customDays"
             placeholder="请输入天数"
             type="number"
             @input="updatePoints"
@@ -75,7 +75,18 @@ export default {
         ],
         customDays: [
           { required: true, message: '请输入自定义天数', trigger: 'blur' },
-          { type: 'number', min: 1, message: '天数必须大于0', trigger: 'blur' },
+          {
+            validator: (rule, value, callback) => {
+              if (value === null || value === undefined || value === '') {
+                callback(new Error('请输入自定义天数'));
+              } else if (isNaN(value) || Number(value) <= 0) {
+                callback(new Error('天数必须大于0'));
+              } else {
+                callback();
+              }
+            },
+            trigger: 'blur',
+          },
         ],
       },
     };
@@ -84,13 +95,41 @@ export default {
     // 组件挂载时初始化积分
     this.updatePoints();
   },
+  watch: {
+    // 监听机器人ID或价格变化，重置表单状态
+    robotId: {
+      handler() {
+        this.resetForm();
+      },
+      immediate: false,
+    },
+    price: {
+      handler() {
+        this.resetForm();
+      },
+      immediate: false,
+    },
+  },
   methods: {
+    // 重置表单状态
+    resetForm() {
+      this.form.duration = 1; // 重置为默认1天
+      this.form.customDays = null; // 清空自定义天数
+      this.updatePoints(); // 重新计算积分
+      // 清除表单验证状态
+      this.$nextTick(() => {
+        if (this.$refs.formRef) {
+          this.$refs.formRef.clearValidate();
+        }
+      });
+    },
     // 更新积分
     updatePoints() {
       // 如果是自定义天数
       if (this.form.duration === 0) {
-        if (this.form.customDays && this.form.customDays > 0) {
-          this.form.points = this.form.customDays * this.price; // 使用机器人的积分费率
+        const customDays = Number(this.form.customDays);
+        if (this.form.customDays && customDays > 0) {
+          this.form.points = customDays * this.price; // 使用机器人的积分费率
         } else {
           this.form.points = 0;
         }
@@ -107,7 +146,8 @@ export default {
         if (valid) {
           // 如果是自定义模式，需要额外验证自定义天数
           if (this.form.duration === 0) {
-            if (!this.form.customDays || this.form.customDays <= 0) {
+            const customDays = Number(this.form.customDays);
+            if (!this.form.customDays || isNaN(customDays) || customDays <= 0) {
               this.$message.error('请输入有效的自定义天数');
               return;
             }
@@ -117,7 +157,7 @@ export default {
             // 获取实际的订阅天数
             const actualDuration =
               this.form.duration === 0
-                ? this.form.customDays
+                ? Number(this.form.customDays)
                 : this.form.duration;
             // 调用父组件的确认方法
             await this.onConfirm(actualDuration, this.form.points);
@@ -132,6 +172,7 @@ export default {
 
     // 关闭弹窗
     handleClose() {
+      this.form.customDays = null;
       this.onClose();
     },
 

@@ -2,6 +2,8 @@ import { adminLogin as apiAdminLogin } from '../utils/api';
 import Storage from '../utils/storage';
 
 const state = {
+  // 审核机器人状态变更通知
+  robotReviewStatusChanged: false,
   adminToken: Storage.get('admin_token'),
   adminId: Storage.get('admin_id'),
   adminName: Storage.get('admin_name'),
@@ -9,6 +11,9 @@ const state = {
 };
 
 const mutations = {
+  SET_ROBOT_REVIEW_STATUS_CHANGED(state, changed) {
+    state.robotReviewStatusChanged = changed;
+  },
   SET_ADMIN_INFO(state, { token, adminId, adminName }) {
     state.adminToken = token;
     state.adminId = adminId;
@@ -32,6 +37,9 @@ const mutations = {
 };
 
 const actions = {
+  setRobotReviewStatusChanged({ commit }, changed) {
+    commit('SET_ROBOT_REVIEW_STATUS_CHANGED', changed);
+  },
   async adminLogin({ commit }, payload) {
     try {
       const response = await apiAdminLogin(payload);
@@ -49,6 +57,7 @@ const actions = {
 };
 
 const getters = {
+  robotReviewStatusChanged: (state) => state.robotReviewStatusChanged,
   isAdminLoggedIn: (state) => state.isAdminLoggedIn,
   adminId: (state) => state.adminId,
   adminName: (state) => state.adminName,

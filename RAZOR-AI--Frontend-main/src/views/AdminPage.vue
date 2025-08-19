@@ -2,10 +2,13 @@
   <div class="admin-home">
     <!-- 侧边导航栏 -->
     <aside class="sidebar">
+      <button class="toggle-sidebar-btn" @click="toggleSidebar">
+        <i class="el-icon-s-fold"></i>
+      </button>
       <div class="user-info">
-        <div class="avatar">张</div>
+        <div class="avatar">{{ adminName.charAt(0) }}</div>
         <div>
-          <p class="username">张三</p>
+          <p class="username">{{ adminName }}</p>
           <p class="role">系统管理员</p>
         </div>
       </div>
@@ -14,6 +17,10 @@
         <div class="nav-item active">
           <i class="el-icon-menu"></i>
           <span>控制台概览</span>
+        </div>
+        <div class="nav-item" @click="$router.push('/admin/admin-review')">
+          <i class="el-icon-user-solid"></i>
+          <span>管理员审核</span>
         </div>
         <div class="nav-item" @click="$router.push('/admin/review')">
           <i class="el-icon-cpu"></i>
@@ -35,7 +42,56 @@
       <!-- 顶部导航栏 -->
       <header class="header">
         <h1 class="title">控制台</h1>
-        <el-button type="primary" @click="logout">退出登录</el-button>
+        <div style="display: flex; align-items: center; margin-left: auto">
+          <el-button
+            type="warning"
+            style="margin-right: 8px"
+            @click="showChangePwd = true"
+            >修改密码</el-button
+          >
+          <el-button type="primary" @click="logout">退出登录</el-button>
+        </div>
+        <el-dialog
+          title="修改密码"
+          :visible.sync="showChangePwd"
+          width="400px"
+          @close="resetPwdForm"
+        >
+          <el-form
+            :model="pwdForm"
+            :rules="pwdRules"
+            ref="pwdFormRef"
+            label-width="90px"
+          >
+            <el-form-item label="旧密码" prop="oldPwd">
+              <el-input
+                v-model="pwdForm.oldPwd"
+                type="password"
+                autocomplete="off"
+              />
+            </el-form-item>
+            <el-form-item label="新密码" prop="newPwd">
+              <el-input
+                v-model="pwdForm.newPwd"
+                type="password"
+                autocomplete="off"
+              />
+            </el-form-item>
+            <el-form-item label="确认新密码" prop="confirmPwd">
+              <el-input
+                v-model="pwdForm.confirmPwd"
+                type="password"
+                autocomplete="off"
+              />
+            </el-form-item>
+          </el-form>
+          <span slot="footer" class="dialog-footer">
+            <el-button @click="showChangePwd = false">取消</el-button>
+            <el-button type="primary" @click="submitPwdForm"
+              >确认修改</el-button
+            >
+          </span>
+        </el-dialog>
       </header>
 
       <!-- 主要内容 -->
@@ -48,7 +104,7 @@
               <div class="stat-content">
                 <div>
                   <p class="stat-label">待审核机器人</p>
-                  <p class="stat-value">12</p>
+                  <p class="stat-value">{{ pendingRobotsTotal }}</p>
                 </div>
                 <div class="stat-icon">
                   <i class="el-icon-cpu"></i>
@@ -167,31 +223,49 @@
 </template>
 
 <script>
+import {
+  changeAdminPassword,
+  getPendingRobots,
+  adminLogout,
+  getAdminInfo, // 新增获取管理员信息的API
+} from '@/utils/api';
+
 export default {
   name: 'AdminHomePage',
   data() {
     return {
+      isSidebarCollapsed: false,
       activeTab: 'review',
-      pendingRobots: [
-        {
-          id: 1,
-          name: '智能客服机器人 v2.1',
-          time: '2025-07-20 14:30',
-          status: 'pending',
-        },
-        {
-          id: 2,
-          name: '数据分析助手',
-          time: '2025-07-19 11:45',
-          status: 'pending',
-        },
-        {
-          id: 3,
-          name: '内容审核机器人',
-          time: '2025-07-18 19:08',
-          status: 'approved',
-        },
-      ],
+      showChangePwd: false,
+      pwdForm: {
+        oldPwd: '',
+        newPwd: '',
+        confirmPwd: '',
+      },
+      pwdRules: {
+        oldPwd: [{ required: true, message: '请输入旧密码', trigger: 'blur' }],
+        newPwd: [
+          { required: true, message: '请输入新密码', trigger: 'blur' },
+          { min: 6, message: '新密码至少6位', trigger: 'blur' },
+        ],
+        confirmPwd: [
+          { required: true, message: '请确认新密码', trigger: 'blur' },
+          {
+            validator: (rule, value, callback) => {
+              if (value !== this.pwdForm.newPwd) {
+                callback(new Error('两次输入的新密码不一致'));
+              } else {
+                callback();
+              }
+            },
+            trigger: 'blur',
+          },
+        ],
+      },
+      pendingRobots: [],
+      pendingRobotsLoading: false,
+      pendingRobotsTotal: 0, // 新增总数量
+      adminName: '', // 新增管理员名称
       pendingPosts: [
         { id: 1, name: '违规内容举报', time: '2025-07-15 14:30' },
         { id: 2, name: '敏感词检测', time: '2025-07-15 10:45' },
@@ -214,10 +288,112 @@ export default {
     };
   },
   methods: {
-    logout() {
-      // 退出登录逻辑
-      this.$router.push('/');
+    async fetchAdminInfo() {
+      try {
+        const res = await getAdminInfo();
+        if (res.data && res.data.success) {
+          this.adminName = res.data.adminInfo.adminName;
+        } else {
+          this.$message.error(res.data.message || '获取管理员信息失败');
+        }
+      } catch (err) {
+        this.$message.error(err.message || '获取管理员信息失败');
+      }
     },
+    logout() {
+      // 管理员登出逻辑
+      this.$confirm('确定要退出登录吗？', '提示', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning',
+      })
+        .then(async () => {
+          try {
+            const res = await adminLogout();
+            if (res.data && res.data.success) {
+              this.$message.success(res.data.message || '登出成功');
+              // 清除本地token
+              if (window.localStorage) {
+                localStorage.removeItem('admin_token');
+              }
+              this.$router.push('/');
+            } else {
+              this.$message.error(res.data.message || '登出失败');
+            }
+          } catch (err) {
+            this.$message.error(err.message || '登出失败，请重试');
+          }
+        })
+        .catch(() => {
+          // 用户取消
+        });
+      // ...existing code...
+    },
+    toggleSidebar() {
+      this.isSidebarCollapsed = !this.isSidebarCollapsed;
+      const sidebar = document.querySelector('.sidebar');
+      sidebar.classList.toggle('hidden');
+    },
+    async fetchPendingRobots() {
+      this.pendingRobotsLoading = true;
+      try {
+        const res = await getPendingRobots({ page: 1, pageSize: 3 });
+        if (res.data && res.data.success) {
+          this.pendingRobots = res.data.data.map((robot) => ({
+            id: robot.id,
+            name: robot.name,
+            time: robot.createdAt,
+            status: 'pending',
+          }));
+          this.pendingRobotsTotal =
+            res.data.pagination?.totalCount || this.pendingRobots.length;
+        } else {
+          this.$message.error(res.data.message || '获取待审核机器人失败');
+        }
+      } catch (err) {
+        this.$message.error(err.message || '获取待审核机器人失败');
+      }
+      this.pendingRobotsLoading = false;
+    },
+    async submitPwdForm() {
+      this.$refs.pwdFormRef.validate(async (valid) => {
+        if (!valid) return;
+        try {
+          const res = await changeAdminPassword({
+            oldPassword: this.pwdForm.oldPwd,
+            newPassword: this.pwdForm.newPwd,
+          });
+          if (res.data && res.data.success) {
+            this.$message({
+              type: 'success',
+              message: res.data.message || '密码修改成功',
+            });
+            this.showChangePwd = false;
+            this.resetPwdForm();
+          } else {
+            this.$message({
+              type: 'error',
+              message: res.data.message || '密码修改失败',
+            });
+          }
+        } catch (err) {
+          this.$message({
+            type: 'error',
+            message: err.response?.data?.message || '密码修改失败，请重试',
+          });
+        }
+      });
+    },
+    resetPwdForm() {
+      this.pwdForm.oldPwd = '';
+      this.pwdForm.newPwd = '';
+      this.pwdForm.confirmPwd = '';
+      if (this.$refs.pwdFormRef) this.$refs.pwdFormRef.clearValidate();
+    },
+  },
+  mounted() {
+    this.fetchPendingRobots();
+    this.fetchAdminInfo(); // 新增调用获取管理员信息的方法
   },
 };
 </script>
@@ -229,6 +405,55 @@ export default {
   background-color: #f5f5f5;
 
   .sidebar {
+    position: relative;
+    transition: all 0.3s ease;
+
+    .toggle-sidebar-btn {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      cursor: pointer;
+      font-size: 16px;
+      background: none;
+      border: none;
+      color: #606266;
+      padding: 5px;
+
+      &:hover {
+        background-color: rgba(0, 0, 0, 0.05);
+        border-radius: 4px;
+      }
+    }
+
+    &.hidden {
+      width: 60px !important;
+
+      .nav-item {
+        span {
+          display: none;
+        }
+
+        i {
+          margin-right: 0;
+        }
+      }
+
+      .user-info {
+        flex-direction: column;
+        align-items: center;
+        padding: 10px;
+
+        .avatar {
+          margin-right: 0;
+          margin-bottom: 5px;
+        }
+
+        .username,
+        .role {
+          display: none;
+        }
+      }
+    }
     width: 250px;
     background-color: white;
     border-right: 1px solid #e6e6e6;

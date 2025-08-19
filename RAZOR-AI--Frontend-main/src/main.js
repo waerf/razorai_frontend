@@ -5,6 +5,7 @@ import router from './router';
 import store from './store';
 import ElementUI from 'element-ui';
 import 'element-ui/lib/theme-chalk/index.css';
+import axios from 'axios';
 
 // 引入全局样式
 /*
@@ -18,6 +19,7 @@ import '@/assets/styles/layout.scss';
 import '@/assets/styles/global.scss';
 Vue.config.productionTip = false;
 Vue.use(ElementUI);
+Vue.prototype.$axios = axios;
 
 // 初始化应用程序
 async function initApp() {

@@ -7,19 +7,23 @@
     @keyup.enter.native="onSubmit"
     v-loading="isLoading"
   >
-    <el-form-item label="用户ID" prop="userid">
+    <el-form-item label="账号" prop="identifier">
       <el-input
-        v-model="loginForm.userid"
-        placeholder="用户ID"
+        v-model="loginForm.identifier"
+        placeholder="用户名/邮箱/手机号"
         prefix-icon="el-icon-user"
       ></el-input>
+      <div style="font-size: 12px; color: #909399; margin-top: 2px">
+        支持用户名、邮箱或手机号登录
+      </div>
     </el-form-item>
     <el-form-item label="密码" prop="password">
       <el-input
         v-model="loginForm.password"
         type="password"
-        placeholder="密码"
+        placeholder="请输入密码"
         prefix-icon="el-icon-lock"
+        show-password
       ></el-input>
     </el-form-item>
     <el-form-item>
@@ -55,13 +59,36 @@ export default {
   data() {
     return {
       loginForm: {
-        userid: '',
+        identifier: '',
         password: '',
         rememberMe: false,
       },
       loginRules: {
-        userid: [
-          { required: true, message: '请输入您的用户ID', trigger: 'blur' },
+        identifier: [
+          { required: true, message: '请输入账号', trigger: 'blur' },
+          { min: 2, message: '账号至少2个字符', trigger: 'blur' },
+          {
+            validator: (rule, value, callback) => {
+              if (!value) {
+                callback();
+                return;
+              }
+
+              // 检查是否是有效的格式（用户名、邮箱或手机号）
+              const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+              const isPhone = /^1[3-9]\d{9}$/.test(value);
+              const isUsername = /^[a-zA-Z0-9_\u4e00-\u9fa5]{2,20}$/.test(
+                value
+              );
+
+              if (!isEmail && !isPhone && !isUsername) {
+                callback(new Error('请输入有效的用户名、邮箱或手机号'));
+              } else {
+                callback();
+              }
+            },
+            trigger: 'blur',
+          },
         ],
         password: [
           { required: true, message: '请输入您的密码', trigger: 'blur' },
@@ -82,8 +109,8 @@ export default {
           try {
             // 调用Vuex中user模块的login方法
             const result = await this.login({
-              user_id: this.loginForm.userid,
-              user_password: this.loginForm.password,
+              Identifier: this.loginForm.identifier, // 使用后端期望的参数名
+              Password: this.loginForm.password, // 使用后端期望的参数名
             });
             console.log('isLoggedIn in LoginForm:', this.isLoggedIn);
             if (result.success) {
@@ -112,7 +139,7 @@ export default {
       this.resetForm(); // 重置表单
     },
     resetForm() {
-      this.loginForm.userid = '';
+      this.loginForm.identifier = '';
       this.loginForm.password = '';
       this.loginForm.rememberMe = false;
     },

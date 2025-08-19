@@ -665,6 +665,8 @@ export default {
       }
 
       const comment = this.comments[index];
+      console.log('当前用户ID:', this.userId);
+      console.log('评论用户ID:', comment.user_id);
 
       // 检查权限：只能删除自己的评论
       if (comment.user_id !== this.userId) {
@@ -767,13 +769,8 @@ export default {
       }, 1500);
     },
     formatDateTime(date) {
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const day = String(date.getDate()).padStart(2, '0');
-      const hours = String(date.getHours()).padStart(2, '0');
-      const minutes = String(date.getMinutes()).padStart(2, '0');
-      const seconds = String(date.getSeconds()).padStart(2, '0');
-      return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+      // 使用ISO 8601格式，与后端API保持一致
+      return date.toISOString();
     },
     openSubscriptionDialog() {
       this.incrementDialogRef();
@@ -827,9 +824,9 @@ export default {
       try {
         const currentTime = this.formatDateTime(new Date());
         const payload = {
-          user_id: this.$store.state.user.userId,
-          agent_id: this.robot.id,
-          startime: currentTime,
+          userId: this.$store.state.user.userId,
+          agentId: this.robot.id,
+          startTime: currentTime,
           duration: Duration,
           subscriptionType: 1,
         };
@@ -837,10 +834,22 @@ export default {
         const response = await apisubscribeAgent(payload);
         if (response.status === 200) {
           this.$message.success('订阅成功！');
-          this.$store.dispatch(
+
+          // 1. 更新用户订阅数据
+          await this.$store.dispatch(
             'agent/fetchUserSubscriptions',
             this.$store.state.user.userId
           );
+
+          // 2. 重新加载机器人订阅数量
+          await this.loadSubscriptionCount(this.robot.id);
+
+          // 3. 强制更新页面，确保按钮状态正确显示
+          this.$forceUpdate();
+
+          // 4. 通知父组件订阅状态已变化
+          this.$emit('subscription-changed', this.robot.id);
+
           console.log('订阅成功!!!:', response);
           console.log(
             '订阅成功后的用户订阅列表:',
@@ -873,14 +882,14 @@ export default {
       try {
         const response = await apiGetAgentComment(agentId);
         if (response.status === 200 && response.data) {
-          // 后端返回的数据格式：id, user_id, userName, comment, created_at, rating
+          // 后端返回的数据格式：id, user_id, userName, comment, createdAt, score
           this.comments = response.data.map((comment) => ({
             id: comment.id,
             user_id: comment.user_id,
             userName: comment.userName || '匿名用户',
-            rating: comment.rating || 5,
+            rating: comment.rating,
             text: comment.comment,
-            timestamp: new Date(comment.created_at).toLocaleString('zh-CN'),
+            timestamp: new Date(comment.createdAt).toLocaleString('zh-CN'),
           }));
 
           // 更新评论统计
