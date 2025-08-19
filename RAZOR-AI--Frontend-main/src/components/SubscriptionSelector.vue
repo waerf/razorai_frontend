@@ -132,6 +132,7 @@ export default {
 
     // 关闭弹窗
     handleClose() {
+      this.form.customDays = null;
       this.onClose();
     },
 

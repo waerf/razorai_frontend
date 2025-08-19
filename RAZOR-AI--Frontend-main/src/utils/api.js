@@ -60,8 +60,20 @@ api.interceptors.response.use(
       console.log('Error response in api.js:', error.response);
       const { status, data } = error.response;
       return Promise.reject({ code: status, message: data.message }); // 返回错误状态码和消息
+    } else if (error.request) {
+      // 请求已发出但没有收到响应
+      console.error('No response received:', error.request);
+      return Promise.reject({
+        code: 'NETWORK_ERROR',
+        message: '网络连接失败，请检查后端服务是否正常运行',
+      });
     } else {
-      return Promise.reject({ code: 500, message: '哈哈哈出错咯，debug咯' }); // 返回默认错误消息
+      // 请求配置错误
+      console.error('Request setup error:', error.message);
+      return Promise.reject({
+        code: 'REQUEST_ERROR',
+        message: '请求配置错误: ' + error.message,
+      });
     }
   }
 );
@@ -75,6 +87,59 @@ export const login = (payload) =>
 export const register = (payload) =>
   api.post('/user/register', payload, {
     headers: { skipAuth: true }, // 跳过 Authorization 头
+  });
+
+// 获取用户信息
+export const getUserInfo = (userId) => api.get(`/user/${userId}`);
+
+// 更新用户信息
+export const updateUserInfo = (userId, payload) =>
+  api.put(`/user/${userId}`, payload);
+
+// 获取用户积分余额
+export const getUserPoints = () => api.get('/points/balance');
+
+// 获取积分历史记录
+export const getPointsHistory = (page = 1, pageSize = 20) =>
+  api.get(`/points/history?page=${page}&pageSize=${pageSize}`);
+
+// 获取积分统计信息
+export const getPointsStats = () => api.get('/points/stats');
+
+// 检查积分是否足够
+export const checkPointsEnough = (requiredPoints) =>
+  api.post('/points/check', { requiredPoints });
+
+// 管理员增加积分
+export const addUserPoints = (
+  userId,
+  points,
+  actionType,
+  description,
+  relatedId = null
+) =>
+  api.post('/points/add', {
+    userId,
+    points,
+    actionType,
+    description,
+    relatedId,
+  });
+
+// 管理员扣除积分
+export const deductUserPoints = (
+  userId,
+  points,
+  actionType,
+  description,
+  relatedId = null
+) =>
+  api.post('/points/deduct', {
+    userId,
+    points,
+    actionType,
+    description,
+    relatedId,
   });
 
 export const adminLogin = (data) => {
@@ -127,6 +192,9 @@ export const fetchAllAgentsData = () =>
 export const fetchAgentDetail = (agentId) =>
   api.get(`/market/agentdetail/${agentId}`, { headers: { skipAuth: true } }); // 跳过 Authorization 头
 
+export const searchAgent = (searchload) =>
+  api.post(`/market/search`, searchload); // 跳过 Authorization 头
+
 export const fetchUserSubscriptions = async (userId) => {
   const response = await api.get(`/market/user/subs/${userId}`, {
     headers: { skipAuth: false },
@@ -149,11 +217,6 @@ export const fetchAllChats = (user_id) =>
 
 export const subscribeAgent = (payload) =>
   api.post('/market/user/agent/subscribe', payload, {
-    headers: { skipAuth: false },
-  });
-
-export const UnsubscribeAgent = (subId) =>
-  api.delete(`/market/subscription/${subId}`, {
     headers: { skipAuth: false },
   });
 
@@ -192,22 +255,32 @@ export const deleteChat = (chatId) =>
     headers: { skipAuth: false },
   });
 
+// 获取机器人订阅数量
 export const getSubscriptionCnt = (agentId) =>
   api.get(`/market/subscription/count/${agentId}`, {
     headers: { skipAuth: true },
   });
 
+// 获取机器人评论
 export const getAgentComment = (agentId) =>
   api.get(`/market/feedback/${agentId}`, {
     headers: { skipAuth: true },
   });
 
-export const sendAgentComment = (feedback) =>
-  api.post('/market/feedback', feedback, {
+// 发布机器人评论
+export const sendAgentComment = (payload) =>
+  api.post('/market/feedback', payload, {
     headers: { skipAuth: false },
   });
 
+// 删除机器人评论
 export const deleteAgentComment = (feedbackId) =>
   api.delete(`/market/feedback/${feedbackId}`, {
     headers: { skipAuth: false },
+  });
+
+//根据机器人类型分页
+export const getRobotsByType = (agentload) =>
+  api.post(`/market/agents/by-type`, agentload, {
+    headers: { skipAuth: true },
   });

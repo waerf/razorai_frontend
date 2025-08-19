@@ -5,6 +5,17 @@
       <div class="content-layout">
         <!-- 中间帖子列表 -->
         <section class="post-feed">
+          <!-- 发布按钮区域 -->
+          <div class="action-bar">
+            <button
+              class="primary-btn"
+              @click="$router.push('/community/CreatePost')"
+            >
+              <i class="fa fa-plus-circle mr-2"></i>
+              <span>发布帖子</span>
+            </button>
+          </div>
+
           <!-- 排序筛选 -->
           <div class="filter-card">
             <div class="filter-header">
@@ -54,7 +65,13 @@
                 </button>
               </div>
 
-              <h2 class="post-title">{{ post.title }}</h2>
+              <!-- 帖子标题添加路由链接 -->
+              <router-link
+                :to="`/community/post/${post.id}`"
+                class="post-title-link"
+              >
+                <h2 class="post-title-title">{{ post.title }}</h2>
+              </router-link>
 
               <p class="post-excerpt">{{ post.excerpt }}</p>
 
@@ -66,7 +83,7 @@
 
               <div class="post-actions">
                 <div class="action-group">
-                  <button class="action-btn">
+                  <button class="action-btn" @click="likePost(index)">
                     <i class="fa fa-thumbs-o-up mr-1.5"></i>
                     <span>{{ post.likes }}</span>
                   </button>
@@ -74,14 +91,14 @@
                     <i class="fa fa-comment-o mr-1.5"></i>
                     <span>{{ post.comments }}</span>
                   </button>
-                  <button class="action-btn">
+                  <button class="action-btn" @click="bookmarkPost(index)">
                     <i class="fa fa-bookmark-o mr-1.5"></i>
                     <span>{{ post.bookmarks }}</span>
                   </button>
                 </div>
                 <div class="stats-group">
                   <span class="post-views">阅读 {{ post.views }}</span>
-                  <button class="share-btn">
+                  <button class="share-btn" @click="sharePost(index)">
                     <i class="fa fa-share-alt mr-1.5"></i>
                     <span>分享</span>
                   </button>
@@ -92,7 +109,7 @@
 
           <!-- 加载更多 -->
           <div class="load-more">
-            <button class="secondary-btn load-more-btn">
+            <button class="secondary-btn load-more-btn" @click="loadMorePosts">
               加载更多 <i class="fa fa-angle-down ml-2"></i>
             </button>
           </div>
@@ -109,6 +126,7 @@ export default {
       // 帖子数据
       posts: [
         {
+          id: 1,
           authorAvatar: 'https://picsum.photos/id/1005/48/48',
           authorName: '张小明',
           isAuthor: true,
@@ -124,6 +142,7 @@ export default {
           views: '5.2k',
         },
         {
+          id: 2,
           authorAvatar: 'https://picsum.photos/id/1012/48/48',
           authorName: '李华',
           isAuthor: true,
@@ -139,6 +158,7 @@ export default {
           views: '12.8k',
         },
         {
+          id: 3,
           authorAvatar: 'https://picsum.photos/id/1025/48/48',
           authorName: '科技前沿',
           isAuthor: false,
@@ -175,11 +195,6 @@ export default {
     // 分享功能
     sharePost(index) {
       console.log(`分享帖子: ${this.posts[index].title}`);
-    },
-
-    // 关注用户
-    followUser(index) {
-      console.log(`关注用户: ${this.recommendedUsers[index].name}`);
     },
 
     // 加载更多帖子
@@ -224,6 +239,10 @@ export default {
 
 .post-feed {
   flex: 1;
+}
+
+.post-title-link {
+  text-decoration: none;
 }
 
 /* 筛选卡片 */
@@ -368,6 +387,34 @@ export default {
   color: #0f88eb;
 }
 
+.title-link {
+  color: #1a1a1a;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.title-link:hover {
+  color: #0f88eb;
+}
+
+.post-title-link:hover .post-title-title {
+  color: #0f88eb; /* 浅紫色文字 */
+  transition: color 0.2s ease; /* 平滑过渡效果 */
+}
+
+.tab-item:active,
+.action-btn:active,
+.share-btn:active,
+.secondary-btn:active {
+  color: #0f88eb !important;
+  background-color: rgba(90, 24, 154, 0.1) !important;
+}
+
+/* 链接点击状态 */
+.post-title-link:active .post-title-title {
+  color: #0f88eb !important;
+}
+
 .post-excerpt {
   color: #666;
   margin-bottom: 16px;
@@ -507,6 +554,30 @@ export default {
 
 .footer-link:hover {
   color: #0f88eb;
+}
+
+.action-bar {
+  margin-bottom: 24px;
+  text-align: right;
+}
+
+.primary-btn {
+  background-color: #0f88eb;
+  color: white;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+  display: inline-flex;
+  align-items: center;
+}
+
+.primary-btn:hover {
+  background-color: #0a6fcc;
+  box-shadow: 0 4px 8px rgba(15, 136, 235, 0.2);
 }
 
 /* 响应式调整 */

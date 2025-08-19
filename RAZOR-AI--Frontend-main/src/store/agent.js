@@ -10,25 +10,33 @@ import { fetchAllAgentsData as apifetchAllAgentsData } from '../utils/api'; // �
 import { fetchAgentDetail as apifetchAgentDetail } from '../utils/api'; // 引入 API 请求
 import { fetchUserSubscriptions as apifetchUserSubscriptions } from '../utils/api';
 const state = {
-  textAgents: [],
-  imageAgents: [],
-  videoAgents: [],
+  recommendedRobots: [], // 推荐机器人 (type=1)
+  rolePlayRobots: [], // 角色扮演机器人 (type=1)
+  codingRobots: [], // 代码编程机器人 (type=2)
+  paperRobots: [], // 论文修改机器人 (type=3)
   selectedAgent: null,
   haveSubscribed: [],
 };
 
 const getters = {
   allAgents: (state) => {
-    return state.textAgents.concat(state.imageAgents, state.videoAgents);
+    return state.recommendedRobots.concat(
+      state.rolePlayRobots,
+      state.codingRobots,
+      state.paperRobots
+    );
   },
-  textAgents: (state) => {
-    return state.textAgents;
+  recommendedRobots: (state) => {
+    return state.recommendedRobots;
   },
-  imageAgents: (state) => {
-    return state.imageAgents;
+  rolePlayRobots: (state) => {
+    return state.rolePlayRobots;
   },
-  videoAgents: (state) => {
-    return state.videoAgents;
+  codingRobots: (state) => {
+    return state.codingRobots;
+  },
+  paperRobots: (state) => {
+    return state.paperRobots;
   },
   selectedAgent: (state) => {
     return state.selectedAgent;
@@ -39,18 +47,25 @@ const getters = {
 };
 
 const mutations = {
-  SET_TEXT_AGENTS(state, agents) {
-    state.textAgents = agents;
+  SET_RECOMMENDED_ROBOTS(state, agents) {
+    state.recommendedRobots = agents;
   },
-  SET_IMAGE_AGENTS(state, agents) {
-    state.imageAgents = agents;
+  SET_ROLEPLAY_ROBOTS(state, agents) {
+    state.rolePlayRobots = agents;
   },
-  SET_VIDEO_AGENTS(state, agents) {
-    state.videoAgents = agents;
+  SET_CODING_ROBOTS(state, agents) {
+    state.codingRobots = agents;
+  },
+  SET_PAPER_ROBOTS(state, agents) {
+    state.paperRobots = agents;
   },
   SET_SELECTED_AGENT(state, agent) {
     state.selectedAgent = agent;
   },
+  SET_SUBSCRIPTIONS(state, agents) {
+    state.haveSubscribed = agents;
+  },
+  // 保持向后兼容的 mutation 名称
   SET_HAVE_SUBSCRIBED(state, agents) {
     state.haveSubscribed = agents;
   },
@@ -63,15 +78,17 @@ const actions = {
       const response = await apifetchAllAgentsData(); // 调用 API 请求
       if (response.status === 200) {
         const agents = response.data;
-        // 根据类型分类
-        const textAgents = agents.filter((agent) => agent.type === 1);
-        const imageAgents = agents.filter((agent) => agent.type === 2);
-        const videoAgents = agents.filter((agent) => agent.type === 3);
+        // 根据类型和功能分类
+        const recommendedRobots = agents.filter((agent) => agent.type === 1); // 推荐机器人
+        const rolePlayRobots = agents.filter((agent) => agent.type === 1); // 角色扮演机器人 (暂时与推荐相同)
+        const codingRobots = agents.filter((agent) => agent.type === 2); // 代码编程机器人
+        const paperRobots = agents.filter((agent) => agent.type === 3); // 论文修改机器人
 
         // 更新状态
-        commit('SET_TEXT_AGENTS', textAgents);
-        commit('SET_IMAGE_AGENTS', imageAgents);
-        commit('SET_VIDEO_AGENTS', videoAgents);
+        commit('SET_RECOMMENDED_ROBOTS', recommendedRobots);
+        commit('SET_ROLEPLAY_ROBOTS', rolePlayRobots);
+        commit('SET_CODING_ROBOTS', codingRobots);
+        commit('SET_PAPER_ROBOTS', paperRobots);
 
         return { success: true, message: '获取 AI 机器人信息成功' };
       } else {

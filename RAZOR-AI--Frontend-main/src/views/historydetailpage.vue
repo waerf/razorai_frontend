@@ -4,17 +4,11 @@
     v-if="visible"
     class="robot-detail-overlay"
     @click="shouldListenToClicks ? closeDetail() : null"
-    @wheel="shouldListenToClicks ? null : $event.preventDefault()"
-    @touchmove="shouldListenToClicks ? null : $event.preventDefault()"
-    @keydown="shouldListenToClicks ? null : $event.preventDefault()"
   >
     <div
       class="robot-detail-content"
       :class="{ 'content-disabled': !shouldListenToClicks }"
       @click.stop
-      @wheel.stop="shouldListenToClicks ? null : $event.preventDefault()"
-      @touchmove.stop="shouldListenToClicks ? null : $event.preventDefault()"
-      @keydown.stop="shouldListenToClicks ? null : $event.preventDefault()"
       v-loading="loading"
     >
       <!-- 弹窗头部 -->
@@ -48,17 +42,9 @@
                   '这是一个功能强大的AI机器人，可以帮助您完成各种任务。'
                 }}
               </p>
-              <p class="robot-developer">
-                <span class="developer-label">开发者：</span>
-                <span class="developer-name">{{
-                  robot.creatorName || '未知开发者'
-                }}</span>
-              </p>
               <div class="robot-stats">
                 <div class="stat-item">
-                  <div class="stat-value">
-                    {{ formatRating(robotStats.rating) }}
-                  </div>
+                  <div class="stat-value">{{ robotStats.rating }}</div>
                   <div class="stat-label">评分</div>
                 </div>
                 <div class="stat-item">
@@ -68,10 +54,6 @@
                 <div class="stat-item">
                   <div class="stat-value">{{ robotStats.comments }}</div>
                   <div class="stat-label">评论数</div>
-                </div>
-                <div class="stat-item">
-                  <div class="stat-value">{{ formatPrice(robot.price) }}</div>
-                  <div class="stat-label">所需积分</div>
                 </div>
               </div>
               <div class="robot-detail-actions">
@@ -98,29 +80,17 @@
           <div class="comments-header">
             <h3 class="comments-title">用户评论 ({{ comments.length }})</h3>
             <el-button
-              v-if="isLoggedIn && isUserSubscribed"
+              v-if="isLoggedIn"
               type="primary"
               class="add-comment-btn"
               @click="showAddCommentForm = !showAddCommentForm"
             >
               添加评论
             </el-button>
-            <el-button
-              v-else-if="isLoggedIn && !isUserSubscribed"
-              type="info"
-              class="add-comment-btn"
-              disabled
-              title="请先订阅该机器人后再发表评论"
-            >
-              请先订阅后评论
-            </el-button>
           </div>
 
           <!-- 添加评论表单 -->
-          <div
-            v-if="showAddCommentForm && isLoggedIn && isUserSubscribed"
-            class="add-comment-form"
-          >
+          <div v-if="showAddCommentForm && isLoggedIn" class="add-comment-form">
             <div class="comment-form-group">
               <label class="comment-form-label">评分</label>
               <div class="rating-input">
@@ -173,7 +143,7 @@
                 <div class="comment-menu">
                   <button
                     class="comment-delete-btn"
-                    v-if="comment.user_id === userId && isLoggedIn"
+                    v-if="comment.userId === userId && isLoggedIn"
                     @click="confirmDeleteComment(index)"
                     title="删除评论"
                   >
@@ -183,8 +153,6 @@
               </div>
               <div class="comment-text">{{ comment.text }}</div>
               <div class="comment-actions">
-                <!-- 点赞/点踩功能已注释 -->
-                <!--
                 <button
                   class="comment-action"
                   :class="{ liked: comment.userLiked }"
@@ -199,7 +167,6 @@
                 >
                   <i class="el-icon-thumb"></i> {{ comment.dislikes || 0 }}
                 </button>
-                -->
               </div>
             </div>
           </div>
@@ -260,10 +227,6 @@
                     <i class="el-icon-star-on" style="color: #ffc107"></i>
                     {{ recRobot.rating || 4.5 }}
                   </div>
-                  <div class="recommendation-card-points">
-                    <i class="el-icon-coin" style="color: #f39c12"></i>
-                    {{ formatPrice(recRobot.price) }}
-                  </div>
                 </div>
                 <el-button
                   size="mini"
@@ -291,11 +254,7 @@
       center
     >
       <subscription-selector
-        v-if="robot.id"
         :robotId="robot.id"
-        :price="
-          robot.price !== undefined && robot.price !== null ? robot.price : 1
-        "
         :onConfirm="handleSubscriptionConfirm"
         :onClose="closeSubscriptionDialog"
       />
@@ -329,12 +288,6 @@
 import { mapState } from 'vuex';
 import { fetchAgentDetail as apifetchAgentDetail } from '../utils/api';
 import { subscribeAgent as apisubscribeAgent } from '../utils/api';
-import { getSubscriptionCnt } from '../utils/api';
-import {
-  getAgentComment as apiGetAgentComment,
-  sendAgentComment as apiSendAgentComment,
-  deleteAgentComment as apiDeleteAgentComment,
-} from '../utils/api';
 import SubscriptionSelector from '@/components/SubscriptionSelector.vue';
 
 export default {
@@ -371,14 +324,27 @@ export default {
       // 删除评论确认弹窗
       deleteCommentDialogVisible: false,
       deleteCommentIndex: -1,
-      // 机器人统计信息
+      // 模拟数据 - 机器人统计信息
       robotStats: {
-        rating: 0, // 初始为0，将通过评论计算
-        subscriptions: 0, // 将通过API获取
-        comments: 0, // 将通过评论数量设置
+        rating: 4.7,
+        subscriptions: 1234,
+        comments: 89,
       },
-      // 评论列表 - 从后端获取
-      comments: [],
+      // 模拟数据 - 评论列表
+      comments: [
+        {
+          id: 1,
+          userName: '用户A',
+          userId: 'user1',
+          rating: 5,
+          text: '这个机器人非常好用，回答问题很准确，强烈推荐！',
+          likes: 15,
+          dislikes: 2,
+          userLiked: false,
+          userDisliked: false,
+          timestamp: '2024-01-15 14:30',
+        },
+      ],
       // 模拟数据 - 推荐机器人分类
       recommendationCategories: [
         {
@@ -392,7 +358,6 @@ export default {
               description: '专业的对话机器人，支持多种语言',
               rating: 4.8,
               developer: '开发者A',
-              price: 1,
             },
           ],
         },
@@ -407,7 +372,6 @@ export default {
               description: '强大的图像生成工具',
               rating: 4.9,
               developer: '开发者C',
-              price: 1,
             },
           ],
         },
@@ -428,35 +392,22 @@ export default {
     shouldListenToClicks() {
       return this.dialogRefCount === 0 && !this.isClosingSubDialog;
     },
-    // 检查用户是否已订阅该机器人
-    isUserSubscribed() {
-      const subscribedRobot = this.$store.state.agent.haveSubscribed.find(
-        (r) => r.agent_id === this.robot.id
-      );
-      return subscribedRobot && subscribedRobot.status;
-    },
   },
   watch: {
     visible(newVal) {
       if (newVal && this.robotId) {
         this.fetchRobotDetail(this.robotId);
-        this.loadComments(this.robotId);
-        this.loadSubscriptionCount(this.robotId);
       }
       // 监听弹窗显示状态变化，添加或移除键盘事件监听
       if (newVal) {
         this.addKeyboardListener();
-        this.disableBodyScroll();
       } else {
         this.removeKeyboardListener();
-        this.enableBodyScroll();
       }
     },
     robotId(newVal) {
       if (newVal && this.visible) {
         this.fetchRobotDetail(newVal);
-        this.loadComments(newVal);
-        this.loadSubscriptionCount(newVal);
       }
     },
   },
@@ -464,63 +415,15 @@ export default {
     // 键盘事件监听管理
     addKeyboardListener() {
       document.addEventListener('keydown', this.handleKeyDown);
-      // 添加滚轮事件监听
-      document.addEventListener('wheel', this.handleWheelEvent, {
-        passive: false,
-      });
-      // 添加触摸事件监听（移动端）
-      document.addEventListener('touchmove', this.handleTouchEvent, {
-        passive: false,
-      });
     },
     removeKeyboardListener() {
       document.removeEventListener('keydown', this.handleKeyDown);
-      // 移除滚轮事件监听
-      document.removeEventListener('wheel', this.handleWheelEvent);
-      // 移除触摸事件监听
-      document.removeEventListener('touchmove', this.handleTouchEvent);
     },
     handleKeyDown(event) {
       // 只处理ESC键
       if (event.key === 'Escape') {
         event.preventDefault();
         this.handleEscapeKey();
-      } else if (!this.shouldListenToClicks) {
-        // 如果有子弹窗打开，阻止所有其他键盘事件
-        event.preventDefault();
-        event.stopPropagation();
-      }
-    },
-    handleWheelEvent(event) {
-      // 如果有子弹窗打开，阻止滚轮事件
-      if (!this.shouldListenToClicks) {
-        event.preventDefault();
-        event.stopPropagation();
-      }
-    },
-    handleTouchEvent(event) {
-      // 如果有子弹窗打开，阻止触摸滚动事件
-      if (!this.shouldListenToClicks) {
-        event.preventDefault();
-        event.stopPropagation();
-      }
-    },
-    // 禁用body滚动
-    disableBodyScroll() {
-      document.body.style.overflow = 'hidden';
-      document.body.style.position = 'fixed';
-      document.body.style.width = '100%';
-      document.body.style.top = `-${window.scrollY}px`;
-    },
-    // 恢复body滚动
-    enableBodyScroll() {
-      const scrollY = document.body.style.top;
-      document.body.style.overflow = '';
-      document.body.style.position = '';
-      document.body.style.width = '';
-      document.body.style.top = '';
-      if (scrollY) {
-        window.scrollTo(0, parseInt(scrollY || '0') * -1);
       }
     },
     handleEscapeKey() {
@@ -567,20 +470,6 @@ export default {
       if (!text) return '';
       return text.length > length ? text.slice(0, length) + '...' : text;
     },
-    formatPrice(points) {
-      // 当points为0时，返回"免费"
-      if (points === 0) {
-        return '免费';
-      }
-      return `${points} 积分`;
-    },
-    formatRating(rating) {
-      // 当rating为0时，返回"暂无评分"
-      if (rating === 0) {
-        return '暂无评分';
-      }
-      return rating.toString();
-    },
     // 评论相关方法
     setRating(rating) {
       this.currentRating = rating;
@@ -592,41 +481,29 @@ export default {
         return;
       }
 
-      // 检查用户是否已订阅该机器人
-      if (!this.isUserSubscribed) {
-        this.$message.warning('请先订阅该机器人后再发表评论');
-        return;
-      }
+      const newComment = {
+        id: Date.now(),
+        userName: this.userName || '当前用户',
+        userId: this.userId,
+        rating: this.currentRating,
+        text: this.newComment.text,
+        likes: 0,
+        dislikes: 0,
+        userLiked: false,
+        userDisliked: false,
+        timestamp: new Date().toLocaleString(),
+      };
 
-      try {
-        const commentLoad = {
-          agentId: this.robot.id,
-          comment: this.newComment.text,
-          score: this.currentRating,
-        };
+      this.comments.unshift(newComment);
+      this.robotStats.comments = this.comments.length;
 
-        const response = await apiSendAgentComment(commentLoad);
+      // 重置表单
+      this.newComment.text = '';
+      this.currentRating = 5;
+      this.showAddCommentForm = false;
 
-        if (response.status === 200) {
-          this.$message.success('评论发布成功！');
-
-          // 重置表单
-          this.newComment.text = '';
-          this.currentRating = 5;
-          this.showAddCommentForm = false;
-
-          // 重新加载评论列表
-          await this.loadComments(this.robot.id);
-        } else {
-          this.$message.error('评论发布失败，请稍后重试');
-        }
-      } catch (error) {
-        console.error('发布评论失败:', error);
-        this.$message.error('评论发布失败，请稍后重试');
-      }
+      this.$message.success('评论添加成功！');
     },
-    // 点赞/点踩功能已注释
-    /*
     likeComment(index) {
       const comment = this.comments[index];
       if (comment.userLiked) {
@@ -655,7 +532,6 @@ export default {
         comment.userDisliked = true;
       }
     },
-    */
     // 确认删除评论
     confirmDeleteComment(index) {
       console.log('准备删除评论，索引:', index);
@@ -665,11 +541,9 @@ export default {
       }
 
       const comment = this.comments[index];
-      console.log('当前用户ID:', this.userId);
-      console.log('评论用户ID:', comment.user_id);
 
       // 检查权限：只能删除自己的评论
-      if (comment.user_id !== this.userId) {
+      if (comment.userId !== this.userId) {
         this.$message.error('您只能删除自己的评论');
         return;
       }
@@ -680,31 +554,23 @@ export default {
       console.log('删除确认弹窗已显示，引用计数:', this.dialogRefCount);
     },
     // 执行删除评论
-    async executeDeleteComment() {
+    executeDeleteComment() {
       if (
         this.deleteCommentIndex >= 0 &&
         this.deleteCommentIndex < this.comments.length
       ) {
-        try {
-          const comment = this.comments[this.deleteCommentIndex];
-          const response = await apiDeleteAgentComment(comment.id);
+        const deletedComment = this.comments.splice(
+          this.deleteCommentIndex,
+          1
+        )[0];
+        this.robotStats.comments = this.comments.length;
 
-          if (response.status === 200) {
-            this.$message.success('评论删除成功！');
+        this.$message.success('评论删除成功！');
+        console.log('已删除评论:', deletedComment);
 
-            // 重新加载评论列表
-            await this.loadComments(this.robot.id);
-
-            // 如果删除后没有评论了，显示提示
-            if (this.comments.length === 0) {
-              this.$message.info('已删除所有评论，快来添加第一条评论吧！');
-            }
-          } else {
-            this.$message.error('评论删除失败，请稍后重试');
-          }
-        } catch (error) {
-          console.error('删除评论失败:', error);
-          this.$message.error('评论删除失败，请稍后重试');
+        // 如果删除的是最后一条评论，可以显示提示
+        if (this.comments.length === 0) {
+          this.$message.info('已删除所有评论，快来添加第一条评论吧！');
         }
       }
       this.closeDeleteCommentDialog();
@@ -744,7 +610,6 @@ export default {
     showRecommendations() {
       this.incrementDialogRef();
       this.recommendationDialogVisible = true;
-      this.disableBodyScroll();
     },
     closeRecommendations() {
       this.isClosingSubDialog = true;
@@ -769,19 +634,22 @@ export default {
       }, 1500);
     },
     formatDateTime(date) {
-      // 使用ISO 8601格式，与后端API保持一致
-      return date.toISOString();
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      const hours = String(date.getHours()).padStart(2, '0');
+      const minutes = String(date.getMinutes()).padStart(2, '0');
+      const seconds = String(date.getSeconds()).padStart(2, '0');
+      return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
     },
     openSubscriptionDialog() {
       this.incrementDialogRef();
       this.isSubscriptionDialogVisible = true;
-      this.disableBodyScroll();
     },
     closeSubscriptionDialog() {
       this.isClosingSubDialog = true;
       this.isSubscriptionDialogVisible = false;
       this.decrementDialogRef();
-      this.enableBodyScroll();
       // 延迟重置标识，防止连带关闭
       setTimeout(() => {
         this.isClosingSubDialog = false;
@@ -798,10 +666,6 @@ export default {
       try {
         const response = await apifetchAgentDetail(agentId);
         this.robot = response.data;
-        // 确保机器人对象有price属性，当price为undefined或null时默认为1，但保留0值
-        if (this.robot.price === undefined || this.robot.price === null) {
-          this.robot.price = 1;
-        }
       } catch (error) {
         console.error('获取机器人详情失败:', error);
         this.$message.error('无法加载机器人详情');
@@ -809,47 +673,23 @@ export default {
         this.loading = false;
       }
     },
-    async loadSubscriptionCount(agentId) {
-      try {
-        const response = await getSubscriptionCnt(agentId);
-        if (response.status === 200) {
-          this.robotStats.subscriptions = response.data.subscriptionCnt;
-        }
-      } catch (error) {
-        console.warn('获取订阅数失败:', error);
-        this.robotStats.subscriptions = 0;
-      }
-    },
     async subscribeRobot(Duration) {
       try {
         const currentTime = this.formatDateTime(new Date());
         const payload = {
-          userId: this.$store.state.user.userId,
-          agentId: this.robot.id,
-          startTime: currentTime,
+          user_id: this.$store.state.user.userId,
+          agent_id: this.robot.id,
+          startime: currentTime,
           duration: Duration,
-          subscriptionType: 1,
         };
         console.log('请求 payload:', payload);
         const response = await apisubscribeAgent(payload);
         if (response.status === 200) {
           this.$message.success('订阅成功！');
-
-          // 1. 更新用户订阅数据
-          await this.$store.dispatch(
+          this.$store.dispatch(
             'agent/fetchUserSubscriptions',
             this.$store.state.user.userId
           );
-
-          // 2. 重新加载机器人订阅数量
-          await this.loadSubscriptionCount(this.robot.id);
-
-          // 3. 强制更新页面，确保按钮状态正确显示
-          this.$forceUpdate();
-
-          // 4. 通知父组件订阅状态已变化
-          this.$emit('subscription-changed', this.robot.id);
-
           console.log('订阅成功!!!:', response);
           console.log(
             '订阅成功后的用户订阅列表:',
@@ -877,48 +717,6 @@ export default {
         this.openSubscriptionDialog();
       }
     },
-    // 加载机器人评论
-    async loadComments(agentId) {
-      try {
-        const response = await apiGetAgentComment(agentId);
-        if (response.status === 200 && response.data) {
-          // 后端返回的数据格式：id, user_id, userName, comment, createdAt, score
-          this.comments = response.data.map((comment) => ({
-            id: comment.id,
-            user_id: comment.user_id,
-            userName: comment.userName || '匿名用户',
-            rating: comment.rating,
-            text: comment.comment,
-            timestamp: new Date(comment.createdAt).toLocaleString('zh-CN'),
-          }));
-
-          // 更新评论统计
-          this.robotStats.comments = this.comments.length;
-
-          // 计算平均评分
-          if (this.comments.length > 0) {
-            const avgRating =
-              this.comments.reduce(
-                (sum, comment) => sum + (comment.rating || 0),
-                0
-              ) / this.comments.length;
-            this.robotStats.rating = Math.round(avgRating * 10) / 10; // 保留一位小数
-          } else {
-            // 没有评论时显示暂无评分
-            this.robotStats.rating = 0;
-          }
-        } else {
-          this.comments = [];
-          this.robotStats.comments = 0;
-          this.robotStats.rating = 0;
-        }
-      } catch (error) {
-        console.error('加载评论失败:', error);
-        this.comments = [];
-        this.robotStats.comments = 0;
-        this.robotStats.rating = 0;
-      }
-    },
   },
   // 组件销毁时移除键盘事件监听
   beforeDestroy() {
@@ -938,29 +736,19 @@ export default {
   left: 0;
   width: 100vw;
   height: 100vh;
-  background-color: rgba(0, 0, 0, 0.95); // 使用完全覆盖下层
+  background-color: rgba(0, 0, 0, 0.8); // 使用完全覆盖下层
   z-index: 9999;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 2vh;
-  overflow: hidden; // 防止滚动穿透
-
-  // 确保完全阻止滚动穿透
-  &::-webkit-scrollbar {
-    display: none;
-  }
-
-  // 禁用滚动
-  overscroll-behavior: contain;
-  touch-action: none;
 }
 
 // 弹窗主体样式
 .robot-detail-content {
   background: white;
   border-radius: 12px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
   max-width: 90vw;
   max-height: 90vh;
   width: 80vw;
@@ -977,15 +765,6 @@ export default {
     opacity: 0.5;
     filter: grayscale(30%);
     pointer-events: none;
-    user-select: none;
-    overflow: hidden;
-
-    // 禁用所有滚动
-    * {
-      overflow: hidden !important;
-      pointer-events: none !important;
-      user-select: none !important;
-    }
   }
 }
 
@@ -1077,22 +856,6 @@ export default {
           color: $text-color;
           line-height: 1.6;
           margin-bottom: 2vh;
-        }
-
-        .robot-developer {
-          color: $text-color;
-          margin-bottom: 2vh;
-          font-size: 0.95rem;
-
-          .developer-label {
-            font-weight: 500;
-            color: #666;
-          }
-
-          .developer-name {
-            color: $accent-color;
-            font-weight: 500;
-          }
         }
 
         .robot-stats {
@@ -1308,7 +1071,6 @@ export default {
           display: flex;
           gap: 1.5vw;
 
-          /* 点赞/点踩功能相关样式已注释
           .comment-action {
             background: none;
             border: none;
@@ -1331,7 +1093,6 @@ export default {
               color: #dc3545;
             }
           }
-          */
         }
       }
     }
@@ -1431,15 +1192,6 @@ export default {
               align-items: center;
               gap: 0.5vw;
               color: #ffc107;
-              font-size: 0.8rem;
-              margin-bottom: 0.5vh;
-            }
-
-            .recommendation-card-points {
-              display: flex;
-              align-items: center;
-              gap: 0.5vw;
-              color: #f39c12;
               font-size: 0.8rem;
             }
           }

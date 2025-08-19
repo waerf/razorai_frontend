@@ -21,13 +21,13 @@
           v-model="searchKeyword"
           class="search-input"
           placeholder="搜索机器人..."
-          @input="performSearch"
+          @clear="handleSearchClear"
           clearable
         >
           <el-button
             slot="append"
             icon="el-icon-search"
-            @click="performSearch"
+            @click="handleSearchClick"
           ></el-button>
         </el-input>
       </div>
@@ -35,67 +35,15 @@
 
     <!-- 搜索结果 -->
     <div v-if="showSearchResults" class="search-results">
-      <h2 class="section-title">搜索结果 ({{ searchResults.length }})</h2>
-      <div class="robots-grid">
-        <el-card
-          v-for="robot in searchResults"
-          :key="robot.id"
-          class="robot-card"
-          @click.native="showRobotDetail(robot.id)"
-        >
-          <div class="robot-header">
-            <img
-              :src="getRobotImage(robot.type)"
-              alt="robot"
-              class="robot-logo"
-            />
-            <div class="robot-name">{{ robot.name }}</div>
-          </div>
-          <div class="robot-description">
-            {{ truncate(robot.description, 80) }}
-          </div>
-          <div class="robot-rating-price">
-            <div class="robot-subscription">
-              <i class="el-icon-user" style="color: #409eff"></i>
-              {{ subscriptionCounts[robot.id] }} 人订阅
-            </div>
-            <div class="robot-price">
-              {{ formatprice(robot.price) }}
-            </div>
-          </div>
-          <div class="robot-actions">
-            <el-button size="mini" @click.stop="showRobotDetail(robot.id)">
-              查看详情
-            </el-button>
-            <el-button
-              type="primary"
-              size="mini"
-              :class="{ subscribed: isSubscribed(robot.id) }"
-              @click.stop="subscribeRobot(robot.id)"
-            >
-              {{ isSubscribed(robot.id) ? '开始对话' : '订阅' }}
-            </el-button>
-          </div>
-        </el-card>
-      </div>
-    </div>
-
-    <!-- 机器人分类展示 -->
-    <div v-else class="robots-container">
-      <!-- 推荐机器人 -->
-      <div class="category-section">
-        <div class="category-header">
-          <h3 class="category-title">
-            <i class="el-icon-document"></i>
-            推荐机器人
-          </h3>
-          <el-button class="view-more-btn" @click="showCategoryDetail('text')">
-            查看更多
-          </el-button>
-        </div>
+      <div v-loading="searchLoading" class="search-results-container">
+        <h2 class="section-title">
+          搜索结果 (第{{ currentSearchPageNumber }}页，共{{
+            searchResults.length
+          }}个)
+        </h2>
         <div class="robots-grid">
           <el-card
-            v-for="robot in textRobots.slice(0, 4)"
+            v-for="robot in searchResults"
             :key="robot.id"
             class="robot-card"
             @click.native="showRobotDetail(robot.id)"
@@ -114,7 +62,7 @@
             <div class="robot-rating-price">
               <div class="robot-subscription">
                 <i class="el-icon-user" style="color: #409eff"></i>
-                {{ subscriptionCounts[robot.id] }} 人订阅
+                {{ robot.subscriptionCnt || 0 }} 人订阅
               </div>
               <div class="robot-price">
                 {{ formatprice(robot.price) }}
@@ -125,7 +73,91 @@
                 查看详情
               </el-button>
               <el-button
-                type="prefered"
+                type="primary"
+                size="mini"
+                :class="{ subscribed: isSubscribed(robot.id) }"
+                @click.stop="subscribeRobot(robot.id)"
+              >
+                {{ isSubscribed(robot.id) ? '开始对话' : '订阅' }}
+              </el-button>
+            </div>
+          </el-card>
+        </div>
+
+        <!-- 搜索结果分页控件 -->
+        <div class="pagination-controls">
+          <el-button
+            :disabled="isFirstSearchPage || searchLoading"
+            :class="['pagination-btn', { disabled: isFirstSearchPage }]"
+            @click="goToPreviousSearchPage"
+          >
+            <i class="el-icon-arrow-left"></i>
+            上一页
+          </el-button>
+
+          <span class="page-info">第 {{ currentSearchPageNumber }} 页</span>
+
+          <el-button
+            :disabled="!hasNextSearchPage || searchLoading"
+            :class="['pagination-btn', { disabled: !hasNextSearchPage }]"
+            @click="goToNextSearchPage"
+          >
+            下一页
+            <i class="el-icon-arrow-right"></i>
+          </el-button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 机器人分类展示 -->
+    <div v-else class="robots-container">
+      <!-- 推荐机器人 -->
+      <div class="category-section">
+        <div class="category-header">
+          <h3 class="category-title">
+            <i class="el-icon-document"></i>
+            推荐机器人
+          </h3>
+          <el-button
+            class="view-more-btn"
+            @click="showCategoryDetail('recommended')"
+          >
+            查看更多
+          </el-button>
+        </div>
+        <div class="robots-grid">
+          <el-card
+            v-for="robot in recommendedRobots"
+            :key="robot.id"
+            class="robot-card"
+            @click.native="showRobotDetail(robot.id)"
+          >
+            <div class="robot-header">
+              <img
+                :src="getRobotImage(robot.type)"
+                alt="robot"
+                class="robot-logo"
+              />
+              <div class="robot-name">{{ robot.name }}</div>
+            </div>
+            <div class="robot-description">
+              {{ truncate(robot.description, 80) }}
+            </div>
+            <div class="robot-rating-price">
+              <div class="robot-subscription">
+                <i class="el-icon-user" style="color: #409eff"></i>
+                {{ robot.subscriptionCnt || 0 }} 人订阅
+              </div>
+              <div class="robot-price">
+                {{ formatprice(robot.price) }}
+              </div>
+            </div>
+            <div class="robot-actions">
+              <el-button size="mini" @click.stop="showRobotDetail(robot.id)">
+                查看详情
+              </el-button>
+              <el-button
+                type="primary"
                 size="mini"
                 :class="{ subscribed: isSubscribed(robot.id) }"
                 @click.stop="subscribeRobot(robot.id)"
@@ -144,13 +176,16 @@
             <i class="el-icon-document"></i>
             角色扮演机器人
           </h3>
-          <el-button class="view-more-btn" @click="showCategoryDetail('text')">
+          <el-button
+            class="view-more-btn"
+            @click="showCategoryDetail('roleplay')"
+          >
             查看更多
           </el-button>
         </div>
         <div class="robots-grid">
           <el-card
-            v-for="robot in textRobots.slice(0, 4)"
+            v-for="robot in rolePlayRobots"
             :key="robot.id"
             class="robot-card"
             @click.native="showRobotDetail(robot.id)"
@@ -169,7 +204,7 @@
             <div class="robot-rating-price">
               <div class="robot-subscription">
                 <i class="el-icon-user" style="color: #409eff"></i>
-                {{ subscriptionCounts[robot.id] }} 人订阅
+                {{ robot.subscriptionCnt || 0 }} 人订阅
               </div>
               <div class="robot-price">
                 {{ formatprice(robot.price) }}
@@ -199,13 +234,16 @@
             <i class="el-icon-picture-outline"></i>
             代码编程机器人
           </h3>
-          <el-button class="view-more-btn" @click="showCategoryDetail('image')">
+          <el-button
+            class="view-more-btn"
+            @click="showCategoryDetail('coding')"
+          >
             查看更多
           </el-button>
         </div>
         <div class="robots-grid">
           <el-card
-            v-for="robot in imageRobots.slice(0, 4)"
+            v-for="robot in codingRobots"
             :key="robot.id"
             class="robot-card"
             @click.native="showRobotDetail(robot.id)"
@@ -224,7 +262,7 @@
             <div class="robot-rating-price">
               <div class="robot-subscription">
                 <i class="el-icon-user" style="color: #409eff"></i>
-                {{ subscriptionCounts[robot.id] }} 人订阅
+                {{ robot.subscriptionCnt || 0 }} 人订阅
               </div>
               <div class="robot-price">
                 {{ formatprice(robot.price) }}
@@ -254,13 +292,13 @@
             <i class="el-icon-video-camera"></i>
             论文修改机器人
           </h3>
-          <el-button class="view-more-btn" @click="showCategoryDetail('video')">
+          <el-button class="view-more-btn" @click="showCategoryDetail('paper')">
             查看更多
           </el-button>
         </div>
         <div class="robots-grid">
           <el-card
-            v-for="robot in videoRobots.slice(0, 4)"
+            v-for="robot in paperRobots"
             :key="robot.id"
             class="robot-card"
             @click.native="showRobotDetail(robot.id)"
@@ -279,7 +317,7 @@
             <div class="robot-rating-price">
               <div class="robot-subscription">
                 <i class="el-icon-user" style="color: #409eff"></i>
-                {{ subscriptionCounts[robot.id] }} 人订阅
+                {{ robot.subscriptionCnt || 0 }} 人订阅
               </div>
               <div class="robot-price">
                 {{ formatprice(robot.price) }}
@@ -308,51 +346,75 @@
       :title="categoryDialogTitle"
       :visible.sync="categoryDialogVisible"
       width="80%"
-      center
       :close-on-click-modal="false"
       :close-on-press-escape="false"
     >
-      <div class="category-detail-grid">
-        <el-card
-          v-for="robot in categoryDetailRobots"
-          :key="robot.id"
-          class="robot-card"
-          @click.native="showRobotDetail(robot.id)"
-        >
-          <div class="robot-header">
-            <img
-              :src="getRobotImage(robot.type)"
-              alt="robot"
-              class="robot-logo"
-            />
-            <div class="robot-name">{{ robot.name }}</div>
-          </div>
-          <div class="robot-description">
-            {{ truncate(robot.description, 80) }}
-          </div>
-          <div class="robot-rating-price">
-            <div class="robot-subscription">
-              <i class="el-icon-user" style="color: #409eff"></i>
-              {{ subscriptionCounts[robot.id] }} 人订阅
+      <div v-loading="paginationLoading" class="category-detail-container">
+        <div class="category-detail-grid">
+          <el-card
+            v-for="robot in categoryDetailRobots"
+            :key="robot.id"
+            class="robot-card"
+            @click.native="showRobotDetail(robot.id)"
+          >
+            <div class="robot-header">
+              <img
+                :src="getRobotImage(robot.type)"
+                alt="robot"
+                class="robot-logo"
+              />
+              <div class="robot-name">{{ robot.name }}</div>
             </div>
-            <div class="robot-price">
-              {{ formatprice(robot.price) }}
+            <div class="robot-description">
+              {{ truncate(robot.description, 80) }}
             </div>
-          </div>
-          <div class="robot-actions">
-            <el-button size="mini" @click.stop="showRobotDetail(robot.id)">
-              查看详情
-            </el-button>
-            <el-button
-              type="primary"
-              size="mini"
-              :class="{ subscribed: isSubscribed(robot.id) }"
-              @click.stop="subscribeRobot(robot.id)"
-            >
-              {{ isSubscribed(robot.id) ? '开始对话' : '订阅' }}
-            </el-button>
-          </div>
-        </el-card>
+            <div class="robot-rating-price">
+              <div class="robot-subscription">
+                <i class="el-icon-user" style="color: #409eff"></i>
+                {{ robot.subscriptionCnt || 0 }} 人订阅
+              </div>
+              <div class="robot-price">
+                {{ formatprice(robot.price) }}
+              </div>
+            </div>
+            <div class="robot-actions">
+              <el-button size="mini" @click.stop="showRobotDetail(robot.id)">
+                查看详情
+              </el-button>
+              <el-button
+                type="primary"
+                size="mini"
+                :class="{ subscribed: isSubscribed(robot.id) }"
+                @click.stop="subscribeRobot(robot.id)"
+              >
+                {{ isSubscribed(robot.id) ? '开始对话' : '订阅' }}
+              </el-button>
+            </div>
+          </el-card>
+        </div>
+
+        <!-- 分页控件 -->
+        <div class="pagination-controls">
+          <el-button
+            :disabled="isFirstPage || paginationLoading"
+            :class="['pagination-btn', { disabled: isFirstPage }]"
+            @click="goToPreviousPage"
+          >
+            <i class="el-icon-arrow-left"></i>
+            上一页
+          </el-button>
+
+          <span class="page-info">第 {{ currentPageNumber }} 页</span>
+
+          <el-button
+            :disabled="!hasNextPage || paginationLoading"
+            :class="['pagination-btn', { disabled: !hasNextPage }]"
+            @click="goToNextPage"
+          >
+            下一页
+            <i class="el-icon-arrow-right"></i>
+          </el-button>
+        </div>
       </div>
     </el-dialog>
 
@@ -386,7 +448,7 @@
     <robot-detail-dialog
       :visible="robotDetailVisible"
       :robotId="currentRobotId"
-      @close="robotDetailVisible = false"
+      @close="handleRobotDetailClose"
       @show-robot="showRobotDetail"
     />
   </div>
@@ -396,7 +458,8 @@
 import { mapActions, mapState } from 'vuex';
 import {
   subscribeAgent as apiSubscribeAgent,
-  getSubscriptionCnt,
+  getRobotsByType as apiGetRobotsByType,
+  searchAgent as apiSearchAgent,
 } from '../utils/api';
 import RobotDetailDialog from './RobotDetailPage.vue';
 import SubscriptionSelector from '@/components/SubscriptionSelector.vue';
@@ -421,15 +484,27 @@ export default {
       loading: false,
       robotDetailVisible: false,
       currentRobotId: null,
-      subscriptionCounts: {}, // 存储每个机器人的订阅数
+      // 新增的分页相关数据
+      recommendedRobots: [], // 推荐机器人前4个
+      rolePlayRobots: [], // 角色扮演机器人前4个
+      codingRobots: [], // 代码编程机器人前4个
+      paperRobots: [], // 论文修改机器人前4个
+      currentCategoryType: null, // 当前查看的分类类型
+      currentFirstIndex: 0, // 当前分页的起始索引
+      paginationLoading: false, // 分页加载状态
+      hasNextPage: true, // 是否有下一页
+      // 搜索相关数据
+      searchType: 1, // 搜索类型：1=名称，2=描述
+      searchInfo: '', // 当前搜索关键词
+      searchIndex: 0, // 搜索结果起始索引
+      searchLoading: false, // 搜索加载状态
+      hasNextSearchPage: true, // 是否有下一页搜索结果
+      subscriptionCheckInterval: null, // 订阅状态检查定时器
     };
   },
   computed: {
     ...mapState('user', ['isLoggedIn', 'userName', 'userId']),
     ...mapState('agent', {
-      textRobots: (state) => state.textAgents,
-      imageRobots: (state) => state.imageAgents,
-      videoRobots: (state) => state.videoAgents,
       haveSubscribed: (state) => state.haveSubscribed,
     }),
     currentSearchModeText() {
@@ -440,73 +515,112 @@ export default {
       return modes[this.currentSearchMode];
     },
     allRobots() {
-      return [...this.textRobots, ...this.imageRobots, ...this.videoRobots];
+      return [
+        ...this.recommendedRobots,
+        ...this.rolePlayRobots,
+        ...this.codingRobots,
+        ...this.paperRobots,
+      ];
+    },
+    currentPageNumber() {
+      return Math.floor(this.currentFirstIndex / 8) + 1;
+    },
+    isFirstPage() {
+      return this.currentFirstIndex === 0;
+    },
+    // 搜索相关计算属性
+    currentSearchPageNumber() {
+      return Math.floor(this.searchIndex / 16) + 1;
+    },
+    isFirstSearchPage() {
+      return this.searchIndex === 0;
+    },
+  },
+  watch: {
+    // 监听搜索框内容变化
+    searchKeyword(newVal) {
+      if (!newVal || newVal.trim() === '') {
+        this.handleSearchClear();
+      }
     },
   },
   created() {
-    this.getAllAgentsData();
+    // 初始化搜索类型
+    this.searchType = this.currentSearchMode === 'name' ? 1 : 2;
+
+    this.loadInitialData();
     this.getUserSubscriptions();
   },
+  mounted() {
+    // 设置定时器，每5分钟检查一次订阅状态
+    this.subscriptionCheckInterval = setInterval(
+      () => {
+        if (this.userId) {
+          this.getUserSubscriptions();
+        }
+      },
+      5 * 60 * 1000
+    ); // 5分钟
+  },
   beforeDestroy() {
-    // 组件销毁前清理
+    // 组件销毁前清理定时器
+    if (this.subscriptionCheckInterval) {
+      clearInterval(this.subscriptionCheckInterval);
+    }
   },
   methods: {
-    ...mapActions('agent', [
-      'fetchAllAgentsData',
-      'fetchAgentDetail',
-      'fetchUserSubscriptions',
-    ]),
-    async getAllAgentsData() {
+    ...mapActions('agent', ['fetchAgentDetail', 'fetchUserSubscriptions']),
+    // 加载初始数据（首页展示的前4个机器人）
+    async loadInitialData() {
       this.loading = true;
       try {
-        await this.fetchAllAgentsData();
-        // 确保所有机器人都有price属性，默认为1
-        this.ensurepriceProperty();
-        // 获取所有机器人的订阅数
-        await this.getSubscriptionCounts();
-        console.log('获取机器人数据成功');
+        // 并行加载所有类型的前4个机器人
+        const [recommendedData, rolePlayData, codingData, paperData] =
+          await Promise.all([
+            this.loadRobotsByType(1, 0), // 推荐机器人 type=1
+            this.loadRobotsByType(1, 0), // 角色扮演机器人 type=1 (暂时相同)
+            this.loadRobotsByType(2, 0), // 代码编程机器人 type=2
+            this.loadRobotsByType(3, 0), // 论文修改机器人 type=3
+          ]);
+
+        // 保存前4个机器人用于首页展示
+        this.recommendedRobots = recommendedData.slice(0, 4);
+        this.rolePlayRobots = rolePlayData.slice(0, 4);
+        this.codingRobots = codingData.slice(0, 4);
+        this.paperRobots = paperData.slice(0, 4);
+
+        console.log('初始数据加载成功');
       } catch (error) {
-        console.error('获取机器人数据失败:', error);
-        this.$message.error('获取机器人数据失败');
+        console.error('加载初始数据失败:', error);
+        this.$message.error('加载机器人数据失败');
       } finally {
         this.loading = false;
       }
     },
-    ensurepriceProperty() {
-      // 确保所有机器人都有price属性，当price为undefined或null时默认为1，但保留0值
-      [...this.textRobots, ...this.imageRobots, ...this.videoRobots].forEach(
-        (robot) => {
-          if (robot.price === undefined || robot.price === null) {
-            robot.price = 1;
-          }
-        }
-      );
-    },
-    async getSubscriptionCounts() {
-      const allRobots = [
-        ...this.textRobots,
-        ...this.imageRobots,
-        ...this.videoRobots,
-      ];
-      const counts = {};
 
-      // 并行获取所有机器人的订阅数
+    // 根据类型和起始索引加载机器人数据
+    async loadRobotsByType(type, firstIndex) {
       try {
-        const promises = allRobots.map(async (robot) => {
-          try {
-            const response = await getSubscriptionCnt(robot.id);
-            counts[robot.id] = response.data.subscriptionCnt;
-          } catch (error) {
-            console.warn(`获取机器人 ${robot.id} 订阅数失败:`, error);
-            counts[robot.id] = 0;
-          }
-        });
+        const agentload = {
+          type: type,
+          firstIndex: firstIndex,
+        };
+        const response = await apiGetRobotsByType(agentload);
 
-        await Promise.all(promises);
-        this.subscriptionCounts = counts;
-        console.log('订阅数获取完成:', this.subscriptionCounts);
+        if (response.status === 200 && response.data) {
+          const robots = response.data.data;
+          return robots;
+        } else {
+          console.error('加载机器人数据失败:', response);
+          this.$message.error('加载机器人数据失败，请稍后重试');
+        }
+        return [];
       } catch (error) {
-        console.error('获取订阅数失败:', error);
+        console.error(
+          `加载机器人数据失败 (type: ${type}, firstIndex: ${firstIndex}):`,
+          error
+        );
+        throw error;
       }
     },
     async getUserSubscriptions() {
@@ -514,53 +628,209 @@ export default {
       try {
         await this.fetchUserSubscriptions(this.userId);
         console.log('获取用户订阅信息成功');
+
+        // 检查并清理过期的订阅
+        this.checkExpiredSubscriptions();
       } catch (error) {
         console.error('获取用户订阅信息失败:', error);
       }
     },
+
+    // 检查过期的订阅
+    checkExpiredSubscriptions() {
+      const currentTime = new Date();
+      const expiredSubscriptions = this.haveSubscribed.filter((sub) => {
+        if (sub.end_time) {
+          const endTime = new Date(sub.end_time);
+          return currentTime > endTime && sub.status;
+        }
+        return false;
+      });
+
+      if (expiredSubscriptions.length > 0) {
+        console.log('发现过期订阅:', expiredSubscriptions);
+        // 可以在这里添加处理过期订阅的逻辑，比如通知用户
+      }
+    },
     setSearchMode(mode) {
       this.currentSearchMode = mode;
-      this.performSearch();
+      // 更新搜索类型
+      this.searchType = mode === 'name' ? 1 : 2;
     },
-    performSearch() {
+    // 处理搜索按钮点击
+    async handleSearchClick() {
       if (!this.searchKeyword.trim()) {
-        this.showSearchResults = false;
+        this.$message.warning('请输入搜索关键词');
         return;
       }
 
-      const keyword = this.searchKeyword.toLowerCase();
-      this.searchResults = this.allRobots.filter((robot) => {
-        switch (this.currentSearchMode) {
-          case 'name':
-            return robot.name && robot.name.toLowerCase().includes(keyword);
-          case 'description':
-            return (
-              robot.description &&
-              robot.description.toLowerCase().includes(keyword)
-            );
-          default:
-            return (
-              (robot.name && robot.name.toLowerCase().includes(keyword)) ||
-              (robot.description &&
-                robot.description.toLowerCase().includes(keyword))
-            );
-        }
-      });
-      this.showSearchResults = true;
+      this.searchInfo = this.searchKeyword.trim();
+      this.searchIndex = 0;
+      this.hasNextSearchPage = true;
+
+      await this.performSearch();
     },
-    showCategoryDetail(categoryType) {
-      const titles = {
-        text: '文本对话机器人',
-        image: '图片生成机器人',
-        video: '音视频机器人',
+
+    // 处理搜索框清空
+    handleSearchClear() {
+      this.showSearchResults = false;
+      this.searchResults = [];
+      this.searchInfo = '';
+      this.searchIndex = 0;
+      this.hasNextSearchPage = true;
+    },
+
+    // 执行搜索
+    async performSearch() {
+      this.searchLoading = true;
+      try {
+        const searchload = {
+          searchType: this.searchType,
+          searchInfo: this.searchInfo,
+          searchIndex: this.searchIndex,
+        };
+
+        console.log('搜索请求:', searchload);
+        const response = await apiSearchAgent(searchload);
+
+        if (response.status === 200 && response.data) {
+          const robots = Array.isArray(response.data)
+            ? response.data
+            : response.data.data || [];
+          this.searchResults = robots;
+
+          // 判断是否有下一页（如果返回的数据少于16个，说明没有下一页）
+          this.hasNextSearchPage = robots.length === 16;
+
+          this.showSearchResults = true;
+          console.log('搜索成功，获得结果:', robots.length);
+        } else {
+          throw new Error('搜索响应格式错误');
+        }
+      } catch (error) {
+        console.error('搜索失败:', error);
+        this.$message.error('搜索失败，请稍后重试');
+      } finally {
+        this.searchLoading = false;
+      }
+    },
+
+    // 搜索结果上一页
+    async goToPreviousSearchPage() {
+      if (this.isFirstSearchPage || this.searchLoading) return;
+
+      this.searchIndex -= 16;
+      await this.performSearch();
+    },
+
+    // 搜索结果下一页
+    async goToNextSearchPage() {
+      if (!this.hasNextSearchPage || this.searchLoading) return;
+
+      this.searchIndex += 16;
+      await this.performSearch();
+    },
+    async showCategoryDetail(categoryType) {
+      // 映射分类到类型和标题
+      const categoryConfig = {
+        recommended: { type: 1, title: '推荐机器人' },
+        roleplay: { type: 1, title: '角色扮演机器人' },
+        coding: { type: 2, title: '代码编程机器人' },
+        paper: { type: 3, title: '论文修改机器人' },
       };
-      this.categoryDialogTitle = titles[categoryType];
-      this.categoryDetailRobots = this.getRobotsByType(categoryType);
+
+      const config = categoryConfig[categoryType];
+      if (!config) {
+        console.error('未知的分类类型:', categoryType);
+        return;
+      }
+
+      this.currentCategoryType = config.type;
+      this.categoryDialogTitle = config.title;
+      this.currentFirstIndex = 0;
+      this.hasNextPage = true;
+
+      // 加载第一页数据
+      await this.loadCategoryPageData();
       this.categoryDialogVisible = true;
+    },
+
+    // 加载分类页面数据
+    async loadCategoryPageData() {
+      this.paginationLoading = true;
+      try {
+        const robots = await this.loadRobotsByType(
+          this.currentCategoryType,
+          this.currentFirstIndex
+        );
+        this.categoryDetailRobots = robots;
+
+        // 判断是否有下一页（如果返回的数据少于8个，说明没有下一页）
+        this.hasNextPage = robots.length === 8;
+
+        console.log(
+          `加载分类数据成功 (type: ${this.currentCategoryType}, firstIndex: ${this.currentFirstIndex})`
+        );
+      } catch (error) {
+        console.error('加载分类数据失败:', error);
+        this.$message.error('加载数据失败，请稍后重试');
+      } finally {
+        this.paginationLoading = false;
+      }
+    },
+
+    // 上一页
+    async goToPreviousPage() {
+      if (this.isFirstPage || this.paginationLoading) return;
+
+      this.currentFirstIndex -= 8;
+      await this.loadCategoryPageData();
+    },
+
+    // 下一页
+    async goToNextPage() {
+      if (!this.hasNextPage || this.paginationLoading) return;
+
+      this.currentFirstIndex += 8;
+      await this.loadCategoryPageData();
     },
     showRobotDetail(robotId) {
       this.currentRobotId = robotId;
       this.robotDetailVisible = true;
+    },
+    async handleRobotDetailClose() {
+      // 关闭机器人详情弹窗时，更新页面数据
+      this.robotDetailVisible = false;
+
+      try {
+        // 1. 更新用户订阅数据（可能在详情页面中进行了订阅操作）
+        if (this.userId) {
+          await this.$store.dispatch(
+            'agent/fetchUserSubscriptions',
+            this.userId
+          );
+        }
+
+        // 2. 重新加载初始数据（包含最新的订阅数量）
+        await this.loadInitialData();
+
+        // 3. 如果分类详情弹窗是打开的，也更新分类数据
+        if (this.categoryDialogVisible && this.currentCategoryType) {
+          await this.loadCategoryPageData();
+        }
+
+        // 4. 如果当前显示搜索结果，也更新搜索结果
+        if (this.showSearchResults && this.searchInfo) {
+          await this.performSearch();
+        }
+
+        // 4. 强制更新页面，确保所有状态正确显示
+        this.$forceUpdate();
+
+        console.log('机器人详情弹窗关闭，页面数据已更新');
+      } catch (error) {
+        console.error('更新页面数据失败:', error);
+      }
     },
     subscribeRobot(robotId) {
       //if (!this.isLoggedIn) {
@@ -573,7 +843,12 @@ export default {
         return;
       }
 
-      const robot = this.allRobots.find((r) => r.id === robotId);
+      // 查找机器人（包括搜索结果）
+      let robot = this.allRobots.find((r) => r.id === robotId);
+      if (!robot && this.showSearchResults) {
+        robot = this.searchResults.find((r) => r.id === robotId);
+      }
+
       if (robot) {
         this.currentRobotForSubscription = robot;
         this.subscriptionDialogVisible = true;
@@ -594,9 +869,9 @@ export default {
       try {
         const currentTime = this.formatDateTime(new Date());
         const payload = {
-          user_id: this.userId,
-          agent_id: this.currentRobotForSubscription.id,
-          startime: currentTime,
+          userId: this.$store.state.user.userId,
+          agentId: this.currentRobotForSubscription.id,
+          startTime: currentTime,
           duration: duration,
           subscriptionType: 1,
         };
@@ -607,9 +882,44 @@ export default {
         const response = await apiSubscribeAgent(payload);
         if (response.status === 200) {
           this.$message.success('订阅成功！');
+
+          // 1. 更新用户订阅数据
+          await this.$store.dispatch(
+            'agent/fetchUserSubscriptions',
+            this.$store.state.user.userId
+          );
+
+          // 2. 重新加载初始数据（包含最新的订阅数量）
+          await this.loadInitialData();
+
+          // 3. 如果分类详情弹窗是打开的，也更新分类数据
+          if (this.categoryDialogVisible && this.currentCategoryType) {
+            await this.loadCategoryPageData();
+          }
+
+          // 4. 如果当前显示搜索结果，也更新搜索结果
+          if (this.showSearchResults && this.searchInfo) {
+            await this.performSearch();
+          }
+
+          console.log(
+            '订阅成功后的用户订阅列表:',
+            this.$store.state.agent.haveSubscribed
+          );
+          console.log('当前机器人ID:', this.currentRobotForSubscription.id);
+          console.log(
+            '检查是否已订阅:',
+            this.isSubscribed(this.currentRobotForSubscription.id)
+          );
+
+          // 3. 强制更新页面，确保所有状态正确显示
+          this.$forceUpdate();
+
+          // 4. 最后关闭弹窗
           this.closeSubscriptionDialog();
-          this.getUserSubscriptions();
           console.log('订阅成功!!!:', response);
+        } else if (response.status === 300) {
+          this.$message.warning('您的积分不足，请充值后再试');
         } else {
           this.$message.error('订阅失败，请稍后重试');
         }
@@ -623,27 +933,46 @@ export default {
       this.currentRobotForSubscription = null;
     },
     formatDateTime(date) {
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const day = String(date.getDate()).padStart(2, '0');
-      const hours = String(date.getHours()).padStart(2, '0');
-      const minutes = String(date.getMinutes()).padStart(2, '0');
-      const seconds = String(date.getSeconds()).padStart(2, '0');
-      return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+      // 使用ISO 8601格式，与后端API保持一致
+      return date.toISOString();
     },
     isSubscribed(robotId) {
-      return this.haveSubscribed.some(
+      const subscription = this.haveSubscribed.find(
         (sub) => sub.agent_id === robotId && sub.status
       );
+
+      if (!subscription) {
+        return false;
+      }
+
+      // 检查订阅是否过期
+      if (subscription.end_time) {
+        const endTime = new Date(subscription.end_time);
+        const currentTime = new Date();
+
+        // 如果当前时间超过了结束时间，订阅已过期
+        if (currentTime > endTime) {
+          console.log(`机器人 ${robotId} 订阅已过期`, {
+            endTime: subscription.end_time,
+            currentTime: currentTime.toISOString(),
+          });
+          return false;
+        }
+      }
+
+      return true;
     },
     getRobotsByType(type) {
+      // 这个方法现在主要用于搜索，返回相应类型的机器人
       switch (type) {
-        case 'text':
-          return this.textRobots;
-        case 'image':
-          return this.imageRobots;
-        case 'video':
-          return this.videoRobots;
+        case 'recommended':
+          return this.recommendedRobots;
+        case 'roleplay':
+          return this.rolePlayRobots;
+        case 'coding':
+          return this.codingRobots;
+        case 'paper':
+          return this.paperRobots;
         default:
           return [];
       }
@@ -735,6 +1064,10 @@ export default {
 
   .search-results,
   .robots-container {
+    .search-results-container {
+      min-height: 400px;
+    }
+
     .section-title {
       font-size: 1.5rem;
       color: $text-color;
@@ -867,12 +1200,65 @@ export default {
     }
   }
 
+  .category-detail-container {
+    min-height: 400px;
+    height: 67.5vh;
+  }
+
   .category-detail-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
     gap: 15px;
-    max-height: 60vh;
+    max-height: 62.5vh;
     overflow-y: auto;
+    margin-bottom: 20px;
+  }
+
+  .pagination-controls {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 20px;
+    padding: 15px 0;
+    border-top: 1px solid $border-color;
+
+    .pagination-btn {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      padding: 8px 16px;
+      border: 1px solid $border-color;
+      border-radius: 6px;
+      background: white;
+      color: $text-color;
+      cursor: pointer;
+      transition: all 0.3s ease;
+
+      &:hover:not(.disabled) {
+        background: white;
+        color: $text-color;
+        border-color: $accent-color;
+      }
+
+      &.disabled {
+        background: #f5f5f5;
+        color: #c0c4cc;
+        cursor: not-allowed;
+        border-color: #e4e7ed;
+
+        &:hover {
+          background: #f5f5f5;
+          color: #c0c4cc;
+          border-color: #e4e7ed;
+        }
+      }
+    }
+
+    .page-info {
+      font-size: 14px;
+      color: $text-color;
+      font-weight: 500;
+    }
   }
 }
 

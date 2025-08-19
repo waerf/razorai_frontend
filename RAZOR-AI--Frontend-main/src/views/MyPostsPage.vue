@@ -12,7 +12,10 @@
 
       <!-- 页面右上角按钮 -->
       <div class="action-bar">
-        <button class="primary-btn" @click="$router.push('/createPost')">
+        <button
+          class="primary-btn"
+          @click="$router.push('/community/CreatePost')"
+        >
           <i class="fa fa-plus mr-2"></i>
           <span>发布帖子</span>
         </button>
