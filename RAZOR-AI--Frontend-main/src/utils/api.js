@@ -9,8 +9,8 @@ const api = axios.create({
 });
 
 const adminApi = axios.create({
-  baseURL: process.env.VUE_APP_API_BASE_URL || 'http://localhost:8000',
-  timeout: 5000,
+  baseURL: 'http://localhost:5253',
+  timeout: 10000,
 });
 
 // 为adminApi添加请求拦截器
@@ -155,7 +155,7 @@ export const deductUserPoints = (
   });
 
 export const adminLogin = (data) => {
-  return adminApi.post('/admin/login', data);
+  return adminApi.post('/api/admin/login', data);
 };
 
 export const approveRobot = (robotId) => {
@@ -166,8 +166,21 @@ export const rejectRobot = (robotId) => {
   return adminApi.post(`/admin/robots/${robotId}/reject`);
 };
 
-export const getPendingRobots = () => {
-  return adminApi.get('/admin/robots/pending');
+export const getPendingRobots = (params = {}) => {
+  // params: { page, pageSize }
+  return adminApi.get('/admin/agent-review/pending', {
+    params,
+  });
+};
+
+// 获取管理员信息
+export const getAdminInfo = () => {
+  return adminApi.get('/api/admin/info');
+};
+
+// 获取待审核管理员列表
+export const getPendingAdmins = () => {
+  return adminApi.get('/api/admin/pending');
 };
 
 export const getFeedbacks = () => {
