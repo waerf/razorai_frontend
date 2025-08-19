@@ -59,6 +59,9 @@
           <el-button type="primary" size="small" @click="openEditDialog">
             编辑资料
           </el-button>
+          <el-button type="danger" size="small" @click="handleLogout">
+            退出登录
+          </el-button>
         </div>
       </div>
     </el-card>
@@ -137,15 +140,19 @@
           <el-input
             type="email"
             v-model="editForm.Email"
-            placeholder="请输入邮箱地址"
+            placeholder="邮箱不可修改"
+            readonly
+            disabled
           />
         </el-form-item>
 
         <el-form-item label="手机" prop="Phone">
           <el-input
             v-model="editForm.Phone"
-            placeholder="请输入手机号"
+            placeholder="手机号不可修改"
             maxlength="11"
+            readonly
+            disabled
           />
         </el-form-item>
 
@@ -463,22 +470,6 @@ export default {
             trigger: 'blur',
           },
         ],
-        Email: [
-          { required: true, message: '请输入邮箱地址', trigger: 'blur' },
-          {
-            type: 'email',
-            message: '请输入有效的邮箱地址',
-            trigger: 'blur',
-          },
-        ],
-        Phone: [
-          { required: true, message: '请输入手机号', trigger: 'blur' },
-          {
-            pattern: /^1[3-9]\d{9}$/,
-            message: '请输入有效的手机号',
-            trigger: 'blur',
-          },
-        ],
         Organization: [
           {
             max: 100,
@@ -565,6 +556,35 @@ export default {
 
   methods: {
     ...mapActions('user', ['logout']),
+
+    // 登出功能
+    handleLogout() {
+      this.$confirm('确定要退出登录吗？', '确认退出', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning',
+      })
+        .then(async () => {
+          try {
+            // 调用store中的logout action
+            await this.logout();
+
+            this.$message.success('已成功退出登录');
+
+            // 跳转到登录页面或首页
+            this.$router.push('/').catch(() => {
+              // 如果没有登录页面，跳转到首页
+              this.$router.push('/');
+            });
+          } catch (error) {
+            console.error('退出登录失败:', error);
+            this.$message.error('退出登录失败，请重试');
+          }
+        })
+        .catch(() => {
+          // 用户取消登出，不需要处理
+        });
+    },
 
     async loadUserInfo() {
       try {
@@ -1114,9 +1134,10 @@ export default {
 
 .action-buttons {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   gap: 10px;
   align-items: center;
+  justify-content: center;
 }
 
 // 积分卡片样式
@@ -1401,6 +1422,15 @@ export default {
       font-size: 18px;
       font-weight: bold;
     }
+  }
+}
+
+// 禁用字段样式
+.el-form-item {
+  .el-input.is-disabled .el-input__inner {
+    background-color: #f5f7fa;
+    color: #909399;
+    cursor: not-allowed;
   }
 }
 </style>
