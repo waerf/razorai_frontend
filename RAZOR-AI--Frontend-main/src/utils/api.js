@@ -381,3 +381,89 @@ export const getRecommendedRobots = (userId) =>
   api.post(`/agent/recommend`, userId, {
     headers: { skipAuth: true },
   });
+
+// ====================== 社区模块 API ======================
+// 创建帖子
+export const createCommunityPost = (payload) =>
+  api.post('/community/posts', payload, {
+    headers: { skipAuth: false },
+  });
+
+// 修改帖子
+export const updateCommunityPost = (postId, payload) =>
+  api.put(`/community/posts/${postId}`, payload, {
+    headers: { skipAuth: false },
+  });
+
+// 删除帖子
+export const deleteCommunityPost = (postId, payload) =>
+  api.delete(`/community/posts/${postId}`, {
+    data: payload,
+    headers: { skipAuth: false },
+  });
+
+// 获取单个帖子详情
+export const getCommunityPostDetail = (postId) =>
+  api.get(`/community/posts/${postId}`, {
+    headers: { skipAuth: true },
+  });
+
+// 获取指定用户的所有帖子
+export const getCommunityUserPosts = (userId) =>
+  api.get(`/community/posts/user/${userId}`, {
+    headers: { skipAuth: false },
+  });
+
+// 发布评论
+export const createCommunityComment = (postId, payload) =>
+  api.post(`/community/posts/${postId}/comments`, payload, {
+    headers: { skipAuth: false },
+  });
+
+// 删除评论
+export const deleteCommunityComment = (commentId, payload) =>
+  api.delete(`/community/comments/${commentId}`, {
+    data: payload, // DELETE 请求携带请求体
+    headers: { skipAuth: false },
+  });
+
+// 获取帖子的所有评论
+export const getCommunityPostComments = (postId) =>
+  api.get(`/community/posts/${postId}/comments`, {
+    headers: { skipAuth: true },
+  });
+
+// 获取帖子评论数
+export const getCommunityCommentCount = (postId) =>
+  api.get(`/community/posts/${postId}/comments/count`, {
+    headers: { skipAuth: true },
+  });
+
+// 点赞帖子
+export const likeCommunityPost = (postId, payload) =>
+  api.post(`/community/posts/${postId}/like`, payload, {
+    headers: { skipAuth: false },
+  });
+
+// 取消点赞
+export const cancelLikeCommunityPost = (postId, payload) =>
+  api.delete(`/community/posts/${postId}/like`, {
+    data: payload,
+    headers: { skipAuth: false },
+  });
+
+// 获取帖子点赞数
+export const getCommunityLikeCount = (postId) =>
+  api.get(`/community/posts/${postId}/likes/count`, {
+    headers: { skipAuth: true },
+  });
+
+// 获取推荐的最新帖子
+export const getRecommendedPosts = (count) =>
+  api.post(
+    '/community/posts/recommend',
+    { Count: count },
+    {
+      headers: { skipAuth: true },
+    }
+  );

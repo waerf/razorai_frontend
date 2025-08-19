@@ -56,7 +56,10 @@
             <button type="button" class="secondary-btn" @click="$router.go(-1)">
               取消
             </button>
-            <button type="submit" class="primary-btn">发布帖子</button>
+            <button type="submit" class="primary-btn" :disabled="submitting">
+              <span v-if="!submitting">发布帖子</span>
+              <span v-if="submitting">发布中...</span>
+            </button>
           </div>
         </form>
       </div>
@@ -65,16 +68,17 @@
 </template>
 
 <script>
+import { mapState } from 'vuex';
+import { createCommunityPost } from '@/utils/api';
+
 export default {
   data() {
     return {
-      // 帖子数据
       post: {
         title: '',
         content: '',
         tags: [],
       },
-      // 所有可选标签（与社区页面保持一致）
       allTags: [
         '订阅管理',
         '效率工具',
@@ -89,40 +93,63 @@ export default {
         '性能优化',
         '前端布局',
       ],
+      submitting: false,
     };
   },
+  computed: {
+    ...mapState('user', ['isLoggedIn', 'userId', 'userName']),
+  },
   methods: {
-    // 切换标签选择状态
     toggleTag(tag) {
       if (this.post.tags.includes(tag)) {
         this.post.tags = this.post.tags.filter((t) => t !== tag);
-      } else {
-        // 限制最多选择5个标签
-        if (this.post.tags.length < 5) {
-          this.post.tags.push(tag);
-        }
+      } else if (this.post.tags.length < 5) {
+        this.post.tags.push(tag);
       }
     },
-    // 提交帖子
-    submitPost() {
-      // 这里可以添加表单验证逻辑
+
+    async submitPost() {
+      if (!this.isLoggedIn || !this.userId) {
+        this.$message.warning('请先登录后再发布帖子');
+        this.$router.push('/login');
+        return;
+      }
+
       if (!this.post.title.trim() || !this.post.content.trim()) {
-        alert('标题和内容不能为空');
-        return;
+        return this.$message.warning('标题和内容不能为空');
       }
-
       if (this.post.tags.length === 0) {
-        alert('请至少选择一个标签');
-        return;
+        return this.$message.warning('请至少选择一个标签');
       }
 
-      // 实际项目中这里会调用API提交数据
-      console.log('发布新帖子:', this.post);
+      this.submitting = true;
+      try {
+        const payload = {
+          userId: this.userId,
+          postContent: JSON.stringify({
+            title: this.post.title,
+            content: this.post.content,
+            tags: this.post.tags,
+            author: this.userName,
+          }),
+        };
 
-      // 提交成功后跳转到社区页面
-      this.$router.push('/community');
-      // 可以添加成功提示
-      alert('帖子发布成功！');
+        const res = await createCommunityPost(payload); // ✅ 使用封装的 API
+
+        if (res.data && res.data.success !== false) {
+          this.$message.success('帖子发布成功！');
+          this.$router.push('/community');
+        } else {
+          this.$message.error(res.data.message || '发布失败');
+        }
+      } catch (err) {
+        console.error('发布帖子失败:', err.response ? err.response.data : err);
+        this.$message.error(
+          err.response?.data?.message || '服务器错误，请稍后重试'
+        );
+      } finally {
+        this.submitting = false;
+      }
     },
   },
 };

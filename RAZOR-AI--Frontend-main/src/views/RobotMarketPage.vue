@@ -115,7 +115,7 @@
       <div v-if="isLoggedIn" class="category-section">
         <div class="category-header">
           <h3 class="category-title">
-            <i class="el-icon-document"></i>
+            <i class="el-icon-collection-tag"></i>
             推荐机器人
           </h3>
           <el-button class="view-more-btn" @click="refreshRecommendedRobots">
@@ -170,7 +170,7 @@
       <div class="category-section">
         <div class="category-header">
           <h3 class="category-title">
-            <i class="el-icon-document"></i>
+            <i class="el-icon-headset"></i>
             角色扮演机器人
           </h3>
           <el-button
@@ -228,7 +228,7 @@
       <div class="category-section">
         <div class="category-header">
           <h3 class="category-title">
-            <i class="el-icon-picture-outline"></i>
+            <i class="el-icon-postcard"></i>
             代码编程机器人
           </h3>
           <el-button
@@ -286,7 +286,7 @@
       <div class="category-section">
         <div class="category-header">
           <h3 class="category-title">
-            <i class="el-icon-video-camera"></i>
+            <i class="el-icon-document"></i>
             论文修改机器人
           </h3>
           <el-button class="view-more-btn" @click="showCategoryDetail('paper')">
