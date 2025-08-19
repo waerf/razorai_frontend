@@ -95,7 +95,34 @@ export default {
     // 组件挂载时初始化积分
     this.updatePoints();
   },
+  watch: {
+    // 监听机器人ID或价格变化，重置表单状态
+    robotId: {
+      handler() {
+        this.resetForm();
+      },
+      immediate: false,
+    },
+    price: {
+      handler() {
+        this.resetForm();
+      },
+      immediate: false,
+    },
+  },
   methods: {
+    // 重置表单状态
+    resetForm() {
+      this.form.duration = 1; // 重置为默认1天
+      this.form.customDays = null; // 清空自定义天数
+      this.updatePoints(); // 重新计算积分
+      // 清除表单验证状态
+      this.$nextTick(() => {
+        if (this.$refs.formRef) {
+          this.$refs.formRef.clearValidate();
+        }
+      });
+    },
     // 更新积分
     updatePoints() {
       // 如果是自定义天数

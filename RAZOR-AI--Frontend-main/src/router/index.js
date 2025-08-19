@@ -25,7 +25,6 @@ import ScoreMessage from '@/views/ScoreMessage.vue';
 import AdminPage from '@/views/AdminPage.vue';
 import AdminLogin from '@/views/AdminLoginPage.vue';
 import AdminFeedback from '@/views/AdminFeedbackPage.vue';
-import AdminNotifications from '@/views/AdminNotificationsPage.vue';
 
 Vue.use(VueRouter);
 
@@ -229,6 +228,32 @@ const router = new VueRouter({
       },
     },
     {
+      path: '/admin/admin-review',
+      name: 'AdminAdminReview',
+      component: () => import('@/views/AdminAdminReviewPage.vue'),
+      meta: {
+        title: 'RazorAI-管理员审核',
+        requiresAdmin: true,
+      },
+    },
+    {
+      path: '/admin/feedback',
+      name: 'AdminFeedback',
+      component: AdminFeedback,
+      meta: {
+        title: 'RazorAI-管理员审核',
+        requiresAdmin: true,
+      },
+    },
+    {
+      path: '/admin/register',
+      name: 'AdminRegister',
+      component: () => import('@/views/AdminRegisterPage.vue'),
+      meta: {
+        title: 'RazorAI-管理员注册',
+      },
+    },
+    {
       path: '/admin',
       name: 'Admin',
       component: AdminPage,
@@ -247,20 +272,20 @@ const router = new VueRouter({
       },
     },
     {
+      path: '/admin/robots/:id',
+      name: 'AdminRobotReviewDetail',
+      component: () => import('@/views/AdminRobotReviewDetail.vue'),
+      meta: {
+        title: 'RazorAI-机器人审核详情',
+        requiresAdmin: true,
+      },
+    },
+    {
       path: '/admin/feedback',
       name: 'AdminFeedback',
       component: AdminFeedback,
       meta: {
         title: 'RazorAI-用户反馈',
-        requiresAdmin: true,
-      },
-    },
-    {
-      path: '/admin/notifications',
-      name: 'AdminNotifications',
-      component: AdminNotifications,
-      meta: {
-        title: 'RazorAI-通知管理',
         requiresAdmin: true,
       },
     },

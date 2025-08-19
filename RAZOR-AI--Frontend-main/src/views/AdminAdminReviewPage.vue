@@ -18,7 +18,7 @@
           <i class="el-icon-menu"></i>
           <span>控制台概览</span>
         </div>
-        <div class="nav-item" @click="$router.push('/admin/admin-review')">
+        <div class="nav-item active">
           <i class="el-icon-user-solid"></i>
           <span>管理员审核</span>
         </div>
@@ -30,7 +30,7 @@
           <i class="el-icon-document"></i>
           <span>帖子审核</span>
         </div>
-        <div class="nav-item active">
+        <div class="nav-item" @click="$router.push('/admin/feedback')">
           <i class="el-icon-chat-dot-round"></i>
           <span>用户反馈</span>
         </div>
@@ -41,7 +41,7 @@
     <main class="main-content">
       <!-- 顶部导航栏 -->
       <header class="header">
-        <h1 class="title">用户反馈管理</h1>
+        <h1 class="title">管理员审核列表</h1>
         <div style="display: flex; align-items: center; margin-left: auto">
           <el-button
             type="warning"
@@ -96,33 +96,43 @@
 
       <!-- 主要内容 -->
       <div class="content">
+        <!-- 管理员列表 -->
         <el-card class="post-list-card" shadow="hover">
           <div class="card-header">
-            <h2 class="card-title">用户反馈列表</h2>
+            <h2 class="card-title">待审核管理员</h2>
             <span class="text-sm text-gray-500"
-              >共 {{ feedbackList.length }} 条反馈</span
+              >共 {{ pendingAdmins.length }} 个待审核</span
             >
           </div>
           <div class="p-6">
             <div class="space-y-4">
               <div
-                v-for="(feedback, index) in feedbackList"
+                v-for="(admin, index) in pendingAdmins"
                 :key="index"
                 class="p-4 border border-gray-100 rounded-lg card-hover cursor-pointer"
-                @click="$router.push('/admin/feedback/detail')"
               >
                 <div class="flex items-center justify-between mb-2">
-                  <p class="font-medium">{{ feedback.name }}</p>
-                  <p class="text-sm text-gray-500">{{ feedback.createdAt }}</p>
+                  <p class="font-medium">{{ admin.username }}</p>
+                  <p class="text-sm text-gray-500">{{ admin.registeredAt }}</p>
                 </div>
-                <el-tag
-                  :type="feedback.status === 'pending' ? 'warning' : 'success'"
-                >
-                  {{ feedback.status === 'pending' ? '待处理' : '已解决' }}
-                </el-tag>
+                <el-tag type="warning">待审核</el-tag>
                 <p class="text-gray-600 text-sm mt-2">
-                  {{ feedback.content }}
+                  邮箱：{{ admin.email }}
                 </p>
+                <div class="mt-3 flex gap-2">
+                  <el-button
+                    type="success"
+                    size="mini"
+                    @click="approveAdmin(admin.id)"
+                    >通过</el-button
+                  >
+                  <el-button
+                    type="danger"
+                    size="mini"
+                    @click="rejectAdmin(admin.id)"
+                    >拒绝</el-button
+                  >
+                </div>
               </div>
             </div>
           </div>
@@ -133,9 +143,14 @@
 </template>
 
 <script>
-import { changeAdminPassword, adminLogout, getAdminInfo } from '@/utils/api';
+import {
+  changeAdminPassword,
+  adminLogout,
+  getPendingAdmins,
+  getAdminInfo,
+} from '@/utils/api';
 export default {
-  name: 'AdminFeedbackPage',
+  name: 'AdminAdminReviewPage',
   data() {
     return {
       isSidebarCollapsed: false,
@@ -166,24 +181,12 @@ export default {
           },
         ],
       },
-      feedbackList: [
-        {
-          id: 1,
-          name: '李四',
-          createdAt: '2025-1-10 3:14',
-          content:
-            '机器人无法正确识别"退款"相关的问题，总是将用户引导到错误的页面。',
-          status: 'pending',
-        },
-        {
-          id: 2,
-          name: '王五',
-          createdAt: '2025-1-9 16:53',
-          content: '数据分析机器人导出报表功能有时会出错。',
-          status: 'resolved',
-        },
-      ],
+      pendingAdmins: [],
     };
+  },
+  created() {
+    this.fetchPendingAdmins();
+    this.fetchAdminInfo();
   },
   methods: {
     async fetchAdminInfo() {
@@ -196,6 +199,24 @@ export default {
         }
       } catch (err) {
         this.$message.error(err.message || '获取管理员信息失败');
+      }
+    },
+    async fetchPendingAdmins() {
+      try {
+        const res = await getPendingAdmins();
+        if (res.data && res.data.success) {
+          // 兼容后端返回的字段
+          this.pendingAdmins = (res.data.data || []).map((a) => ({
+            id: a.adminId || a.id,
+            username: a.adminName || a.username,
+            registeredAt: a.createdAt || a.registeredAt,
+            email: a.email,
+          }));
+        } else {
+          this.$message.error(res.data.message || '获取待审核管理员失败');
+        }
+      } catch (err) {
+        this.$message.error(err.message || '获取待审核管理员失败');
       }
     },
     toggleSidebar() {
@@ -228,6 +249,18 @@ export default {
         .catch(() => {
           // 用户取消
         });
+    },
+    approveAdmin() {
+      // TODO: 调用后端接口通过管理员申请
+      this.$message.info('请实现通过管理员申请的后端调用');
+      // 审核成功后可刷新列表
+      // await this.fetchPendingAdmins();
+    },
+    rejectAdmin() {
+      // TODO: 调用后端接口拒绝管理员申请
+      this.$message.info('请实现拒绝管理员申请的后端调用');
+      // 审核成功后可刷新列表
+      // await this.fetchPendingAdmins();
     },
     async submitPwdForm() {
       this.$refs.pwdFormRef.validate(async (valid) => {
@@ -264,9 +297,6 @@ export default {
       this.pwdForm.confirmPwd = '';
       if (this.$refs.pwdFormRef) this.$refs.pwdFormRef.clearValidate();
     },
-  },
-  mounted() {
-    this.fetchAdminInfo();
   },
 };
 </script>

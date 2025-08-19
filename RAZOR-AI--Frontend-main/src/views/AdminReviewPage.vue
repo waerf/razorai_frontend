@@ -2,10 +2,13 @@
   <div class="admin-home">
     <!-- 侧边导航栏 -->
     <aside class="sidebar">
+      <button class="toggle-sidebar-btn" @click="toggleSidebar">
+        <i class="el-icon-s-fold"></i>
+      </button>
       <div class="user-info">
-        <div class="avatar">张</div>
+        <div class="avatar">{{ adminName ? adminName.charAt(0) : '管' }}</div>
         <div>
-          <p class="username">张三</p>
+          <p class="username">{{ adminName || '管理员' }}</p>
           <p class="role">系统管理员</p>
         </div>
       </div>
@@ -14,6 +17,10 @@
         <div class="nav-item" @click="$router.push('/admin')">
           <i class="el-icon-menu"></i>
           <span>控制台概览</span>
+        </div>
+        <div class="nav-item" @click="$router.push('/admin/admin-review')">
+          <i class="el-icon-user-solid"></i>
+          <span>管理员审核</span>
         </div>
         <div class="nav-item active">
           <i class="el-icon-cpu"></i>
@@ -35,17 +42,70 @@
       <!-- 顶部导航栏 -->
       <header class="header">
         <h1 class="title">机器人审核列表</h1>
-        <el-button type="primary" @click="logout">退出登录</el-button>
+        <div style="display: flex; align-items: center; margin-left: auto">
+          <el-button
+            type="warning"
+            style="margin-right: 8px"
+            @click="showChangePwd = true"
+            >修改密码</el-button
+          >
+          <el-button type="primary" @click="logout">退出登录</el-button>
+        </div>
+        <el-dialog
+          title="修改密码"
+          :visible.sync="showChangePwd"
+          width="400px"
+          @close="resetPwdForm"
+        >
+          <el-form
+            :model="pwdForm"
+            :rules="pwdRules"
+            ref="pwdFormRef"
+            label-width="90px"
+          >
+            <el-form-item label="旧密码" prop="oldPwd">
+              <el-input
+                v-model="pwdForm.oldPwd"
+                type="password"
+                autocomplete="off"
+              />
+            </el-form-item>
+            <el-form-item label="新密码" prop="newPwd">
+              <el-input
+                v-model="pwdForm.newPwd"
+                type="password"
+                autocomplete="off"
+              />
+            </el-form-item>
+            <el-form-item label="确认新密码" prop="confirmPwd">
+              <el-input
+                v-model="pwdForm.confirmPwd"
+                type="password"
+                autocomplete="off"
+              />
+            </el-form-item>
+          </el-form>
+          <span slot="footer" class="dialog-footer">
+            <el-button @click="showChangePwd = false">取消</el-button>
+            <el-button type="primary" @click="submitPwdForm"
+              >确认修改</el-button
+            >
+          </span>
+        </el-dialog>
       </header>
 
       <!-- 主要内容 -->
-      <div class="content">
+      <div class="content" style="position: relative; min-height: 300px">
+        <!-- loading 遮罩 -->
+        <div v-if="loading" class="loading-mask">
+          <div class="spinner"></div>
+        </div>
         <!-- 机器人列表 -->
         <el-card class="post-list-card" shadow="hover">
           <div class="card-header">
             <h2 class="card-title">待审核机器人</h2>
             <span class="text-sm text-gray-500"
-              >共 {{ pendingRobots.length }} 个待审核</span
+              >共 {{ totalCount }} 个待审核</span
             >
           </div>
           <div class="p-6">
@@ -66,6 +126,18 @@
                 </p>
               </div>
             </div>
+            <div class="mt-6 text-center">
+              <el-button
+                v-if="hasPrevPage"
+                type="default"
+                @click="loadPrevPage"
+                style="margin-right: 12px"
+                >上一页</el-button
+              >
+              <el-button v-if="hasNextPage" type="primary" @click="loadNextPage"
+                >下一页</el-button
+              >
+            </div>
           </div>
         </el-card>
       </div>
@@ -74,33 +146,206 @@
 </template>
 
 <script>
+import {
+  getPendingRobots,
+  changeAdminPassword,
+  adminLogout,
+  getAdminInfo,
+} from '@/utils/api';
 export default {
   name: 'AdminReviewPage',
   data() {
     return {
-      pendingRobots: [
-        {
-          id: 1,
-          name: '智能客服机器人 v2.1',
-          createdAt: '2025-07-20 14:30',
-          description: '智能客服机器人，能够处理常见客户咨询问题',
-        },
-        {
-          id: 2,
-          name: '数据分析助手',
-          createdAt: '2025-07-19 11:45',
-          description: '数据分析助手，提供数据可视化与分析功能',
-        },
-      ],
+      isSidebarCollapsed: false,
+      showChangePwd: false,
+      adminName: '',
+      pwdForm: {
+        oldPwd: '',
+        newPwd: '',
+        confirmPwd: '',
+      },
+      pwdRules: {
+        oldPwd: [{ required: true, message: '请输入旧密码', trigger: 'blur' }],
+        newPwd: [
+          { required: true, message: '请输入新密码', trigger: 'blur' },
+          { min: 6, message: '新密码至少6位', trigger: 'blur' },
+        ],
+        confirmPwd: [
+          { required: true, message: '请确认新密码', trigger: 'blur' },
+          {
+            validator: (rule, value, callback) => {
+              if (value !== this.pwdForm.newPwd) {
+                callback(new Error('两次输入的新密码不一致'));
+              } else {
+                callback();
+              }
+            },
+            trigger: 'blur',
+          },
+        ],
+      },
+      pendingRobots: [], // 当前页显示的机器人
+      currentPage: 1,
+      pageSize: 3,
+      totalCount: 0,
+      loading: false,
     };
   },
   methods: {
+    async fetchAdminInfo() {
+      try {
+        const res = await getAdminInfo();
+        if (res.data && res.data.success) {
+          this.adminName = res.data.adminInfo.adminName;
+        } else {
+          this.$message.error(res.data.message || '获取管理员信息失败');
+        }
+      } catch (err) {
+        this.$message.error(err.message || '获取管理员信息失败');
+      }
+    },
+    toggleSidebar() {
+      this.isSidebarCollapsed = !this.isSidebarCollapsed;
+      const sidebar = document.querySelector('.sidebar');
+      sidebar.classList.toggle('hidden');
+    },
     logout() {
-      // 退出登录逻辑
-      this.$router.push('/');
+      this.$confirm('确定要退出登录吗？', '提示', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning',
+      })
+        .then(async () => {
+          try {
+            const res = await adminLogout();
+            if (res.data && res.data.success) {
+              this.$message.success(res.data.message || '登出成功');
+              if (window.localStorage) {
+                localStorage.removeItem('admin_token');
+              }
+              this.$router.push('/');
+            } else {
+              this.$message.error(res.data.message || '登出失败');
+            }
+          } catch (err) {
+            this.$message.error(err.message || '登出失败，请重试');
+          }
+        })
+        .catch(() => {
+          // 用户取消
+        });
     },
     goToReviewPage(id) {
-      this.$router.push(`/admin/robots/${id}`);
+      // 跳转详情页，监听返回时的状态
+      this.$router.push({
+        path: `/admin/robots/${id}`,
+        query: { fromList: true },
+      });
+    },
+    async fetchPendingRobots(page = 1) {
+      this.loading = true;
+      try {
+        const res = await getPendingRobots({ page, pageSize: this.pageSize });
+        if (res.data && res.data.success) {
+          this.pendingRobots = res.data.data.map((robot) => ({
+            id: robot.id,
+            name: robot.name,
+            createdAt: robot.createdAt,
+            description: robot.description,
+          }));
+          this.totalCount =
+            res.data.pagination?.totalCount || this.pendingRobots.length;
+        } else {
+          this.$message.error(res.data.message || '获取待审核机器人失败');
+        }
+      } catch (err) {
+        this.$message.error(err.message || '获取待审核机器人失败');
+      }
+      this.loading = false;
+    },
+    loadNextPage() {
+      if (this.hasNextPage && !this.loading) {
+        this.currentPage++;
+        this.fetchPendingRobots(this.currentPage);
+      }
+    },
+    loadPrevPage() {
+      if (this.hasPrevPage && !this.loading) {
+        this.currentPage--;
+        this.fetchPendingRobots(this.currentPage);
+      }
+    },
+    async submitPwdForm() {
+      this.$refs.pwdFormRef.validate(async (valid) => {
+        if (!valid) return;
+        try {
+          const res = await changeAdminPassword({
+            oldPassword: this.pwdForm.oldPwd,
+            newPassword: this.pwdForm.newPwd,
+          });
+          if (res.data && res.data.success) {
+            this.$message({
+              type: 'success',
+              message: res.data.message || '密码修改成功',
+            });
+            this.showChangePwd = false;
+            this.resetPwdForm();
+          } else {
+            this.$message({
+              type: 'error',
+              message: res.data.message || '密码修改失败',
+            });
+          }
+        } catch (err) {
+          this.$message({
+            type: 'error',
+            message: err.response?.data?.message || '密码修改失败，请重试',
+          });
+        }
+      });
+    },
+    resetPwdForm() {
+      this.pwdForm.oldPwd = '';
+      this.pwdForm.newPwd = '';
+      this.pwdForm.confirmPwd = '';
+      if (this.$refs.pwdFormRef) this.$refs.pwdFormRef.clearValidate();
+    },
+  },
+  mounted() {
+    this.fetchPendingRobots(1);
+    this.fetchAdminInfo();
+    // 监听页面返回，更新状态
+    this.$watch(
+      () => this.$route,
+      (to, from) => {
+        // 仅在从详情页返回列表页时触发
+        if (
+          to.path === '/admin/review' &&
+          from.path.startsWith('/admin/robots/')
+        ) {
+          // 获取详情页返回的审核结果
+          const reviewedId = from.params.id;
+          const reviewedStatus = from.query && from.query.status;
+          if (reviewedId && reviewedStatus) {
+            const idx = this.pendingRobots.findIndex((r) => r.id == reviewedId);
+            if (idx !== -1) {
+              // 更新状态（可根据实际字段调整）
+              this.$set(this.pendingRobots, idx, {
+                ...this.pendingRobots[idx],
+                status: reviewedStatus,
+              });
+            }
+          }
+        }
+      }
+    );
+  },
+  computed: {
+    hasNextPage() {
+      return this.currentPage * this.pageSize < this.totalCount;
+    },
+    hasPrevPage() {
+      return this.currentPage > 1;
     },
   },
 };
@@ -113,6 +358,55 @@ export default {
   background-color: #f5f5f5;
 
   .sidebar {
+    position: relative;
+    transition: all 0.3s ease;
+
+    .toggle-sidebar-btn {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      cursor: pointer;
+      font-size: 16px;
+      background: none;
+      border: none;
+      color: #606266;
+      padding: 5px;
+
+      &:hover {
+        background-color: rgba(0, 0, 0, 0.05);
+        border-radius: 4px;
+      }
+    }
+
+    &.hidden {
+      width: 60px !important;
+
+      .nav-item {
+        span {
+          display: none;
+        }
+
+        i {
+          margin-right: 0;
+        }
+      }
+
+      .user-info {
+        flex-direction: column;
+        align-items: center;
+        padding: 10px;
+
+        .avatar {
+          margin-right: 0;
+          margin-bottom: 5px;
+        }
+
+        .username,
+        .role {
+          display: none;
+        }
+      }
+    }
     width: 250px;
     background-color: white;
     border-right: 1px solid #e6e6e6;
@@ -209,6 +503,35 @@ export default {
         box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
       }
     }
+  }
+}
+/* loading 遮罩样式 */
+.loading-mask {
+  position: absolute;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+.spinner {
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #409eff;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  animation: spin 1s linear infinite;
+}
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
   }
 }
 </style>
