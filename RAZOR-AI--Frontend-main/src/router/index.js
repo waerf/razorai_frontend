@@ -14,10 +14,6 @@ import Rgister from '@/views/RegisterPage.vue';
 import RobotDetail from '@/views/RobotDetailPage.vue';
 import CreateBots from '@/views/CreateBotsPage.vue';
 import Explorer from '@/views/ExplorerPage.vue';
-<<<<<<< Updated upstream
-import CreateBots from '@/views/CreateBotsPage.vue';
-=======
->>>>>>> Stashed changes
 import HelperCenter from '@/views/HelperCenterPage.vue';
 import ConversationHistory from '@/views/ConversationHistory.vue';
 import RobotMarket from '@/views/RobotMarketPage.vue';
@@ -62,11 +58,7 @@ const routes = [
         name: 'CreateBots',
         component: CreateBots,
         meta: {
-<<<<<<< Updated upstream
-          title: 'RazorAI-创建机器人', // 创建机器人页标题
-=======
           title: 'Razor-AI-基本信息', // 创建机器人页标题
->>>>>>> Stashed changes
         },
       },
       {

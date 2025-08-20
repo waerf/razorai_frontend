@@ -246,30 +246,4 @@ export default {
   color: #ffffff;
   margin-bottom: 10px;
 }
-<<<<<<< Updated upstream
-
-.interest-list,
-.friend-list,
-.robot-list,
-.tool-list {
-  list-style-type: none;
-  padding: 0;
-}
-
-.interest-list li,
-.friend-list li,
-.robot-list li,
-.tool-list li {
-  color: #aaa;
-  font-size: 1.1em;
-  margin-bottom: 5px;
-}
-
-.button-group {
-  display: flex;
-  justify-content: center;
-  margin-top: 20px;
-}
-=======
->>>>>>> Stashed changes
 </style>
