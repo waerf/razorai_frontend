@@ -179,6 +179,11 @@ export const createAI = (payload) =>
     headers: { skipAuth: false },
   });
 
+export const createAgentPending = (payload) =>
+  adminApi.post('/admin/agent-review/pending', payload, {
+    headers: { skipAuth: false },
+  });
+
 export const createChat = (payload) =>
   api.post('/agent/user/chat/creation', payload, {
     headers: { skipAuth: false },

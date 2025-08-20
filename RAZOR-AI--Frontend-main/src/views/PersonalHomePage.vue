@@ -246,6 +246,7 @@ export default {
   color: #ffffff;
   margin-bottom: 10px;
 }
+<<<<<<< Updated upstream
 
 .interest-list,
 .friend-list,
@@ -269,4 +270,6 @@ export default {
   justify-content: center;
   margin-top: 20px;
 }
+=======
+>>>>>>> Stashed changes
 </style>
