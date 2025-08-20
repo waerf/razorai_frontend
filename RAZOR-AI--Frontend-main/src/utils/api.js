@@ -119,6 +119,15 @@ export const getPendingAdmins = () => {
   return adminApi.get('/api/admin/pending');
 };
 
+// 管理员审核接口
+export function reviewAdmin({ adminId, status, reviewComment = '' }) {
+  return adminApi.post('/api/Admin/review', {
+    adminId,
+    status,
+    reviewComment,
+  });
+}
+// 获取待审核管理员列表
 export const markFeedbackAsRead = (feedbackId) => {
   return adminApi.post(`/admin/feedbacks/${feedbackId}/read`);
 };
