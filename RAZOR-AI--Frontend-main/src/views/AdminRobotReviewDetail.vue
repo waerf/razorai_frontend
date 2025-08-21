@@ -194,7 +194,7 @@ import {
   changeAdminPassword,
   adminLogout,
   getAdminInfo,
-  createAI,
+  getPendingAgentDetail,
 } from '@/utils/api';
 
 export default {
@@ -235,6 +235,7 @@ export default {
     };
   },
   methods: {
+    getPendingAgentDetail,
     async fetchAdminInfo() {
       try {
         const res = await getAdminInfo();
@@ -315,45 +316,41 @@ export default {
     },
     async fetchRobotDetail() {
       this.loading = true;
-      const id = this.$route.params.id;
+      // 正确获取 auditId，路由为 /admin/robots/:id
+      const auditId = this.$route.params.id;
+      if (!auditId) {
+        this.$message.error('未获取到审核ID，无法加载详情');
+        this.loading = false;
+        return;
+      }
       try {
-        const token = MyStorage.get('admin_token');
-        const res = await fetch(
-          `http://localhost:5253/admin/agent-review/${id}`,
-          {
-            method: 'GET',
-            headers: {
-              Accept: 'application/json',
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
-        const data = await res.json();
-        if (data.success) {
-          // 适配字段
+        const res = await getPendingAgentDetail(auditId);
+        if (res.data && res.data.success) {
+          const data = res.data.data;
           this.robot = {
-            id: data.data.id,
-            name: data.data.name,
-            type: data.data.type === 1 ? '文本' : data.data.type,
-            llm: data.data.llm || '-',
+            id: data.auditId,
+            name: data.name,
+            type: data.type,
+            llmId: data.llmId,
             status:
-              data.data.reviewStatus === 0
+              data.reviewStatus === 0
                 ? 'pending'
-                : data.data.reviewStatus === 1
+                : data.reviewStatus === 1
                   ? 'approved'
                   : 'rejected',
-            prompt: data.data.chatPrompt,
-            description: data.data.description,
-            price: data.data.price,
-            creatorName: data.data.creatorName,
-            createdAt: data.data.createdAt,
-            reviewRemarks: data.data.reviewRemarks,
+            prompt: data.chatPrompt,
+            description: data.description,
+            price: data.price,
+            creatorId: data.creatorId,
+            creatorName: data.creatorName,
+            createdAt: data.createdAt,
+            reviewRemarks: data.reviewRemarks,
           };
         } else {
-          this.$message.error(data.message || '获取机器人详情失败');
+          this.$message.error(res.data?.message || '获取机器人详情失败');
         }
       } catch (err) {
-        this.$message.error(err.message || '获取机器人详情失败');
+        this.$message.error(err?.message || '获取机器人详情失败');
       }
       this.loading = false;
     },
@@ -362,6 +359,30 @@ export default {
       // 先调用后端审核通过接口
       const token = MyStorage.get('admin_token');
       try {
+        // 字段映射
+        let type = 1;
+        if (typeof this.robot.type === 'number') {
+          type = this.robot.type;
+        } else if (typeof this.robot.type === 'string') {
+          if (this.robot.type.includes('任务')) type = 2;
+          else if (this.robot.type.includes('分析')) type = 3;
+          else type = 1;
+        }
+        let llmId = 1;
+        let creatorId = this.robot.creatorId;
+        if (!creatorId) {
+          creatorId = MyStorage.get('user_id') || 1;
+        }
+        const payload = {
+          Name: this.robot.name,
+          Type: type,
+          LLMId: llmId,
+          ChatPrompt: this.robot.prompt,
+          Description: this.robot.description,
+          CreatorId: parseInt(creatorId),
+          Price: this.robot.price || 0,
+          Remarks: '', // 审核备注
+        };
         const approveRes = await fetch(
           `http://localhost:5253/admin/agent-review/${this.robot.id}/approve`,
           {
@@ -371,46 +392,19 @@ export default {
               Accept: 'application/json',
               Authorization: `Bearer ${token}`,
             },
-            body: JSON.stringify({ remarks: '' }),
+            body: JSON.stringify(payload),
           }
         );
         const approveData = await approveRes.json();
         if (approveData.success) {
-          // 字段映射
-          let type = 1;
-          if (typeof this.robot.type === 'number') {
-            type = this.robot.type;
-          } else if (typeof this.robot.type === 'string') {
-            if (this.robot.type.includes('任务')) type = 2;
-            else if (this.robot.type.includes('分析')) type = 3;
-            else type = 1;
-          }
-          let llmId = 1;
-          let creatorId = this.robot.creatorId;
-          if (!creatorId) {
-            creatorId = MyStorage.get('user_id') || 1;
-          }
-          const payload = {
-            Name: this.robot.name,
-            Type: type,
-            LLMId: llmId,
-            ChatPrompt: this.robot.prompt,
-            Description: this.robot.description,
-            CreatorId: parseInt(creatorId),
-            Price: this.robot.price || 0,
-          };
-          // 调用createAI接口
-          const res = await createAI(payload);
-          if (res.data && res.data.agent_id) {
-            this.robot.status = 'approved';
-            this.$message.success(res.data.message || '审核已通过，AI创建成功');
-            this.$router.push({
-              path: '/admin/review',
-              query: { removedId: this.robot.id },
-            });
-          } else {
-            this.$message.error(res.data?.message || 'AI创建失败');
-          }
+          this.robot.status = 'approved';
+          this.$message.success(
+            approveData.message || '审核已通过，AI创建成功'
+          );
+          this.$router.push({
+            path: '/admin/review',
+            query: { removedId: this.robot.id },
+          });
         } else {
           this.$message.error(approveData.message || '审核操作失败');
         }

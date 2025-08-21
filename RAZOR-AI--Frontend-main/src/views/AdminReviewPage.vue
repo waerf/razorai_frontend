@@ -236,9 +236,10 @@ export default {
         });
     },
     goToReviewPage(id) {
-      // 跳转详情页，监听返回时的状态
+      // 跳转详情页，使用路由 name+params，确保 id 正确传递
       this.$router.push({
-        path: `/admin/robots/${id}`,
+        name: 'AdminRobotReviewDetail',
+        params: { id },
         query: { fromList: true },
       });
     },
@@ -248,7 +249,7 @@ export default {
         const res = await getPendingRobots({ page, pageSize: this.pageSize });
         if (res.data && res.data.success) {
           this.pendingRobots = res.data.data.map((robot) => ({
-            id: robot.id,
+            id: robot.auditId,
             name: robot.name,
             createdAt: robot.createdAt,
             description: robot.description,

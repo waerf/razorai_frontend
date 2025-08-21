@@ -1,3 +1,7 @@
+// 获取待审核机器人详情（通过审核记录ID）
+export const getPendingAgentDetail = (auditId) => {
+  return adminApi.get(`/admin/agent-review/pending/${auditId}`);
+};
 // src/utils/api.js
 //api.js 文件用于封装 API 请求，方便在项目中进行统一管理和调用。
 
@@ -109,6 +113,12 @@ export const getPendingRobots = (params = {}) => {
     params,
   });
 };
+
+// 提交机器人审核（新版接口）
+export const createAgentForReview = (payload) =>
+  adminApi.post('/admin/agent-review/submit', payload, {
+    headers: { skipAuth: false },
+  });
 
 export const getFeedbacks = () => {
   return adminApi.get('/admin/feedbacks');

@@ -81,7 +81,7 @@
 </template>
 
 <script>
-import { createAgentPending } from '@/utils/api';
+import { createAgentForReview } from '@/utils/api';
 export default {
   data() {
     return {
@@ -131,15 +131,16 @@ export default {
           }
 
           const payload = {
-            Name: this.form.name,
-            Type: String(this.form.type),
-            Description: this.form.description,
-            Price: 0, // 默认价格为0
-            CreatorId: userId,
-            ChatPrompt: this.form.chatprompt,
+            name: this.form.name,
+            type: this.form.type,
+            llmId: this.form.LLM_id,
+            chatPrompt: this.form.chatprompt,
+            description: this.form.description,
+            creatorId: userId,
+            price: 0,
           };
           console.log('提交参数:', payload);
-          this.apicreateRobot(payload);
+          this.apiCreateAgentForReview(payload);
         } else {
           console.log('表单验证失败');
           this.$message.warning('请完善表单信息后重试');
@@ -149,23 +150,25 @@ export default {
     onCancel() {
       this.$router.go(-1); // 返回上一页
     },
-    async apicreateRobot(payload) {
+    async apiCreateAgentForReview(payload) {
       try {
-        const response = await createAgentPending(payload);
+        const response = await createAgentForReview(payload);
         console.log('接口响应:', response);
 
-        // 同时检查HTTP状态码和业务状态码
+        // 检查HTTP状态码和业务状态码
         const isSuccess =
           response.status === 200 &&
           (response.data.code === 200 || response.data.success);
 
         if (isSuccess) {
-          this.$message.success('创建机器人成功');
-          const robotId = response.data.agent_id;
-          if (robotId) {
-            this.$router.push({ name: 'RobotDetail', params: { id: robotId } });
+          this.$message.success('创建机器人成功，等待审核');
+          // 审核提交成功后，后端返回 auditId
+          const auditId = response.data.auditId;
+          if (auditId) {
+            // 可跳转到审核进度页或首页
+            this.$router.push({ name: 'Home' });
           } else {
-            this.$message.warning('未获取到机器人ID，无法跳转详情页');
+            this.$message.warning('未获取到审核ID');
           }
         } else {
           const errorMsg = response.data?.message || '创建失败，服务器返回异常';
