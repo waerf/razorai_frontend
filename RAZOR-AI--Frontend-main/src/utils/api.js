@@ -1,7 +1,3 @@
-// 获取待审核机器人详情（通过审核记录ID）
-export const getPendingAgentDetail = (auditId) => {
-  return adminApi.get(`/admin/agent-review/pending/${auditId}`);
-};
 // src/utils/api.js
 //api.js 文件用于封装 API 请求，方便在项目中进行统一管理和调用。
 
@@ -142,6 +138,17 @@ export const markFeedbackAsRead = (feedbackId) => {
   return adminApi.post(`/admin/feedbacks/${feedbackId}/read`);
 };
 
+// 获取所有用户反馈（平台全部反馈）
+export const fetchAllFeedbacks = () => {
+  return api.get('/feedback/all', {
+    headers: { Accept: 'application/json', skipAuth: true },
+  });
+};
+// 获取待审核机器人详情（通过审核记录ID）
+export const getPendingAgentDetail = (auditId) => {
+  return adminApi.get(`/admin/agent-review/pending/${auditId}`);
+};
+
 export const deleteFeedback = (feedbackId) => {
   return adminApi.delete(`/admin/feedbacks/${feedbackId}`);
 };
@@ -236,4 +243,11 @@ export const deleteChat = (chatId) =>
 // 获取管理员信息
 export const getAdminInfo = () => {
   return adminApi.get('/api/admin/info');
+};
+
+// 根据用户ID获取该用户所有反馈
+export const fetchUserFeedbacks = (userId) => {
+  return api.get(`/feedback/user/${userId}`, {
+    headers: { Accept: 'application/json', skipAuth: true },
+  });
 };

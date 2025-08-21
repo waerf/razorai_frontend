@@ -220,6 +220,15 @@ const router = new VueRouter({
       },
     },
     {
+      path: '/admin/feedback/:userId/:feedbackId',
+      name: 'AdminFeedbackDetail',
+      component: () => import('@/views/AdminFeedbackDetail.vue'),
+      meta: {
+        title: 'RazorAI-反馈详情',
+        requiresAdmin: true,
+      },
+    },
+    {
       path: '/admin/posts',
       name: 'PostReview',
       component: () => import('@/views/AdminPostReviewPage.vue'),
