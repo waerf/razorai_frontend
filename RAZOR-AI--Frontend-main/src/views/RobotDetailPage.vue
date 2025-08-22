@@ -621,8 +621,11 @@ export default {
           this.$message.error('评论发布失败，请稍后重试');
         }
       } catch (error) {
-        console.error('发布评论失败:', error);
-        this.$message.error('评论发布失败，请稍后重试');
+        if (error.code === 400) {
+          this.$message.error(error.message);
+        } else {
+          this.$message.error('评论发布失败，请稍后重试');
+        }
       }
     },
     // 点赞/点踩功能已注释
