@@ -188,7 +188,7 @@
 
       <!-- 右侧内容区域 -->
       <el-main>
-        <router-view></router-view>
+        <router-view :key="$route.fullPath"></router-view>
       </el-main>
     </div>
 

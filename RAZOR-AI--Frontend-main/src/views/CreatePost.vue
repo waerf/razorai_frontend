@@ -134,7 +134,7 @@ export default {
           }),
         };
 
-        const res = await createCommunityPost(payload); // ✅ 使用封装的 API
+        const res = await createCommunityPost(payload);
 
         if (res.data && res.data.success !== false) {
           this.$message.success('帖子发布成功！');

@@ -40,13 +40,6 @@
               >
                 最热
               </button>
-              <button
-                class="tab-item"
-                :class="{ active: activeTab === 'follow' }"
-                @click="switchTab('follow')"
-              >
-                关注
-              </button>
             </div>
           </div>
 
@@ -88,17 +81,14 @@
                 <div class="action-group">
                   <!-- 点赞仅展示 -->
                   <div class="action-display">
-                    <i class="fa fa-thumbs-o-up mr-1.5"></i>
-                    <span>{{ post.likeCount }}</span>
+                    <span>{{ post.likeCount }} 个点赞</span>
                   </div>
                   <!-- 评论仅展示 -->
                   <div class="action-display">
-                    <i class="fa fa-comment-o mr-1.5"></i>
-                    <span>{{ post.commentCount }}</span>
+                    <span>{{ post.commentCount }} 条评论</span>
                   </div>
                 </div>
                 <div class="stats-group">
-                  <span class="post-views">阅读 {{ post.views }}</span>
                   <button class="share-btn" @click="sharePost(post.id)">
                     <i class="fa fa-share-alt mr-1.5"></i>
                     <span>分享</span>
@@ -135,7 +125,11 @@
 </template>
 
 <script>
-import { getRecommendedPosts } from '@/utils/api';
+import {
+  getRecommendedPosts,
+  getCommunityLikeCount,
+  getCommunityCommentCount,
+} from '@/utils/api';
 
 export default {
   data() {
@@ -178,8 +172,7 @@ export default {
             }
 
             return {
-              id: p.id,
-              // 作者优先用 postContent 内的 author
+              id: p.postId || p.id,
               authorName:
                 contentObj.author ||
                 p.author?.name ||
@@ -187,13 +180,30 @@ export default {
                 '匿名用户',
               createTime: p.createdAt || p.createTime || '',
               title: contentObj.title || p.title || '未命名帖子',
-              excerpt: contentObj.content?.slice(0, 50) || p.excerpt || '', // 截取前50个字作为摘要
-              likeCount: p.likeCount || p.likes || 0,
-              commentCount: p.commentCount || p.comments || 0,
+              excerpt: contentObj.content?.slice(0, 50) || p.excerpt || '',
+              likeCount: 0, // 默认值
+              commentCount: 0, // 默认值
               views: p.views || 0,
               tags: contentObj.tags || p.tags || [],
             };
           });
+
+          // 🔥 并行获取点赞数和评论数
+          await Promise.all(
+            this.posts.map(async (post) => {
+              try {
+                const [likeRes, commentRes] = await Promise.all([
+                  getCommunityLikeCount(post.id),
+                  getCommunityCommentCount(post.id),
+                ]);
+                post.likeCount = likeRes.data?.likeCount ?? 0;
+                post.commentCount = commentRes.data?.commentCount ?? 0;
+              } catch (e) {
+                console.error(`获取帖子 ${post.id} 的点赞/评论数失败:`, e);
+              }
+            })
+          );
+
           this.hasMore = this.posts.length < this.totalCount;
         } else {
           this.hasMore = false;
@@ -216,14 +226,10 @@ export default {
       this.activeTab = tab;
       this.fetchPosts(true);
     },
-    // 获取帖子标签（兜底，避免报错）
+    // 获取帖子标签
     getPostTags(postId) {
       const post = this.posts.find((p) => p.id === postId);
       return post && post.tags ? post.tags : [];
-    },
-    // 分享帖子
-    sharePost(postId) {
-      console.log('分享帖子:', postId);
     },
   },
 };
@@ -238,13 +244,15 @@ export default {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  max-width: 100%;
 }
 
 .container {
-  max-width: 100%;
-  width: 100%;
+  position: relative;
+  left: 3.5vw;
+  width: 70vw;
   margin: 0;
-  padding: 0 90px; /* 两边保留点空隙 */
+  padding: 0 200px; /* 两边保留点空隙 */
 }
 
 .text-primary {
@@ -335,6 +343,10 @@ export default {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
   padding: 24px;
   transition: all 0.3s ease;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .post-card:hover {
@@ -406,6 +418,9 @@ export default {
   color: #1a1a1a;
   margin-bottom: 12px;
   transition: color 0.2s ease;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  max-width: 100%;
 }
 
 .post-title:hover {
@@ -422,18 +437,25 @@ export default {
   color: #0f88eb;
 }
 
+.post-title-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin-bottom: 12px;
+  transition: color 0.2s ease;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  max-width: 100%;
+}
+
 .post-title-link:hover .post-title-title {
-  color: #0f88eb; /* 浅紫色文字 */
+  color: #0f88eb;
   transition: color 0.2s ease; /* 平滑过渡效果 */
 }
 
 .tab-item:active,
 .action-btn:active,
 .share-btn:active,
-.secondary-btn:active {
-  color: #0f88eb !important;
-  background-color: rgba(90, 24, 154, 0.1) !important;
-}
 
 /* 链接点击状态 */
 .post-title-link:active .post-title-title {
@@ -447,6 +469,9 @@ export default {
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  max-width: 100%;
 }
 
 .post-tags {

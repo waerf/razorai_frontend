@@ -171,15 +171,20 @@ const routes = [
         },
       },
       {
-        path: '/community',
+        path: 'community',
         name: 'Community',
         component: community,
-        meta: {
-          title: '社区动态',
-        },
+        meta: { title: '社区动态' },
       },
       {
-        path: '/community/news',
+        path: 'community/post/:id',
+        name: 'PostDetail',
+        component: PostDetail,
+        meta: { title: '帖子详情' },
+        props: true,
+      },
+      {
+        path: 'community/news',
         name: 'CommunityNews',
         component: () => import('@/views/CommunityPage.vue'),
         meta: {
@@ -187,7 +192,7 @@ const routes = [
         },
       },
       {
-        path: '/community/my-posts',
+        path: 'community/my-posts',
         name: 'MyPosts',
         component: () => import('@/views/MyPostsPage.vue'),
         meta: {
@@ -195,19 +200,11 @@ const routes = [
         },
       },
       {
-        path: '/community/createPost',
+        path: 'community/createPost',
         name: 'CreatePost',
         component: () => import('@/views/CreatePost.vue'),
         meta: {
           title: '发布帖子',
-        },
-      },
-      {
-        path: '/community/post/:id', // 添加id参数用于识别不同帖子
-        name: 'PostDetail',
-        component: PostDetail,
-        meta: {
-          title: '帖子详情',
         },
       },
     ],
