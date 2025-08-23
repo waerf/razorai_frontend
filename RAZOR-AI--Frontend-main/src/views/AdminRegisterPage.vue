@@ -125,7 +125,7 @@ export default {
               payload.Phone = this.registerForm.phone;
             }
             const response = await this.$axios.post(
-              'http://localhost:5253/api/admin/register',
+              'http://47.99.66.142:5253/api/admin/register',
               payload
             );
             if (response.data.success) {
