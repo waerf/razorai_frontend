@@ -109,17 +109,24 @@
                 v-for="(feedback, index) in feedbackList"
                 :key="index"
                 class="p-4 border border-gray-100 rounded-lg card-hover cursor-pointer"
-                @click="$router.push('/admin/feedback/detail')"
+                @click="
+                  $router.push(
+                    `/admin/feedback/${feedback.userId}/${feedback.id}`
+                  )
+                "
               >
                 <div class="flex items-center justify-between mb-2">
                   <p class="font-medium">{{ feedback.name }}</p>
                   <p class="text-sm text-gray-500">{{ feedback.createdAt }}</p>
                 </div>
-                <el-tag
-                  :type="feedback.status === 'pending' ? 'warning' : 'success'"
+                <span
+                  class="feedback-status"
+                  :class="
+                    feedback.status === 'pending' ? 'pending' : 'resolved'
+                  "
                 >
                   {{ feedback.status === 'pending' ? '待处理' : '已解决' }}
-                </el-tag>
+                </span>
                 <p class="text-gray-600 text-sm mt-2">
                   {{ feedback.content }}
                 </p>
@@ -133,7 +140,12 @@
 </template>
 
 <script>
-import { changeAdminPassword, adminLogout, getAdminInfo } from '@/utils/api';
+import {
+  changeAdminPassword,
+  adminLogout,
+  getAdminInfo,
+  fetchAllFeedbacks,
+} from '@/utils/api';
 export default {
   name: 'AdminFeedbackPage',
   data() {
@@ -166,23 +178,27 @@ export default {
           },
         ],
       },
-      feedbackList: [
-        {
-          id: 1,
-          name: '李四',
-          createdAt: '2025-1-10 3:14',
-          content:
-            '机器人无法正确识别"退款"相关的问题，总是将用户引导到错误的页面。',
-          status: 'pending',
-        },
-        {
-          id: 2,
-          name: '王五',
-          createdAt: '2025-1-9 16:53',
-          content: '数据分析机器人导出报表功能有时会出错。',
-          status: 'resolved',
-        },
-      ],
+      feedbackList: [],
+      async fetchFeedbackList() {
+        try {
+          const res = await fetchAllFeedbacks();
+          // 适配后端返回 { message, feedbacks: [...] }
+          if (res.data && Array.isArray(res.data.feedbacks)) {
+            this.feedbackList = res.data.feedbacks.map((f) => ({
+              id: f.id,
+              name: f.userName || '未知用户',
+              createdAt: f.time,
+              content: f.feedback,
+              status: f.state === 0 ? 'pending' : 'resolved',
+              userId: f.userId,
+            }));
+          } else {
+            this.$message.error('获取反馈数据失败');
+          }
+        } catch (err) {
+          this.$message.error(err.message || '获取反馈数据失败');
+        }
+      },
     };
   },
   methods: {
@@ -267,6 +283,7 @@ export default {
   },
   mounted() {
     this.fetchAdminInfo();
+    this.fetchFeedbackList();
   },
 };
 </script>

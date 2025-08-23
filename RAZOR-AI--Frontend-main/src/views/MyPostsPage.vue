@@ -53,16 +53,12 @@
               <!-- 帖子统计 - 新增点赞统计 -->
               <div class="post-stats">
                 <div class="stat-item">
-                  <i class="fa fa-eye mr-1.5"></i>
-                  <span>{{ post.views }} 次浏览</span>
-                </div>
-                <div class="stat-item">
                   <i class="fa fa-comment-o mr-1.5"></i>
-                  <span>{{ post.comments }} 条评论</span>
+                  <span>{{ post.commentCount }} 条评论</span>
                 </div>
                 <div class="stat-item">
                   <i class="fa fa-thumbs-o-up mr-1.5"></i>
-                  <span>{{ post.likes }} 个点赞</span>
+                  <span>{{ post.likeCount }} 个点赞</span>
                 </div>
               </div>
 
@@ -70,7 +66,7 @@
               <div class="post-actions">
                 <a
                   class="action-link detail-link"
-                  @click.prevent="$router.push(`/community/post`)"
+                  @click.prevent="$router.push(`/community/post/${post.id}`)"
                 >
                   <i class="fa fa-eye mr-1.5"></i>
                   帖子详情
@@ -105,69 +101,100 @@
 </template>
 
 <script>
+import { mapState } from 'vuex';
+import {
+  getCommunityUserPosts,
+  deleteCommunityPost,
+  getCommunityCommentCount,
+  getCommunityLikeCount,
+} from '@/utils/api';
+
 export default {
   name: 'MyPostsPage',
   data() {
     return {
-      // 帖子数据 - 新增点赞字段
-      posts: [
-        {
-          id: 1,
-          title: '如何高效学习Vue框架',
-          category: '技术分享',
-          status: 'published',
-          createTime: '2023-10-15',
-          views: 1258,
-          comments: 42,
-          likes: 89, // 点赞数
-        },
-        {
-          id: 2,
-          title: '前端性能优化实践指南',
-          category: '性能优化',
-          status: 'published',
-          createTime: '2023-10-10',
-          views: 986,
-          comments: 28,
-          likes: 65, // 点赞数
-        },
-        {
-          id: 3,
-          title: 'JavaScript设计模式总结',
-          category: '技术分享',
-          status: 'draft',
-          createTime: '2023-10-05',
-          views: 0,
-          comments: 0,
-          likes: 0, // 点赞数
-        },
-        {
-          id: 4,
-          title: 'CSS Grid布局完全指南',
-          category: '前端布局',
-          status: 'published',
-          createTime: '2023-09-28',
-          views: 1563,
-          comments: 57,
-          likes: 124, // 点赞数
-        },
-        {
-          id: 5,
-          title: 'React Hooks 最佳实践',
-          category: '技术分享',
-          status: 'published',
-          createTime: '2023-09-20',
-          views: 876,
-          comments: 32,
-          likes: 78, // 点赞数
-        },
-      ],
+      posts: [],
     };
   },
+  computed: {
+    ...mapState('user', ['isLoggedIn', 'userId', 'userName']),
+  },
+  created() {
+    if (this.isLoggedIn && this.userId) {
+      this.fetchMyPosts();
+    } else {
+      this.$router.push('/community');
+      this.$message.warning('请先登录后查看帖子');
+    }
+  },
   methods: {
-    handleDelete(postId) {
-      if (confirm('确定要删除这篇帖子吗？')) {
+    async fetchMyPosts() {
+      try {
+        const res = await getCommunityUserPosts(this.userId);
+        console.log('我的帖子接口返回:', res.data);
+
+        const records = res.data?.posts || [];
+
+        // 先解析基本字段
+        this.posts = records.map((p) => {
+          let contentObj = {};
+          try {
+            contentObj = p.postContent ? JSON.parse(p.postContent) : {};
+          } catch (e) {
+            console.error('解析 postContent 失败:', e, p.postContent);
+          }
+
+          return {
+            id: p.postId,
+            authorName:
+              contentObj.author ||
+              this.userName ||
+              p.author?.name ||
+              p.authorName ||
+              '匿名用户',
+            createTime: p.createdAt || p.createTime || '',
+            title: contentObj.title || '未命名帖子',
+            excerpt: contentObj.content?.slice(0, 50) || '',
+            tags: contentObj.tags || [],
+            views: p.views || 0,
+            status: p.status === 1 ? 'published' : 'draft',
+
+            // 点赞数 & 评论数先占位，后续更新
+            likeCount: 0,
+            commentCount: 0,
+          };
+        });
+
+        await Promise.all(
+          this.posts.map(async (post) => {
+            try {
+              const [likeRes, commentRes] = await Promise.all([
+                getCommunityLikeCount(post.id),
+                getCommunityCommentCount(post.id),
+              ]);
+
+              post.likeCount = likeRes.data?.likeCount ?? 0;
+              post.commentCount = commentRes.data?.commentCount ?? 0;
+            } catch (e) {
+              console.error(`获取帖子 ${post.id} 的点赞/评论数失败:`, e);
+            }
+          })
+        );
+      } catch (err) {
+        console.error('获取我的帖子失败:', err);
+        this.$message.error('获取帖子失败，请稍后再试');
+      }
+    },
+
+    async handleDelete(postId) {
+      if (!confirm('确定要删除这篇帖子吗？')) return;
+      try {
+        await deleteCommunityPost(postId, { userId: this.userId });
         this.posts = this.posts.filter((post) => post.id !== postId);
+        this.$message.success('删除成功');
+      } catch (err) {
+        console.error('删除帖子失败:', err);
+        this.$message.error('删除失败，请稍后再试');
       }
     },
   },

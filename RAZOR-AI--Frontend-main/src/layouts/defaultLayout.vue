@@ -72,11 +72,19 @@
         </div>
         <div
           class="menu-item"
+          :class="{ active: $route.name === 'MyBots' }"
+          @click="navigateTo('MyBots')"
+        >
+          <el-icon name="s-opportunity" class="menu-item-icon"></el-icon>
+          我的机器人
+        </div>
+        <div
+          class="menu-item"
           :class="{ active: $route.name === 'SubscribedBots' }"
           @click="navigateTo('SubscribedBots')"
         >
           <el-icon name="s-opportunity" class="menu-item-icon"></el-icon>
-          我的机器人
+          我订阅的机器人
         </div>
         <div
           class="menu-item"
@@ -188,7 +196,7 @@
 
       <!-- 右侧内容区域 -->
       <el-main>
-        <router-view></router-view>
+        <router-view :key="$route.fullPath"></router-view>
       </el-main>
     </div>
 
@@ -313,7 +321,7 @@ export default {
       if (this.$route.params.id === chatId) {
         return;
       }
-      this.$router.push({ name: 'ChatRobot', params: { id: chatId } });
+      this.$router.push({ name: 'ChatRobot', params: { chatId } });
     },
   },
 };
