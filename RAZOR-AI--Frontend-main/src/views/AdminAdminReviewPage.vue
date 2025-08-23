@@ -148,6 +148,7 @@ import {
   adminLogout,
   getPendingAdmins,
   getAdminInfo,
+  reviewAdmin,
 } from '@/utils/api';
 export default {
   name: 'AdminAdminReviewPage',
@@ -250,17 +251,31 @@ export default {
           // 用户取消
         });
     },
-    approveAdmin() {
-      // TODO: 调用后端接口通过管理员申请
-      this.$message.info('请实现通过管理员申请的后端调用');
-      // 审核成功后可刷新列表
-      // await this.fetchPendingAdmins();
+    async approveAdmin(adminId) {
+      try {
+        const res = await reviewAdmin({ adminId, status: 1 });
+        if (res.data && res.data.success) {
+          this.$message.success(res.data.message || '审核通过成功');
+          await this.fetchPendingAdmins();
+        } else {
+          this.$message.error(res.data.message || '审核失败');
+        }
+      } catch (err) {
+        this.$message.error(err.message || '审核失败，请重试');
+      }
     },
-    rejectAdmin() {
-      // TODO: 调用后端接口拒绝管理员申请
-      this.$message.info('请实现拒绝管理员申请的后端调用');
-      // 审核成功后可刷新列表
-      // await this.fetchPendingAdmins();
+    async rejectAdmin(adminId) {
+      try {
+        const res = await reviewAdmin({ adminId, status: 2 });
+        if (res.data && res.data.success) {
+          this.$message.success(res.data.message || '已拒绝该管理员');
+          await this.fetchPendingAdmins();
+        } else {
+          this.$message.error(res.data.message || '操作失败');
+        }
+      } catch (err) {
+        this.$message.error(err.message || '操作失败，请重试');
+      }
     },
     async submitPwdForm() {
       this.$refs.pwdFormRef.validate(async (valid) => {

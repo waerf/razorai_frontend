@@ -70,16 +70,6 @@
         ></el-input>
       </el-form-item>
 
-      <el-form-item label="价格">
-        <el-input-number
-          v-model="form.price"
-          :min="0"
-          :step="100"
-          placeholder="请输入价格"
-          class="custom-input"
-        />
-      </el-form-item>
-
       <el-form-item class="form-actions">
         <el-button class="cancel-button" @click="onCancel"> 取消 </el-button>
         <el-button type="primary" class="submit-button" @click="onSubmit">
@@ -91,7 +81,7 @@
 </template>
 
 <script>
-import { reviewAI as apireviewAI } from '@/utils/api';
+import { createAgentForReview } from '@/utils/api';
 export default {
   data() {
     return {
@@ -101,7 +91,6 @@ export default {
         LLM_id: null,
         chatprompt: '',
         description: '',
-        price: 0,
       },
       rules: {
         name: [
@@ -116,12 +105,11 @@ export default {
         chatprompt: [
           { required: true, message: '请输入提示词', trigger: 'blur' },
         ],
-        price: [{ required: true, message: '请输入价格', trigger: 'blur' }],
       },
       robotTypes: [
-        { label: '文本生成', value: 1 },
-        { label: '代码编程', value: 2 },
-        { label: '情感伙伴', value: 3 },
+        { label: '文本机器人', value: 1 },
+        { label: '图像机器人', value: 2 },
+        { label: '音视频机器人', value: 3 },
       ],
       llmOptions: [
         { label: 'Kimi', value: 1 },
@@ -145,14 +133,14 @@ export default {
           const payload = {
             name: this.form.name,
             type: this.form.type,
-            LLM_id: this.form.LLM_id,
-            chatprompt: this.form.chatprompt,
+            llmId: this.form.LLM_id,
+            chatPrompt: this.form.chatprompt,
             description: this.form.description,
-            creator_id: userId,
-            price: this.form.price,
+            creatorId: userId,
+            price: 0,
           };
           console.log('提交参数:', payload);
-          this.apicreateRobot(payload);
+          this.apiCreateAgentForReview(payload);
         } else {
           console.log('表单验证失败');
           this.$message.warning('请完善表单信息后重试');
@@ -162,28 +150,37 @@ export default {
     onCancel() {
       this.$router.go(-1); // 返回上一页
     },
-    async apicreateRobot(payload) {
+    async apiCreateAgentForReview(payload) {
       try {
-        const response = await apireviewAI(payload);
+        const response = await createAgentForReview(payload);
         console.log('接口响应:', response);
 
+        // 检查HTTP状态码和业务状态码
         const isSuccess =
           response.status === 200 &&
           (response.data.code === 200 || response.data.success);
 
         if (isSuccess) {
-          this.$message.success('请等待管理员审核');
-          // 重置表单
-          this.$refs.form?.resetFields();
+          this.$message.success('创建机器人成功，等待审核');
+          // 审核提交成功后，后端返回 auditId
+          const auditId = response.data.auditId;
+          if (auditId) {
+            // 可跳转到审核进度页或首页
+            this.$router.push({ name: 'Home' });
+          } else {
+            this.$message.warning('未获取到审核ID');
+          }
         } else {
           const errorMsg = response.data?.message || '创建失败，服务器返回异常';
           this.$message.error(`创建失败: ${errorMsg}`);
         }
       } catch (error) {
+        // 详细打印错误信息
         console.error('创建机器人错误详情:', error);
         console.error('错误响应数据:', error.response?.data);
         console.error('错误状态码:', error.response?.status);
 
+        // 用户友好提示
         const errorMsg =
           error.response?.data?.message ||
           error.message ||

@@ -234,15 +234,6 @@ const router = new VueRouter({
       },
     },
     {
-      path: '/admin/feedback',
-      name: 'AdminFeedback',
-      component: AdminFeedback,
-      meta: {
-        title: 'RazorAI-管理员审核',
-        requiresAdmin: true,
-      },
-    },
-    {
       path: '/admin/register',
       name: 'AdminRegister',
       component: () => import('@/views/AdminRegisterPage.vue'),
@@ -283,6 +274,15 @@ const router = new VueRouter({
       component: AdminFeedback,
       meta: {
         title: 'RazorAI-用户反馈',
+        requiresAdmin: true,
+      },
+    },
+    {
+      path: '/admin/feedback/:userId/:feedbackId',
+      name: 'AdminFeedbackDetail',
+      component: () => import('@/views/AdminFeedbackDetail.vue'),
+      meta: {
+        title: 'RazorAI-反馈详情',
         requiresAdmin: true,
       },
     },

@@ -14,6 +14,10 @@ const adminApi = axios.create({
 });
 
 // 为adminApi添加请求拦截器
+// 管理员登出
+export const adminLogout = () => {
+  return adminApi.post('api/admin/logout');
+};
 adminApi.interceptors.request.use(
   (config) => {
     const token = MyStorage.get('admin_token');
@@ -79,6 +83,11 @@ api.interceptors.response.use(
 );
 
 // API 请求方法
+// 修改管理员密码
+export const changeAdminPassword = (payload) => {
+  // payload: { oldPassword, newPassword }
+  return adminApi.put('api/admin/password', payload);
+};
 export const login = (payload) =>
   api.post('/user/login', payload, {
     headers: { skipAuth: true }, // 跳过 Authorization 头
@@ -173,9 +182,14 @@ export const getPendingRobots = (params = {}) => {
   });
 };
 
-// 获取管理员信息
-export const getAdminInfo = () => {
-  return adminApi.get('/api/admin/info');
+// 提交机器人审核（新版接口）
+export const createAgentForReview = (payload) =>
+  adminApi.post('/admin/agent-review/submit', payload, {
+    headers: { skipAuth: false },
+  });
+
+export const getFeedbacks = () => {
+  return adminApi.get('/admin/feedbacks');
 };
 
 // 获取待审核管理员列表
@@ -183,12 +197,28 @@ export const getPendingAdmins = () => {
   return adminApi.get('/api/admin/pending');
 };
 
-export const getFeedbacks = () => {
-  return adminApi.get('/admin/feedbacks');
-};
-
+// 管理员审核接口
+export function reviewAdmin({ adminId, status, reviewComment = '' }) {
+  return adminApi.post('/api/Admin/review', {
+    adminId,
+    status,
+    reviewComment,
+  });
+}
+// 获取待审核管理员列表
 export const markFeedbackAsRead = (feedbackId) => {
   return adminApi.post(`/admin/feedbacks/${feedbackId}/read`);
+};
+
+// 获取所有用户反馈（平台全部反馈）
+export const fetchAllFeedbacks = () => {
+  return api.get('/feedback/all', {
+    headers: { Accept: 'application/json', skipAuth: true },
+  });
+};
+// 获取待审核机器人详情（通过审核记录ID）
+export const getPendingAgentDetail = (auditId) => {
+  return adminApi.get(`/admin/agent-review/pending/${auditId}`);
 };
 
 export const deleteFeedback = (feedbackId) => {
@@ -250,6 +280,11 @@ export const createAI = (payload) =>
     headers: { skipAuth: false },
   });
 
+export const createAgentPending = (payload) =>
+  adminApi.post('/admin/agent-review/pending', payload, {
+    headers: { skipAuth: false },
+  });
+
 // 启用机器人
 export const startRobots = () =>
   api.post(
@@ -300,6 +335,18 @@ export const deleteChat = (chat_id) =>
   api.delete(`/agent/user/chat/delete/${chat_id}`, {
     headers: { skipAuth: false },
   });
+
+// 获取管理员信息
+export const getAdminInfo = () => {
+  return adminApi.get('/api/admin/info');
+};
+
+// 根据用户ID获取该用户所有反馈
+export const fetchUserFeedbacks = (userId) => {
+  return api.get(`/feedback/user/${userId}`, {
+    headers: { Accept: 'application/json', skipAuth: true },
+  });
+};
 
 // 根据用户id获取对应通知
 export const getUserNotifications = (userId) =>

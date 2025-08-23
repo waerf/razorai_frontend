@@ -236,9 +236,10 @@ export default {
         });
     },
     goToReviewPage(id) {
-      // 跳转详情页，监听返回时的状态
+      // 跳转详情页，使用路由 name+params，确保 id 正确传递
       this.$router.push({
-        path: `/admin/robots/${id}`,
+        name: 'AdminRobotReviewDetail',
+        params: { id },
         query: { fromList: true },
       });
     },
@@ -248,7 +249,7 @@ export default {
         const res = await getPendingRobots({ page, pageSize: this.pageSize });
         if (res.data && res.data.success) {
           this.pendingRobots = res.data.data.map((robot) => ({
-            id: robot.id,
+            id: robot.auditId,
             name: robot.name,
             createdAt: robot.createdAt,
             description: robot.description,
@@ -314,28 +315,15 @@ export default {
   mounted() {
     this.fetchPendingRobots(1);
     this.fetchAdminInfo();
-    // 监听页面返回，更新状态
+    // 监听页面返回，移除已审核机器人并刷新列表
     this.$watch(
       () => this.$route,
-      (to, from) => {
-        // 仅在从详情页返回列表页时触发
-        if (
-          to.path === '/admin/review' &&
-          from.path.startsWith('/admin/robots/')
-        ) {
-          // 获取详情页返回的审核结果
-          const reviewedId = from.params.id;
-          const reviewedStatus = from.query && from.query.status;
-          if (reviewedId && reviewedStatus) {
-            const idx = this.pendingRobots.findIndex((r) => r.id == reviewedId);
-            if (idx !== -1) {
-              // 更新状态（可根据实际字段调整）
-              this.$set(this.pendingRobots, idx, {
-                ...this.pendingRobots[idx],
-                status: reviewedStatus,
-              });
-            }
-          }
+      (to) => {
+        if (to.path === '/admin/review' && to.query && to.query.removedId) {
+          // 重新拉取当前页，确保分页数据准确
+          this.fetchPendingRobots(this.currentPage);
+          // 清除 query，避免刷新重复删除
+          this.$router.replace({ path: '/admin/review', query: {} });
         }
       }
     );
