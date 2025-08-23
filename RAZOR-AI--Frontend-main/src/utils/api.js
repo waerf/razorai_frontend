@@ -280,6 +280,20 @@ export const deleteChat = (chatId) =>
     headers: { skipAuth: false },
   });
 
+// 根据用户id获取对应通知
+export const getUserNotifications = (userId) =>
+  api.get(`/notifications/${userId}`);
+
+// 根据通知id将通知标记为已读
+export const markNotificationAsRead = (notificationId) =>
+  api.put(`/notifications/${notificationId}/read`, {
+    headers: { skipAuth: false },
+  });
+
+// 根据通知id和用户id删除通知
+export const deleteNotificationById = ({ id, userId }) =>
+  api.delete(`/notifications/${id}/user/${userId}`);
+
 // 获取机器人订阅数量
 export const getSubscriptionCnt = (agentId) =>
   api.get(`/market/subscription/count/${agentId}`, {
