@@ -53,6 +53,7 @@
 
       <!-- 对话历史列表 -->
       <el-card class="list-card">
+        <!-- 有对话 -->
         <div v-if="filteredConversations.length > 0">
           <div class="robots-grid">
             <!-- 对话项 -->
@@ -62,27 +63,36 @@
               class="conversation-card"
             >
               <div class="conversation-header">
+                <!-- 多选 -->
                 <el-checkbox
                   v-model="selectedConversations"
                   :label="conversation.id"
                   class="selection-checkbox"
                   aria-label="选择此对话"
                 ></el-checkbox>
+
+                <!-- 标题 + 时间 -->
                 <div class="conversation-title">
-                  <h3 class="title-text">{{ conversation.name }}</h3>
+                  <h3 class="title-text">
+                    {{ conversation.name || '未命名对话' }}
+                  </h3>
                   <span class="timestamp">{{
-                    formatDate(conversation.timestamp)
+                    formatDate(conversation.created_at)
                   }}</span>
                 </div>
               </div>
+
+              <!-- 会话简介 -->
               <div class="conversation-content">
-                {{ truncate(conversation.content, 80) }}
+                来自 <strong>{{ conversation.agent_name }}</strong> 的对话
               </div>
+
+              <!-- 标签/信息 -->
               <div class="conversation-tags">
-                <span class="tag" v-for="tag in conversation.tags" :key="tag">
-                  {{ tag }}
-                </span>
+                <span class="tag">AgentID: {{ conversation.agent_id }}</span>
               </div>
+
+              <!-- 操作按钮 -->
               <div class="conversation-actions">
                 <el-button
                   size="mini"
@@ -120,8 +130,8 @@
           </div>
         </div>
 
-        <!-- 无对话时显示 -->
-        <div class="no-conversations" v-else>
+        <!-- 无对话 -->
+        <div v-else class="no-conversations">
           <div class="empty-state">
             <i class="el-icon-inbox text-4xl mb-3"></i>
             <p class="empty-title">暂无相关对话记录</p>
@@ -166,7 +176,8 @@
 </template>
 
 <script>
-import { mapState } from 'vuex';
+import { mapState, mapActions } from 'vuex';
+import { fetchAllChats as apiFetchAllChats } from '../utils/api';
 import { deleteChat as apiDeleteChat } from '../utils/api';
 
 export default {
@@ -174,7 +185,6 @@ export default {
   data() {
     return {
       title: '对话历史',
-      conversations: [],
       selectedConversations: [],
       deleteDialogVisible: false,
       searchQuery: '',
@@ -187,37 +197,55 @@ export default {
       ],
       activeFilter: 'all',
       currentPage: 1,
-      pageSize: 5,
+      pageSize: 10,
     };
   },
   mounted() {
-    const robotId = this.$route.params.id;
-    // 从Vuex获取对话数据
-    this.conversations = this.chats.filter(
-      (chat) => Number(chat.agent_id) === Number(robotId)
-    );
-
-    // 监听滚动事件显示/隐藏回到顶部按钮
+    this.initConversations();
     window.addEventListener('scroll', this.handleScroll);
   },
   beforeDestroy() {
     window.removeEventListener('scroll', this.handleScroll);
   },
+
   computed: {
     ...mapState('chat', ['chats']),
-    // 过滤后的对话列表
-    filteredConversations() {
-      let result = [...this.conversations];
 
-      // 搜索过滤
+    filteredByRobot() {
+      // 路由 '/conversationHistory' 并没有 :id
+      // 所以这里一般是 undefined
+      const robotId = this.$route.params.id;
+      if (!Array.isArray(this.chats)) return [];
+
+      let result;
+      if (robotId) {
+        result = this.chats.filter(
+          (chat) => Number(chat.agent_id) === Number(robotId)
+        );
+      } else {
+        result = [...this.chats];
+      }
+
+      // 让最新的在前面
+      return result.reverse();
+    },
+
+    filteredConversations() {
+      // 先从 filteredByRobot 复制数据
+      let result = [...this.filteredByRobot];
+
       if (this.searchQuery) {
         const query = this.searchQuery.toLowerCase();
-        result = result.filter(
-          (conv) =>
-            conv.name.toLowerCase().includes(query) ||
-            conv.content.toLowerCase().includes(query) ||
-            conv.tags.some((tag) => tag.toLowerCase().includes(query))
-        );
+        result = result.filter((conv) => {
+          const name = (conv.name || '').toLowerCase();
+          const content = (conv.content || '').toLowerCase();
+          const agentIdStr = conv.agent_id ? String(conv.agent_id) : '';
+          return (
+            name.includes(query) ||
+            content.includes(query) ||
+            agentIdStr.includes(query)
+          );
+        });
       }
 
       // 时间过滤
@@ -233,7 +261,9 @@ export default {
         const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
         result = result.filter((conv) => {
-          const convDate = new Date(conv.timestamp);
+          // 确保 timestamp 存在
+          if (!conv.created_at) return false;
+          const convDate = new Date(conv.created_at);
 
           switch (this.activeFilter) {
             case 'today':
@@ -250,9 +280,10 @@ export default {
         });
       }
 
-      return result;
+      // 倒序，让最新的在前
+      return result.reverse();
     },
-    // 分页相关计算
+
     paginatedConversations() {
       const startIndex = (this.currentPage - 1) * this.pageSize;
       return this.filteredConversations.slice(
@@ -260,11 +291,13 @@ export default {
         startIndex + this.pageSize
       );
     },
+
     startItem() {
       return this.filteredConversations.length
         ? (this.currentPage - 1) * this.pageSize + 1
         : 0;
     },
+
     endItem() {
       return Math.min(
         this.currentPage * this.pageSize,
@@ -272,79 +305,170 @@ export default {
       );
     },
   },
+
   methods: {
-    // 查看对话详情
+    ...mapActions('chat', ['fetchChats']),
+
+    async initConversations() {
+      const loadingInstance = this.$loading({
+        lock: true,
+        text: '正在加载对话记录...',
+        spinner: 'el-icon-loading',
+        background: 'rgba(0, 0, 0, 0.3)',
+      });
+
+      try {
+        const userId = this.$store.state.user?.userId;
+        if (!userId) {
+          this.$message.error('未获取到用户信息，请重新登录');
+          return;
+        }
+
+        const result = await apiFetchAllChats({ userId: userId });
+        console.log('输入的参数:', userId);
+        console.log('API返回结果:', result);
+
+        if (result.status === 200) {
+          // 确保存入Vuex的是数组
+          const chatsData = Array.isArray(result.data) ? result.data : [];
+          this.$store.commit('chat/SET_CHATS', chatsData);
+          this.$message.success(`对话记录加载成功，共${chatsData.length}条`);
+        } else if (result.status === 404) {
+          this.$message.error(
+            `加载失败: ${result.data.message || '用户不存在'}`
+          );
+          this.$store.commit('chat/SET_CHATS', []);
+        } else {
+          this.$message.warning(
+            `加载对话记录失败 [状态码: ${result.status}]: ${result.data.message || '未知错误'}`
+          );
+          this.$store.commit('chat/SET_CHATS', []);
+        }
+      } catch (error) {
+        console.error('初始化对话列表失败:', error);
+        this.$message.error('加载对话记录失败，请刷新页面重试');
+        // 异常时也确保状态是数组
+        this.$store.commit('chat/SET_CHATS', []);
+      } finally {
+        loadingInstance.close();
+      }
+    },
+
     viewConversation(conversationId) {
+      if (!conversationId) {
+        this.$message.error('无效的对话 ID');
+        return;
+      }
       this.$router.push({
         name: 'ChatRobot',
-        params: { id: conversationId },
+        params: { chatId: String(conversationId) },
       });
     },
-    // 处理搜索
+
     handleSearch() {
-      this.currentPage = 1; // 重置到第一页
+      this.currentPage = 1;
     },
     performSearch() {
       this.currentPage = 1;
     },
-    // 处理分页变化
+
     handlePageChange(page) {
       this.currentPage = page;
     },
-    // 确认删除
+
     confirmDelete() {
       this.deleteDialogVisible = true;
     },
-    // 选择单个对话用于删除
-    selectConversation(id) {
-      this.selectedConversations = [id];
-    },
-    // 清除选择
-    clearSelection() {
-      this.selectedConversations = [];
-    },
-    // 删除选中的对话
-    async deleteConversations() {
-      try {
-        for (const conversationId of this.selectedConversations) {
-          const response = await apiDeleteChat({
-            chat_id: conversationId,
-          });
 
+    selectConversation(id) {
+      const index = this.selectedConversations.indexOf(id);
+      if (index > -1) {
+        this.selectedConversations.splice(index, 1);
+      } else {
+        this.selectedConversations.push(id);
+      }
+    },
+
+    async deleteConversations() {
+      if (this.selectedConversations.length === 0) return;
+
+      const loadingInstance = this.$loading({
+        lock: true,
+        text: '正在删除对话...',
+        spinner: 'el-icon-loading',
+        background: 'rgba(0, 0, 0, 0.3)',
+      });
+
+      try {
+        // 遍历删除选中的对话
+        for (const conversationId of this.selectedConversations) {
+          console.log('正在删除对话ID:', conversationId);
+          // API请求体为空，只需在URL或参数中传递chat_id
+          const response = await apiDeleteChat(conversationId);
+
+          // 根据状态码判断删除结果
           if (response.status !== 200) {
-            throw new Error(`删除对话 ${conversationId} 失败`);
+            throw new Error(
+              `删除对话 ${conversationId} 失败: ${response.data?.message || '未知错误'}`
+            );
           }
         }
 
-        // 刷新对话列表
-        this.conversations = this.conversations.filter(
-          (conv) => !this.selectedConversations.includes(conv.id)
-        );
+        // 删除成功后重新获取对话列表
+        const userId = this.$store.state.user?.userId;
+        if (!userId) {
+          this.$message.error('未获取到用户信息，无法刷新对话列表');
+          return;
+        }
 
-        // 显示成功提示
-        this.$message.success('对话已成功删除');
+        // 使用userId重新获取对话列表
+        const result = await apiFetchAllChats({ userId: userId });
+        if (result.status === 200) {
+          // 确保存入Vuex的是数组
+          const chatsData = Array.isArray(result.data) ? result.data : [];
+          this.$store.commit('chat/SET_CHATS', chatsData);
+          this.$message.success(`刷新对话列表成功，共${chatsData.length}条`);
+        } else {
+          throw new Error(
+            `刷新对话列表失败: ${result.data?.message || '未知错误'}`
+          );
+        }
+
+        this.$message.success('选中的对话已全部删除');
       } catch (error) {
         console.error('删除对话失败:', error);
-        this.$message.error('删除对话失败，请重试');
+        this.$message.error(`删除失败: ${error.message}`);
       } finally {
         this.deleteDialogVisible = false;
         this.selectedConversations = [];
+        loadingInstance.close();
       }
     },
-    // 格式化日期显示
+
     formatDate(timestamp) {
-      const date = new Date(timestamp);
+      if (!timestamp) return '未知时间';
+
+      // 确保时间被当作本地时间（中国时间），避免被解析为 UTC
+      const date = new Date(timestamp.replace('T', ' '));
+      if (isNaN(date.getTime())) return '无效时间';
+
+      const pad = (num) => num.toString().padStart(2, '0');
+
       const now = new Date();
       const diffInDays = Math.floor((now - date) / (1000 * 60 * 60 * 24));
 
+      const year = date.getFullYear();
+      const month = pad(date.getMonth() + 1);
+      const day = pad(date.getDate());
+      const hours = pad(date.getHours());
+      const minutes = pad(date.getMinutes());
+      const seconds = pad(date.getSeconds());
+
       if (diffInDays === 0) {
-        // 今天
-        return `今天 ${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
+        return `今天 ${hours}:${minutes}:${seconds}`;
       } else if (diffInDays === 1) {
-        // 昨天
-        return `昨天 ${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
+        return `昨天 ${hours}:${minutes}:${seconds}`;
       } else if (diffInDays < 7) {
-        // 本周
         const weekdays = [
           '周日',
           '周一',
@@ -354,29 +478,30 @@ export default {
           '周五',
           '周六',
         ];
-        return `${weekdays[date.getDay()]} ${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
+        return `${weekdays[date.getDay()]} ${hours}:${minutes}:${seconds}`;
       } else {
-        // 更早
-        return `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}`;
+        return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
       }
     },
-    // 处理滚动事件
+
     handleScroll() {
       const backToTopButton = document.getElementById('backToTop');
-      if (window.pageYOffset > 300) {
-        backToTopButton.classList.add('visible');
-      } else {
-        backToTopButton.classList.remove('visible');
+      if (backToTopButton) {
+        if (window.pageYOffset > 300) {
+          backToTopButton.classList.add('visible');
+        } else {
+          backToTopButton.classList.remove('visible');
+        }
       }
     },
-    // 回到顶部
+
     scrollToTop() {
       window.scrollTo({
         top: 0,
         behavior: 'smooth',
       });
     },
-    // 截断文本
+
     truncate(text, length = 50) {
       if (!text) return '';
       return text.length > length ? text.slice(0, length) + '...' : text;
@@ -386,6 +511,7 @@ export default {
 </script>
 
 <style lang="scss" scoped>
+/* 样式部分保持不变 */
 @use '@/assets/styles/variables.scss' as *;
 
 $light-accent: #e8f3ff;
@@ -424,7 +550,7 @@ $light-accent: #e8f3ff;
         }
 
         .sub-title {
-          color: $secondary-color;
+          color: $text-color;
           font-size: 0.9rem;
         }
       }
@@ -551,13 +677,13 @@ $light-accent: #e8f3ff;
 
           .timestamp {
             font-size: 0.8rem;
-            color: $secondary-color;
+            color: $text-color;
           }
         }
       }
 
       .conversation-content {
-        color: $secondary-color;
+        color: $text-color;
         font-size: 0.9rem;
         line-height: 1.4;
         margin-bottom: 15px;
@@ -657,7 +783,7 @@ $light-accent: #e8f3ff;
     }
 
     .dialog-message {
-      color: $secondary-color;
+      color: $text-color;
       font-size: 0.9rem;
     }
   }

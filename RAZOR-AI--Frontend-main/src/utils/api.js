@@ -228,8 +228,8 @@ export const fetchUserSubscriptions = async (userId) => {
 };
 
 export const fetchChatDetailedHistory = async (chat_id) => {
-  console.log('chat_id in api.js:', chat_id);
-  const response = await api.get(`/agent/user/chat/${chat_id.chat_id}`, {
+  console.log('chat_id in fetchChatDetailedHistory api.js:', chat_id);
+  const response = await api.get(`/agent/user/chat/${chat_id}`, {
     headers: { skipAuth: false },
   });
   return response;
@@ -250,33 +250,54 @@ export const createAI = (payload) =>
     headers: { skipAuth: false },
   });
 
+// 启用机器人
+export const startRobots = () =>
+  api.post(
+    '/market/start',
+    {},
+    {
+      headers: { skipAuth: false },
+    }
+  );
+
+// 审核机器人
+export const reviewAI = (payload) =>
+  api.post('/admin/agent-review/submit', payload, {
+    headers: { skipAuth: false },
+  });
+
+// 创建会话
 export const createChat = (payload) =>
   api.post('/agent/user/chat/creation', payload, {
     headers: { skipAuth: false },
   });
 
+// 发送消息
 export const sendMessage = (payload) =>
   api.post(
     `/agent/user/chat/${payload.chat_id}`,
     { question: payload.content },
     {
       headers: { skipAuth: false },
-      timeout: 30000, // 设置 30 秒超时时间
+      timeout: 30000,
     }
   );
 
+// 保存聊天记录
 export const saveChatHistory = (chatId) =>
-  api.post(`/agent/chat/save/${chatId.chat_id}`, {
-    headers: { skipAuth: true },
+  api.post(`/agent/chat/save/${chatId.chat_id}`, null, {
+    headers: { skipAuth: false },
   });
 
+// 关闭聊天（仅内存中移除）
 export const closeChat = (chatId) =>
   api.delete(`/agent/user/chat/${chatId.chat_id}`, {
     headers: { skipAuth: false },
   });
 
-export const deleteChat = (chatId) =>
-  api.delete(`/agent/user/chat/delete/${chatId.chat_id}`, {
+// 永久删除会话
+export const deleteChat = (chat_id) =>
+  api.delete(`/agent/user/chat/delete/${chat_id}`, {
     headers: { skipAuth: false },
   });
 

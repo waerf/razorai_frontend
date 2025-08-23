@@ -8,7 +8,11 @@
  *获取某个会话的历史消息 (/agent/user/chat/<int:chat_id>)
  */
 
-import { fetchAllChats as apifetchAllChats } from '../utils/api';
+import {
+  fetchAllChats as apifetchAllChats,
+  createChat as apiCreateChat,
+} from '../utils/api';
+
 const state = {
   chats: [],
   currentChat: null,
@@ -22,6 +26,7 @@ const mutations = {
     state.currentChat = chat;
   },
 };
+
 const getters = {
   chats: (state) => state.chats,
   currentChat: (state) => state.currentChat,
@@ -42,8 +47,8 @@ const actions = {
       return { success: false, message: error.message };
     }
   },
-  getChatByID({ commit }, chatid) {
-    // const chat = state.chats.find((chat) => chat.id === chatid);
+
+  getChatByID({ commit, state }, chatid) {
     for (const chat of state.chats) {
       if (Number(chat.id) === Number(chatid)) {
         commit('SET_CURRENT_CHAT', chat);
@@ -52,17 +57,32 @@ const actions = {
     }
     return null;
   },
-  // async createChat({ commit }, chatData) {
-  //   const response = await axios.post('/agent/user/chat/creation', chatData);
-  //   commit('SET_CURRENT_CHAT', response.data);
-  // },
-  //   async sendMessage({ commit }, { chatId, message }) {
-  //     await axios.post(`/agent/user/chat/${chatId}`, { question: message });
-  //   },
-  // async fetchChatHistory({ commit }, chatId) {
-  //   const response = await axios.get(`/agent/user/chat/${chatId}`);
-  //   commit('SET_CURRENT_CHAT', response.data);
-  // },
+
+  async createChat({ commit }, chatData) {
+    try {
+      const response = await apiCreateChat(chatData);
+
+      if (response.status === 200 && response.data.chat_id) {
+        commit('SET_CURRENT_CHAT', response.data);
+
+        return {
+          success: true,
+          chatId: response.data.chat_id,
+          message: response.data.message || '会话创建成功',
+        };
+      } else {
+        return {
+          success: false,
+          message: response.data.message || '创建会话失败',
+        };
+      }
+    } catch (error) {
+      if (error.response && error.response.status === 403) {
+        return { success: false, message: '无有效订阅，无法创建会话' };
+      }
+      return { success: false, message: error.message || '请求失败' };
+    }
+  },
 };
 
 export default {
