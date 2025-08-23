@@ -348,9 +348,15 @@ export const fetchUserFeedbacks = (userId) => {
   });
 };
 
+// 发送用户反馈
+export const sendUserFeedback = (feedbackload) =>
+  api.post('/feedback', feedbackload, {
+    headers: { skipAuth: false },
+  });
+
 // 根据用户id获取对应通知
 export const getUserNotifications = (userId) =>
-  api.get(`/notifications/${userId}`);
+  api.get(`/notifications/unread/${userId}`);
 
 // 根据通知id将通知标记为已读
 export const markNotificationAsRead = (notificationId) =>

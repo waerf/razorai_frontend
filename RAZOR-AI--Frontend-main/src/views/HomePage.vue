@@ -1,49 +1,38 @@
 <!-- filepath: /d:/MyGitHub/razor-ai-frontend/src/views/HomePage.vue -->
 <template>
   <div class="homepage">
-    <!-- 上部分布局：Logo + 机器人选项卡 + 通知区域 -->
-    <div class="top-section">
-      <!-- 左侧：Logo 和机器人选项卡 -->
-      <div class="left-content">
-        <!-- Logo 和名称 -->
-        <div class="header">
-          <img src="@/assets/images/logo.png" alt="Razor AI" class="logo" />
-          <h1 class="title">Razor AI</h1>
-        </div>
-
-        <!-- 已经订阅的机器人选项卡和输入框 -->
-        <div class="subscribed-robots">
-          <el-tabs
-            v-model="selectedRobot"
-            class="subscribed-tabs"
-            @tab-click="handleRobotSelect"
+    <!-- 第一层：Logo + 通知区域 -->
+    <div class="header-section">
+      <!-- 左侧：占位通知区域（用于平衡布局，让logo居中） -->
+      <div class="notification-area placeholder-notification">
+        <div class="notification-header">
+          <el-button
+            size="mini"
+            class="placeholder-btn"
+            disabled
+            style="visibility: hidden"
           >
-            <el-tab-pane
-              v-for="robot in filteredSubscribedRobots"
-              :key="robot.agent_id"
-              :label="robot.agent_name"
-              :name="robot.agent_id.toString()"
-            >
-            </el-tab-pane>
-          </el-tabs>
-          <div class="chat-input-section">
-            <el-input
-              v-model="userInput"
-              type="textarea"
-              :autosize="{ minRows: 2, maxRows: 3 }"
-              placeholder="选择机器人并输入您的问题..."
-              class="chat-input"
-              clearable
-            ></el-input>
-            <el-button
-              class="send-button"
-              type="info"
-              icon="el-icon-upload2"
-              @click="sendMessageToRobot"
-              >发送并创建对话</el-button
-            >
-          </div>
+            <i class="el-icon-refresh"></i>
+          </el-button>
+          <h3 class="notification-title">占位区域</h3>
+          <el-button
+            size="mini"
+            class="placeholder-btn"
+            disabled
+            style="visibility: hidden"
+          >
+            <i class="el-icon-refresh"></i>
+          </el-button>
         </div>
+        <div class="notification-list">
+          <div class="no-notifications">保持布局平衡</div>
+        </div>
+      </div>
+
+      <!-- 中间：Logo 和名称 -->
+      <div class="header">
+        <img src="@/assets/images/logo.png" alt="Razor AI" class="logo" />
+        <h1 class="title">Razor AI</h1>
       </div>
 
       <!-- 右侧：通知区域 -->
@@ -102,10 +91,49 @@
             </div>
           </div>
 
-          <!-- 无通知时的提示 -->
+          <!-- 当没有通知时显示的提示 -->
           <div v-if="notifications.length === 0" class="no-notifications">
             暂无通知
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 第二层：机器人选项卡和输入框 -->
+    <div class="chat-section">
+      <!-- 已经订阅的机器人选项卡 -->
+      <div class="subscribed-robots">
+        <el-tabs
+          v-model="selectedRobot"
+          class="subscribed-tabs"
+          @tab-click="handleRobotSelect"
+        >
+          <el-tab-pane
+            v-for="robot in filteredSubscribedRobots"
+            :key="robot.agent_id"
+            :label="robot.agent_name"
+            :name="robot.agent_id.toString()"
+          >
+          </el-tab-pane>
+        </el-tabs>
+
+        <!-- 输入框区域 -->
+        <div class="chat-input-section">
+          <el-input
+            v-model="userInput"
+            type="textarea"
+            :autosize="{ minRows: 2, maxRows: 3 }"
+            placeholder="选择机器人并输入您的问题..."
+            class="chat-input"
+            clearable
+          ></el-input>
+          <el-button
+            class="send-button"
+            type="info"
+            icon="el-icon-upload2"
+            @click="sendMessageToRobot"
+            >发送并创建对话</el-button
+          >
         </div>
       </div>
     </div>
@@ -596,176 +624,204 @@ export default {
   display: flex;
   flex-direction: column;
 
-  .top-section {
+  // 第一层：三列布局 - 占位通知区域 + Logo + 通知区域
+  .header-section {
     display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
     margin-bottom: 30px;
     gap: 20px;
 
-    .left-content {
-      flex: 1;
+    .header {
       display: flex;
       flex-direction: column;
       align-items: center;
+      flex: 0 0 auto; // 不伸缩，保持原始大小
 
-      .header {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        margin-bottom: 20px;
-
-        .logo {
-          width: 100px;
-          height: 100px;
-        }
-
-        .title {
-          font-size: 2rem;
-          color: $primary-color;
-        }
+      .logo {
+        width: 100px;
+        height: 100px;
       }
 
-      .subscribed-robots {
-        width: 80%;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-
-        .subscribed-tabs {
-          width: 100%;
-        }
-
-        .chat-input-section {
-          display: flex;
-          align-items: center;
-          margin-top: 15px;
-          width: 100%;
-
-          .chat-input {
-            flex: 1;
-            margin-right: 15px;
-          }
-
-          .send-button {
-            width: 25%;
-            height: 100%;
-          }
-        }
+      .title {
+        font-size: 2rem;
+        color: $primary-color;
+        margin-top: 10px;
       }
     }
 
     .notification-area {
-      width: 15vw;
-      padding: 1vh 1vw;
-      background-color: #f8f9fa;
-      border-radius: 8px;
-      border: 1px solid #e9ecef;
+      flex: 1;
+      max-width: 300px;
+      min-width: 300px;
 
-      .notification-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 15px;
+      // 占位通知区域样式
+      &.placeholder-notification {
+        background-color: white;
+        opacity: 0.3;
+        pointer-events: none;
 
         .notification-title {
-          font-size: 1.1rem;
-          font-weight: 600;
-          color: $text-color;
-          text-align: center;
-          margin: 0;
-          flex: 1;
-        }
-
-        .refresh-btn {
-          font-size: 0.8rem;
-          padding: 5px 8px;
-          color: #666;
-          border: 1px solid #ddd;
-          background: white;
-
-          &:hover {
-            color: $accent-color;
-            border-color: $accent-color;
-          }
-        }
-
-        .placeholder-btn {
-          font-size: 0.8rem;
-          padding: 5px 8px;
-          pointer-events: none;
-        }
-      }
-
-      .notification-list {
-        .notification-item {
-          background: white;
-          border-radius: 6px;
-          padding: 12px;
-          margin-bottom: 10px;
-          border: 1px solid #e9ecef;
-          cursor: pointer;
-          transition: all 0.3s ease;
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-
-          &.unread {
-            border-left: 3px solid #f56c6c;
-            background-color: #ffebee;
-            color: #d32f2f;
-          }
-
-          &:hover {
-            background-color: #f0f0f0;
-          }
-
-          &.clicked {
-            background-color: white;
-            color: #333;
-            border-color: #e9ecef;
-          }
-
-          &:last-child {
-            margin-bottom: 0;
-          }
-
-          .notification-content {
-            flex: 1;
-            cursor: pointer;
-
-            .notification-text {
-              font-size: 0.9rem;
-              line-height: 1.4;
-              margin-bottom: 5px;
-              word-wrap: break-word;
-            }
-
-            .notification-time {
-              font-size: 0.8rem;
-              color: #666;
-              text-align: right;
-            }
-          }
-
-          .notification-actions {
-            margin-left: 8px;
-
-            .delete-btn {
-              color: #999;
-              padding: 4px;
-
-              &:hover {
-                color: #f56c6c;
-              }
-            }
-          }
+          color: #ccc;
         }
 
         .no-notifications {
-          text-align: center;
-          color: #999;
-          font-size: 0.9rem;
-          padding: 20px;
+          color: #ddd;
         }
+      }
+    }
+  }
+
+  // 第二层：机器人选项卡和输入框
+  .chat-section {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    margin-bottom: 30px;
+
+    .subscribed-robots {
+      width: 80%;
+      max-width: 800px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+
+      .subscribed-tabs {
+        width: 100%;
+      }
+
+      .chat-input-section {
+        display: flex;
+        align-items: center;
+        margin-top: 15px;
+        width: 100%;
+
+        .chat-input {
+          flex: 1;
+          margin-right: 15px;
+        }
+
+        .send-button {
+          width: 25%;
+          height: 100%;
+        }
+      }
+    }
+  }
+
+  // 通知区域样式（现在在header-section内）
+  .notification-area {
+    width: 400px;
+    padding: 1vh 1vw;
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    border: 1px solid #e9ecef;
+
+    .notification-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+
+      .notification-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: $text-color;
+        text-align: center;
+        margin: 0;
+        flex: 1;
+      }
+
+      .refresh-btn {
+        font-size: 0.8rem;
+        padding: 5px 8px;
+        color: #666;
+        border: 1px solid #ddd;
+        background: white;
+
+        &:hover {
+          color: $accent-color;
+          border-color: $accent-color;
+        }
+      }
+
+      .placeholder-btn {
+        font-size: 0.8rem;
+        padding: 5px 8px;
+        pointer-events: none;
+      }
+    }
+
+    .notification-list {
+      .notification-item {
+        background: white;
+        border-radius: 6px;
+        padding: 12px;
+        margin-bottom: 10px;
+        border: 1px solid #e9ecef;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+
+        &.unread {
+          border-left: 3px solid #f56c6c;
+          background-color: #ffebee;
+          color: #d32f2f;
+        }
+
+        &:hover {
+          background-color: #f0f0f0;
+        }
+
+        &.clicked {
+          background-color: white;
+          color: #333;
+          border-color: #e9ecef;
+        }
+
+        &:last-child {
+          margin-bottom: 0;
+        }
+
+        .notification-content {
+          flex: 1;
+          cursor: pointer;
+
+          .notification-text {
+            font-size: 0.9rem;
+            line-height: 1.4;
+            margin-bottom: 5px;
+            word-wrap: break-word;
+          }
+
+          .notification-time {
+            font-size: 0.8rem;
+            color: #666;
+            text-align: right;
+          }
+        }
+
+        .notification-actions {
+          margin-left: 8px;
+
+          .delete-btn {
+            color: #999;
+            padding: 4px;
+
+            &:hover {
+              color: #f56c6c;
+            }
+          }
+        }
+      }
+
+      .no-notifications {
+        text-align: center;
+        color: #999;
+        font-size: 0.9rem;
+        padding: 20px;
       }
     }
   }
@@ -823,6 +879,67 @@ export default {
           font-size: 0.9rem;
           color: $secondary-color;
           line-height: 1.4;
+        }
+      }
+    }
+  }
+
+  // 响应式设计
+  @media (max-width: 768px) {
+    .header-section {
+      flex-direction: column;
+      align-items: center;
+      gap: 15px;
+
+      // 在移动端隐藏占位通知区域
+      .placeholder-notification {
+        display: none;
+      }
+
+      .header {
+        .logo {
+          width: 80px;
+          height: 80px;
+        }
+
+        .title {
+          font-size: 1.5rem;
+        }
+      }
+
+      .notification-area {
+        width: 100%;
+        max-width: none;
+        min-width: none;
+      }
+    }
+
+    .chat-section {
+      .subscribed-robots {
+        width: 100%;
+
+        .chat-input-section {
+          flex-direction: column;
+          gap: 10px;
+
+          .chat-input {
+            margin-right: 0;
+          }
+
+          .send-button {
+            width: 100%;
+          }
+        }
+      }
+    }
+
+    .quick-access-section {
+      .quick-access-cards {
+        grid-template-columns: 1fr;
+        gap: 15px;
+
+        .quick-access-card {
+          padding: 20px 15px;
         }
       }
     }

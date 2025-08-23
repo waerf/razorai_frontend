@@ -75,19 +75,46 @@
                 </div>
               </div>
               <div class="robot-detail-actions">
-                <el-button
-                  type="primary"
-                  class="action-btn primary"
-                  @click="handleSubscription"
-                >
-                  {{ subscriptionButtonText }}
-                </el-button>
+                <!-- 未订阅状态 -->
+                <template v-if="!isUserSubscribed">
+                  <el-button class="action-btn disabled" disabled>
+                    未订阅
+                  </el-button>
+                  <el-button
+                    type="primary"
+                    class="action-btn primary"
+                    @click="openSubscriptionDialog"
+                  >
+                    订阅
+                  </el-button>
+                </template>
+
+                <!-- 已订阅状态 -->
+                <template v-else>
+                  <el-button
+                    class="action-btn start-chat"
+                    @click="startConversation"
+                  >
+                    开始对话
+                  </el-button>
+                  <el-button
+                    type="primary"
+                    class="action-btn renew"
+                    @click="openRenewDialog"
+                  >
+                    续订
+                  </el-button>
+                </template>
+
+                <!-- 注释掉推荐相似机器人按钮 -->
+                <!--
                 <el-button
                   class="action-btn secondary"
                   @click="showRecommendations"
                 >
                   推荐相似机器人
                 </el-button>
+                -->
               </div>
             </div>
           </div>
@@ -416,14 +443,15 @@ export default {
   },
   computed: {
     ...mapState('user', ['isLoggedIn', 'userName', 'userId']),
-    subscriptionButtonText() {
-      const subscribedRobot = this.$store.state.agent.haveSubscribed.find(
-        (r) => r.agent_id === this.robot.id
-      );
-      return subscribedRobot && subscribedRobot.status
-        ? '已订阅，查看对话历史'
-        : '未订阅，点击订阅';
-    },
+    // 注释掉不再使用的subscriptionButtonText
+    // subscriptionButtonText() {
+    //   const subscribedRobot = this.$store.state.agent.haveSubscribed.find(
+    //     (r) => r.agent_id === this.robot.id
+    //   );
+    //   return subscribedRobot && subscribedRobot.status
+    //     ? '已订阅，查看对话历史'
+    //     : '未订阅，点击订阅';
+    // },
     // 计算是否应该监听点击事件（引用计数为0且没有正在关闭子弹窗时才监听）
     shouldListenToClicks() {
       return this.dialogRefCount === 0 && !this.isClosingSubDialog;
@@ -793,7 +821,14 @@ export default {
     async handleSubscriptionConfirm(duration, points) {
       console.log('订阅时长:', duration);
       console.log('所需积分:', points);
-      await this.subscribeRobot(duration);
+
+      // 判断是首次订阅还是续订
+      if (this.isUserSubscribed) {
+        await this.renewSubscription(duration);
+      } else {
+        await this.subscribeRobot(duration);
+      }
+
       this.closeSubscriptionDialog();
     },
     async fetchRobotDetail(agentId) {
@@ -878,6 +913,66 @@ export default {
         });
       } else {
         this.openSubscriptionDialog();
+      }
+    },
+    // 开始对话
+    startConversation() {
+      this.$router.push({
+        name: 'ConversationHistory',
+        params: { id: this.robot.id },
+      });
+    },
+    // 打开续订对话框
+    openRenewDialog() {
+      this.incrementDialogRef();
+      this.isSubscriptionDialogVisible = true;
+      this.disableBodyScroll();
+    },
+    // 续订机器人（仿照subscribeAgent的逻辑）
+    async renewSubscription(Duration) {
+      try {
+        const currentTime = this.formatDateTime(new Date());
+        const payload = {
+          userId: this.$store.state.user.userId,
+          agentId: this.robot.id,
+          startTime: currentTime,
+          duration: Duration,
+          subscriptionType: 1, // 续订类型，可以根据需要调整
+        };
+        console.log('续订请求 payload:', payload);
+
+        // 调用续订API（目前使用相同的subscribeAgent接口）
+        const response = await apisubscribeAgent(payload);
+
+        if (response.status === 200) {
+          this.$message.success('续订成功！');
+
+          // 1. 更新用户订阅数据
+          await this.$store.dispatch(
+            'agent/fetchUserSubscriptions',
+            this.$store.state.user.userId
+          );
+
+          // 2. 重新加载机器人订阅数量
+          await this.loadSubscriptionCount(this.robot.id);
+
+          // 3. 强制更新页面，确保按钮状态正确显示
+          this.$forceUpdate();
+
+          // 4. 通知父组件订阅状态已变化
+          this.$emit('subscription-changed', this.robot.id);
+
+          console.log('续订成功!!!:', response);
+          console.log(
+            '续订成功后的用户订阅列表:',
+            this.$store.state.agent.haveSubscribed
+          );
+        } else {
+          this.$message.error('续订失败，请稍后重试。');
+        }
+      } catch (error) {
+        console.error('续订失败:', error);
+        this.$message.error('无法续订机器人，请稍后重试。');
       }
     },
     // 加载机器人评论
@@ -1147,6 +1242,43 @@ export default {
 
               &:hover {
                 background: #f5f5f5;
+              }
+            }
+
+            // 新增：禁用状态（未订阅按钮）
+            &.disabled {
+              background: #f8f9fa;
+              color: #6c757d;
+              border: 1px solid #dee2e6;
+              cursor: not-allowed;
+
+              &:hover {
+                background: #f8f9fa;
+                color: #6c757d;
+              }
+            }
+
+            // 新增：开始对话按钮
+            &.start-chat {
+              background: #17a2b8;
+              color: white;
+              border: 1px solid #17a2b8;
+
+              &:hover {
+                background: #138496;
+                border-color: #117a8b;
+              }
+            }
+
+            // 新增：续订按钮
+            &.renew {
+              background: $accent-color;
+              color: white;
+              border: none;
+
+              &:hover {
+                background: #138496;
+                border-color: #117a8b;
               }
             }
           }
