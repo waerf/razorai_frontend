@@ -1,20 +1,15 @@
 // src/utils/api.js
 //api.js 文件用于封装 API 请求，方便在项目中进行统一管理和调用。
-
 import axios from 'axios';
 import MyStorage from './storage'; // 引入 Storage 工具类
 
-// 统一管理后端 API 地址
-const BASE_API_URL = 'http://localhost:5253';
-const BASE_ADMIN_API_URL = 'http://localhost:5253';
-
 const api = axios.create({
-  baseURL: BASE_API_URL,
-  timeout: 10000,
+  baseURL: 'http://47.99.66.142:5253',
+  timeout: 5000,
 });
 
 const adminApi = axios.create({
-  baseURL: BASE_ADMIN_API_URL,
+  baseURL: 'http://47.99.66.142:5253',
   timeout: 10000,
 });
 
@@ -69,8 +64,20 @@ api.interceptors.response.use(
       console.log('Error response in api.js:', error.response);
       const { status, data } = error.response;
       return Promise.reject({ code: status, message: data.message }); // 返回错误状态码和消息
+    } else if (error.request) {
+      // 请求已发出但没有收到响应
+      console.error('No response received:', error.request);
+      return Promise.reject({
+        code: 'NETWORK_ERROR',
+        message: '网络连接失败，请检查后端服务是否正常运行',
+      });
     } else {
-      return Promise.reject({ code: 500, message: '哈哈哈出错咯，debug咯' }); // 返回默认错误消息
+      // 请求配置错误
+      console.error('Request setup error:', error.message);
+      return Promise.reject({
+        code: 'REQUEST_ERROR',
+        message: '请求配置错误: ' + error.message,
+      });
     }
   }
 );
@@ -89,6 +96,71 @@ export const login = (payload) =>
 export const register = (payload) =>
   api.post('/user/register', payload, {
     headers: { skipAuth: true }, // 跳过 Authorization 头
+  });
+
+// 获取用户信息
+export const getUserInfo = (userId) => api.get(`/user/${userId}`);
+
+// 更新用户信息
+export const updateUserInfo = (userId, payload) =>
+  api.post(`/user/update-info/${userId}`, payload, {
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  });
+
+// 获取用户积分余额
+export const getUserPoints = () => api.get('/points/balance');
+
+// 获取积分历史记录
+export const getPointsHistory = (page = 1, pageSize = 20) =>
+  api.get(`/points/history?page=${page}&pageSize=${pageSize}`);
+
+// 获取积分统计信息
+export const getPointsStats = () => api.get('/points/stats');
+
+// 用户充值积分
+export const rechargePoints = (points, description = '用户充值积分') =>
+  api.post('/points/recharge', { points, description });
+
+// 获取充值历史记录
+export const getRechargeHistory = (page = 1, pageSize = 20) =>
+  api.get(`/points/recharge-history?page=${page}&pageSize=${pageSize}`);
+
+// 检查积分是否足够
+export const checkPointsEnough = (requiredPoints) =>
+  api.post('/points/check', { requiredPoints });
+
+// 管理员增加积分
+export const addUserPoints = (
+  userId,
+  points,
+  actionType,
+  description,
+  relatedId = null
+) =>
+  api.post('/points/add', {
+    userId,
+    points,
+    actionType,
+    description,
+    relatedId,
+  });
+
+// 管理员扣除积分
+export const deductUserPoints = (
+  userId,
+  points,
+  actionType,
+  description,
+  relatedId = null
+) =>
+  api.post('/points/deduct', {
+    userId,
+    points,
+    actionType,
+    description,
+    relatedId,
   });
 
 export const adminLogin = (data) => {
@@ -175,6 +247,9 @@ export const fetchAllAgentsData = () =>
 export const fetchAgentDetail = (agentId) =>
   api.get(`/market/agentdetail/${agentId}`, { headers: { skipAuth: true } }); // 跳过 Authorization 头
 
+export const searchAgent = (searchload) =>
+  api.post(`/market/search`, searchload); // 跳过 Authorization 头
+
 export const fetchUserSubscriptions = async (userId) => {
   const response = await api.get(`/market/user/subs/${userId}`, {
     headers: { skipAuth: false },
@@ -183,8 +258,8 @@ export const fetchUserSubscriptions = async (userId) => {
 };
 
 export const fetchChatDetailedHistory = async (chat_id) => {
-  console.log('chat_id in api.js:', chat_id);
-  const response = await api.get(`/agent/user/chat/${chat_id.chat_id}`, {
+  console.log('chat_id in fetchChatDetailedHistory api.js:', chat_id);
+  const response = await api.get(`/agent/user/chat/${chat_id}`, {
     headers: { skipAuth: false },
   });
   return response;
@@ -210,33 +285,54 @@ export const createAgentPending = (payload) =>
     headers: { skipAuth: false },
   });
 
+// 启用机器人
+export const startRobots = () =>
+  api.post(
+    '/market/start',
+    {},
+    {
+      headers: { skipAuth: false },
+    }
+  );
+
+// 审核机器人
+export const reviewAI = (payload) =>
+  api.post('/admin/agent-review/submit', payload, {
+    headers: { skipAuth: false },
+  });
+
+// 创建会话
 export const createChat = (payload) =>
   api.post('/agent/user/chat/creation', payload, {
     headers: { skipAuth: false },
   });
 
+// 发送消息
 export const sendMessage = (payload) =>
   api.post(
     `/agent/user/chat/${payload.chat_id}`,
     { question: payload.content },
     {
       headers: { skipAuth: false },
-      timeout: 30000, // 设置 30 秒超时时间
+      timeout: 5000, // 设置 5 秒超时时间
     }
   );
 
+// 保存聊天记录
 export const saveChatHistory = (chatId) =>
-  api.post(`/agent/chat/save/${chatId.chat_id}`, {
-    headers: { skipAuth: true },
+  api.post(`/agent/chat/save/${chatId.chat_id}`, null, {
+    headers: { skipAuth: false },
   });
 
+// 关闭聊天（仅内存中移除）
 export const closeChat = (chatId) =>
   api.delete(`/agent/user/chat/${chatId.chat_id}`, {
     headers: { skipAuth: false },
   });
 
-export const deleteChat = (chatId) =>
-  api.delete(`/agent/user/chat/delete/${chatId.chat_id}`, {
+// 永久删除会话
+export const deleteChat = (chat_id) =>
+  api.delete(`/agent/user/chat/delete/${chat_id}`, {
     headers: { skipAuth: false },
   });
 
@@ -251,3 +347,144 @@ export const fetchUserFeedbacks = (userId) => {
     headers: { Accept: 'application/json', skipAuth: true },
   });
 };
+
+// 更新用户反馈状态（如标记为已处理）
+export const updateFeedbackState = (feedbackId) => {
+  return api.put('/feedback/update-state', { FeedbackId: feedbackId });
+};
+
+// 根据用户id获取对应通知
+export const getUserNotifications = (userId) =>
+  api.get(`/notifications/${userId}`);
+
+// 根据通知id将通知标记为已读
+export const markNotificationAsRead = (notificationId) =>
+  api.put(`/notifications/${notificationId}/read`, {
+    headers: { skipAuth: false },
+  });
+
+// 根据通知id和用户id删除通知
+export const deleteNotificationById = ({ id, userId }) =>
+  api.delete(`/notifications/${id}/user/${userId}`);
+
+// 获取机器人订阅数量
+export const getSubscriptionCnt = (agentId) =>
+  api.get(`/market/subscription/count/${agentId}`, {
+    headers: { skipAuth: true },
+  });
+
+// 获取机器人评论
+export const getAgentComment = (agentId) =>
+  api.get(`/market/feedback/${agentId}`, {
+    headers: { skipAuth: true },
+  });
+
+// 发布机器人评论
+export const sendAgentComment = (payload) =>
+  api.post('/market/feedback', payload, {
+    headers: { skipAuth: false },
+  });
+
+// 删除机器人评论
+export const deleteAgentComment = (feedbackId) =>
+  api.delete(`/market/feedback/${feedbackId}`, {
+    headers: { skipAuth: false },
+  });
+
+//根据机器人类型分页
+export const getRobotsByType = (agentload) =>
+  api.post(`/market/agents/by-type`, agentload, {
+    headers: { skipAuth: true },
+  });
+
+//获取推荐机器人
+export const getRecommendedRobots = (userId) =>
+  api.post(`/agent/recommend`, userId, {
+    headers: { skipAuth: true },
+  });
+
+// ====================== 社区模块 API ======================
+// 创建帖子
+export const createCommunityPost = (payload) =>
+  api.post('/community/posts', payload, {
+    headers: { skipAuth: false },
+  });
+
+// 修改帖子
+export const updateCommunityPost = (postId, payload) =>
+  api.put(`/community/posts/${postId}`, payload, {
+    headers: { skipAuth: false },
+  });
+
+// 删除帖子
+export const deleteCommunityPost = (postId, payload) =>
+  api.delete(`/community/posts/${postId}`, {
+    data: payload,
+    headers: { skipAuth: false },
+  });
+
+// 获取单个帖子详情
+export const getCommunityPostDetail = (postId) =>
+  api.get(`/community/posts/${postId}`, {
+    headers: { skipAuth: true },
+  });
+
+// 获取指定用户的所有帖子
+export const getCommunityUserPosts = (userId) =>
+  api.get(`/community/posts/user/${userId}`, {
+    headers: { skipAuth: false },
+  });
+
+// 发布评论
+export const createCommunityComment = (postId, payload) =>
+  api.post(`/community/posts/${postId}/comments`, payload, {
+    headers: { skipAuth: false },
+  });
+
+// 删除评论
+export const deleteCommunityComment = (commentId, payload) =>
+  api.delete(`/community/comments/${commentId}`, {
+    data: payload, // DELETE 请求携带请求体
+    headers: { skipAuth: false },
+  });
+
+// 获取帖子的所有评论
+export const getCommunityPostComments = (postId) =>
+  api.get(`/community/posts/${postId}/comments`, {
+    headers: { skipAuth: true },
+  });
+
+// 获取帖子评论数
+export const getCommunityCommentCount = (postId) =>
+  api.get(`/community/posts/${postId}/comments/count`, {
+    headers: { skipAuth: true },
+  });
+
+// 点赞帖子
+export const likeCommunityPost = (postId, payload) =>
+  api.post(`/community/posts/${postId}/like`, payload, {
+    headers: { skipAuth: false },
+  });
+
+// 取消点赞
+export const cancelLikeCommunityPost = (postId, payload) =>
+  api.delete(`/community/posts/${postId}/like`, {
+    data: payload,
+    headers: { skipAuth: false },
+  });
+
+// 获取帖子点赞数
+export const getCommunityLikeCount = (postId) =>
+  api.get(`/community/posts/${postId}/likes/count`, {
+    headers: { skipAuth: true },
+  });
+
+// 获取推荐的最新帖子
+export const getRecommendedPosts = (count) =>
+  api.post(
+    '/community/posts/recommend',
+    { Count: count },
+    {
+      headers: { skipAuth: true },
+    }
+  );

@@ -28,25 +28,37 @@
           {{ feedbackDetail.state === 1 ? '已处理' : '未处理' }}
         </span>
         <p>{{ feedbackDetail.feedback }}</p>
+        <div v-if="feedbackDetail.state !== 1" style="margin-top: 16px">
+          <button @click="handleProcessFeedback" class="process-btn">
+            标记为已处理
+          </button>
+        </div>
       </div>
     </div>
-    <div v-else class="feedback-empty">暂无反馈详情</div>
+    <div v-else class="feedback-empty">
+      <div v-if="errorMsg" style="color: #e74c3c; margin-bottom: 12px">
+        {{ errorMsg }}
+      </div>
+      暂无反馈详情
+    </div>
   </div>
 </template>
 
 <script>
-import { fetchUserFeedbacks } from '@/utils/api';
+import { fetchUserFeedbacks, updateFeedbackState } from '@/utils/api';
 
 export default {
   name: 'AdminFeedbackDetail',
   props: {
     userId: {
       type: [String, Number],
-      required: true,
+      required: false,
+      default: null,
     },
     feedbackId: {
       type: [String, Number],
-      required: true,
+      required: false,
+      default: null,
     },
   },
   data() {
@@ -56,22 +68,64 @@ export default {
       errorMsg: '',
     };
   },
+  computed: {
+    resolvedUserId() {
+      // 优先用 props，否则用路由参数
+      return this.userId !== null && this.userId !== undefined
+        ? this.userId
+        : this.$route.params.userId;
+    },
+    resolvedFeedbackId() {
+      return this.feedbackId !== null && this.feedbackId !== undefined
+        ? this.feedbackId
+        : this.$route.params.feedbackId;
+    },
+  },
   methods: {
     async loadFeedbackDetail() {
       this.loading = true;
+      const userId = this.resolvedUserId;
+      const feedbackId = this.resolvedFeedbackId;
+      if (
+        userId === undefined ||
+        userId === null ||
+        userId === '' ||
+        isNaN(Number(userId)) ||
+        feedbackId === undefined ||
+        feedbackId === null ||
+        feedbackId === '' ||
+        isNaN(Number(feedbackId))
+      ) {
+        this.errorMsg = '用户ID或反馈ID无效，无法获取反馈详情';
+        this.feedbackDetail = null;
+        this.loading = false;
+        return;
+      }
       try {
-        const res = await fetchUserFeedbacks(this.userId);
-        if (res && res.feedbacks) {
-          this.feedbackDetail = res.feedbacks.find(
-            (f) => f.id == this.feedbackId
+        const res = await fetchUserFeedbacks(userId);
+        if (res && res.data && Array.isArray(res.data.feedbacks)) {
+          this.feedbackDetail = res.data.feedbacks.find(
+            (f) => f.id == feedbackId
           );
         }
-        // 无需弹窗，页面直接显示空提示
       } catch (e) {
-        // 可选：可在页面顶部显示错误信息
         this.errorMsg = e.message || '获取反馈详情失败';
       } finally {
         this.loading = false;
+      }
+    },
+    async handleProcessFeedback() {
+      if (!this.feedbackDetail || this.feedbackDetail.state === 1) return;
+      try {
+        await updateFeedbackState(this.feedbackDetail.id);
+        this.$message && this.$message.success
+          ? this.$message.success('反馈已标记为已处理')
+          : alert('反馈已标记为已处理');
+        this.feedbackDetail.state = 1;
+      } catch (e) {
+        this.$message && this.$message.error
+          ? this.$message.error(e.message || '处理失败')
+          : alert(e.message || '处理失败');
       }
     },
     formatTime(time) {
@@ -134,6 +188,20 @@ export default {
 .feedback-state.processed {
   background: #e6f7e6;
   color: #52c41a;
+}
+.process-btn {
+  padding: 6px 18px;
+  background: #52c41a;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 15px;
+  margin-top: 8px;
+  transition: background 0.2s;
+}
+.process-btn:hover {
+  background: #389e0d;
 }
 .feedback-empty {
   text-align: center;
