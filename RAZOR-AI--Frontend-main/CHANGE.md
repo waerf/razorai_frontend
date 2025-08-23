@@ -118,4 +118,7 @@ ALTER TABLE "RAZORAI"."ADMIN" MODIFY ("PHONE" VARCHAR2(20) NULL);
 
 ### 前端
 #### src/utils/api.js
-- 统一了api格式，但要注意后端的路径，有些需要加/api（如更改管理员密码的路径为<baseAdminApi> + /api + /后端对应地址），有些不需要加
+- 统一了管理员的api格式
+
+### 注意
+- 由于更改了待审核机器人表，原先的待审核机器人会提示审核失败
