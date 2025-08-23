@@ -14,7 +14,7 @@
       <div class="absolute top-0 right-0 mt-2 mr-4 z-10">
         <button
           class="btn primary-btn flex items-center justify-center h-10 px-4"
-          @click="$router.push('/create')"
+          @click="$router.push('/createRobot')"
         >
           <i class="fa fa-plus mr-2"></i>
           <span class="align-middle leading-none">创建新机器人</span>
@@ -56,7 +56,7 @@
                 <a
                   href="#"
                   class="text-razor-blue hover:text-razor-darkBlue font-medium flex items-center transition-all hover:pl-1"
-                  @click.prevent="$router.push('/chat')"
+                  @click.prevent="$router.push('/ChatRobot')"
                 >
                   <i class="fa fa-comments-o mr-1"></i>
                   开始对话
