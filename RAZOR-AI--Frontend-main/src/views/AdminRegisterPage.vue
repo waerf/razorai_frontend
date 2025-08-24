@@ -45,6 +45,14 @@
             prefix-icon="el-icon-lock"
           ></el-input>
         </el-form-item>
+        <el-form-item label="注册理由" prop="registerReason">
+          <el-input
+            v-model="registerForm.registerReason"
+            type="textarea"
+            placeholder="请填写注册理由"
+            :rows="3"
+          ></el-input>
+        </el-form-item>
         <el-form-item>
           <el-button
             type="primary"
@@ -73,6 +81,7 @@ export default {
         password: '',
         confirmPassword: '',
         phone: '',
+        registerReason: '',
       },
       registerRules: {
         adminName: [
@@ -100,6 +109,9 @@ export default {
             trigger: ['blur', 'change'],
           },
         ],
+        registerReason: [
+          { required: true, message: '请填写注册理由', trigger: 'blur' },
+        ],
       },
       isLoading: false,
     };
@@ -120,6 +132,7 @@ export default {
               AdminName: this.registerForm.adminName,
               Email: this.registerForm.email,
               Password: this.registerForm.password,
+              RegisterReason: this.registerForm.registerReason,
             };
             if (this.registerForm.phone) {
               payload.Phone = this.registerForm.phone;
@@ -136,14 +149,26 @@ export default {
                 password: '',
                 confirmPassword: '',
                 phone: '',
+                registerReason: '',
               };
             } else {
               this.$message.error(response.data.message || '注册失败');
             }
           } catch (error) {
+            // 优化：显示后端返回的具体错误信息
+            let msg = '注册失败，请检查控制台';
+            if (
+              error.response &&
+              error.response.data &&
+              error.response.data.message
+            ) {
+              msg = error.response.data.message;
+            } else if (error.message) {
+              msg = error.message;
+            }
+            this.$message.error(msg);
             console.error(error);
             console.error(error.response?.data);
-            this.$message.error(error.message || '注册失败，请检查控制台');
           } finally {
             this.isLoading = false;
           }
