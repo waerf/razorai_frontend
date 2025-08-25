@@ -59,6 +59,9 @@
           <el-button type="primary" size="small" @click="openEditDialog">
             编辑资料
           </el-button>
+          <el-button type="danger" size="small" @click="handleLogout">
+            退出登录
+          </el-button>
         </div>
       </div>
     </el-card>
@@ -67,6 +70,13 @@
     <el-card class="points-card">
       <div slot="header" class="clearfix">
         <span class="card-title">我的积分</span>
+        <el-button
+          style="float: right; padding: 3px 0"
+          type="text"
+          @click="viewPointsHistory"
+        >
+          查看记录
+        </el-button>
       </div>
       <div class="points-info">
         <div class="points-details">
@@ -86,9 +96,6 @@
           </el-button>
           <el-button size="small" type="success" @click="openRechargeDialog">
             充值积分
-          </el-button>
-          <el-button size="small" type="warning" @click="testBackendConnection">
-            测试连接
           </el-button>
         </div>
       </div>
@@ -129,52 +136,24 @@
           <el-input v-model="editForm.UserName" placeholder="请输入用户名" />
         </el-form-item>
 
-        <!-- 当用户名改变时，显示密码确认框 -->
-        <el-form-item
-          v-if="isUsernameChanged"
-          label="确认密码"
-          prop="ConfirmPassword"
-        >
-          <el-input
-            type="password"
-            v-model="editForm.ConfirmPassword"
-            placeholder="请输入当前密码以确认用户名修改"
-            show-password
-          />
-          <div class="password-tip">
-            <i class="el-icon-info"></i>
-            <span>修改用户名需要验证当前密码</span>
-          </div>
-        </el-form-item>
-
         <el-form-item label="邮箱" prop="Email">
           <el-input
             type="email"
             v-model="editForm.Email"
-            :placeholder="
-              isEmailBound ? '邮箱已绑定，不可修改' : '请输入邮箱地址'
-            "
-            :disabled="isEmailBound"
+            placeholder="邮箱不可修改"
+            readonly
+            disabled
           />
-          <div v-if="isEmailBound" class="bind-tip">
-            <i class="el-icon-lock"></i>
-            <span>已绑定邮箱不可修改</span>
-          </div>
         </el-form-item>
 
         <el-form-item label="手机" prop="Phone">
           <el-input
             v-model="editForm.Phone"
-            :placeholder="
-              isPhoneBound ? '手机号已绑定，不可修改' : '请输入手机号'
-            "
+            placeholder="手机号不可修改"
             maxlength="11"
-            :disabled="isPhoneBound"
+            readonly
+            disabled
           />
-          <div v-if="isPhoneBound" class="bind-tip">
-            <i class="el-icon-lock"></i>
-            <span>已绑定手机号不可修改</span>
-          </div>
         </el-form-item>
 
         <el-form-item label="性别" prop="Gender">
@@ -225,6 +204,15 @@
             show-word-limit
           />
         </el-form-item>
+
+        <el-form-item label="验证密码" prop="Password">
+          <el-input
+            type="password"
+            v-model="editForm.Password"
+            placeholder="请输入当前密码以验证身份"
+            show-password
+          />
+        </el-form-item>
       </el-form>
 
       <div slot="footer" class="dialog-footer">
@@ -235,111 +223,108 @@
       </div>
     </el-dialog>
 
-    <!-- 积分历史对话框 -->
+    <!-- 积分明细对话框 -->
     <el-dialog
-      title="积分历史记录"
-      :visible.sync="pointsHistoryVisible"
+      title="积分明细"
+      :visible.sync="pointsHistoryDialogVisible"
       width="800px"
-      @close="closePointsHistory"
+      @close="resetPointsHistory"
     >
-      <div class="points-history-content">
-        <!-- 积分来源筛选 -->
-        <div class="filter-section">
-          <el-form :inline="true" size="small">
-            <el-form-item label="积分来源:">
-              <el-select
-                v-model="pointsFilter.pointsSource"
-                placeholder="请选择积分来源"
-                @change="loadPointsHistory"
-              >
-                <el-option label="全部来源" :value="0"></el-option>
-                <el-option label="新用户注册" :value="1"></el-option>
-                <el-option label="创建机器人" :value="2"></el-option>
-                <el-option label="发表评论" :value="3"></el-option>
-                <el-option label="获得点赞" :value="4"></el-option>
-                <el-option label="发表文章" :value="5"></el-option>
-                <el-option label="每日签到" :value="6"></el-option>
-                <el-option label="购买消费" :value="7"></el-option>
-                <el-option label="系统奖励" :value="8"></el-option>
-              </el-select>
-            </el-form-item>
-            <el-form-item>
-              <el-button
-                type="primary"
-                @click="loadPointsHistory"
-                :loading="pointsHistoryLoading"
-              >
-                刷新
-              </el-button>
-            </el-form-item>
-          </el-form>
+      <div class="points-dialog-content" v-loading="pointsLoading">
+        <!-- 当前积分显示 -->
+        <div class="current-points">
+          <h3>
+            当前积分：<span class="points-highlight">{{
+              userInfo.points || 0
+            }}</span>
+          </h3>
         </div>
 
-        <!-- 积分历史列表 -->
-        <div class="points-history-list" v-loading="pointsHistoryLoading">
-          <el-table
-            :data="pointsHistoryData"
-            stripe
-            style="width: 100%"
-            empty-text="暂无积分记录"
+        <!-- 积分说明 -->
+        <div class="points-info-section">
+          <h4>积分说明</h4>
+          <ul class="points-info-list">
+            <li>• 积分主要用于购买机器人功能和服务</li>
+            <li>• 通过贡献内容（如开发AI机器人）可获得激励积分奖励</li>
+            <li>• 每日签到和参与活动也可获取积分</li>
+            <li>• 积分可用于解锁高级机器人、购买机器人服务等</li>
+          </ul>
+        </div>
+
+        <!-- 标签页切换 -->
+        <div class="points-tabs">
+          <el-button
+            :type="currentPointsTab === 'all' ? 'primary' : 'default'"
+            size="small"
+            @click="switchPointsTab('all')"
           >
-            <el-table-column
-              prop="transaction_id"
-              label="交易ID"
-              width="80"
-            ></el-table-column>
-            <el-table-column prop="points_change" label="积分变动" width="100">
+            全部
+          </el-button>
+          <el-button
+            :type="currentPointsTab === 'in' ? 'success' : 'default'"
+            size="small"
+            @click="switchPointsTab('in')"
+          >
+            获取
+          </el-button>
+          <el-button
+            :type="currentPointsTab === 'out' ? 'danger' : 'default'"
+            size="small"
+            @click="switchPointsTab('out')"
+          >
+            消耗
+          </el-button>
+        </div>
+
+        <!-- 积分记录表格 -->
+        <div class="points-table-container">
+          <el-table
+            :data="paginatedPointsData"
+            style="width: 100%"
+            stripe
+            v-if="paginatedPointsData.length > 0"
+          >
+            <el-table-column prop="time" label="时间" width="180">
+            </el-table-column>
+            <el-table-column prop="type" label="类型" width="100">
+              <template slot-scope="scope">
+                <el-tag
+                  :type="scope.row.badge === 'in' ? 'success' : 'danger'"
+                  size="small"
+                >
+                  {{ scope.row.type }}
+                </el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column prop="desc" label="描述"> </el-table-column>
+            <el-table-column prop="change" label="变动" width="100">
               <template slot-scope="scope">
                 <span
-                  :class="
-                    scope.row.points_change > 0
-                      ? 'points-positive'
-                      : 'points-negative'
-                  "
+                  :class="scope.row.badge === 'in' ? 'text-green' : 'text-red'"
                 >
-                  {{ scope.row.points_change > 0 ? '+' : ''
-                  }}{{ scope.row.points_change }}
+                  {{ scope.row.change }}
                 </span>
-              </template>
-            </el-table-column>
-            <el-table-column
-              prop="transaction_type"
-              label="交易类型"
-              width="100"
-            >
-              <template slot-scope="scope">
-                {{ getTransactionTypeText(scope.row.transaction_type) }}
-              </template>
-            </el-table-column>
-            <el-table-column
-              prop="source_description"
-              label="描述"
-              min-width="200"
-            ></el-table-column>
-            <el-table-column
-              prop="transaction_date"
-              label="交易时间"
-              width="160"
-            >
-              <template slot-scope="scope">
-                {{ formatDateTime(scope.row.transaction_date) }}
               </template>
             </el-table-column>
           </el-table>
 
-          <!-- 分页 -->
-          <div class="pagination-section">
-            <el-pagination
-              @size-change="handleSizeChange"
-              @current-change="handleCurrentChange"
-              :current-page="pointsFilter.page"
-              :page-sizes="[10, 20, 50, 100]"
-              :page-size="pointsFilter.pageSize"
-              :total="pointsHistoryTotal"
-              layout="total, sizes, prev, pager, next, jumper"
-            >
-            </el-pagination>
+          <!-- 空状态 -->
+          <div v-if="paginatedPointsData.length === 0" class="empty-state">
+            <i class="el-icon-document"></i>
+            <p>暂无积分记录</p>
           </div>
+        </div>
+
+        <!-- 分页 -->
+        <div class="points-pagination" v-if="totalPointsPages > 1">
+          <el-pagination
+            @current-change="changePointsPage"
+            :current-page="currentPointsPage"
+            :page-size="pointsPageSize"
+            layout="prev, pager, next"
+            :total="filteredPointsData.length"
+          >
+          </el-pagination>
         </div>
       </div>
     </el-dialog>
@@ -349,101 +334,80 @@
       title="充值积分"
       :visible.sync="rechargeDialogVisible"
       width="500px"
-      @close="closeRechargeDialog"
+      @close="resetRechargeForm"
     >
-      <div class="recharge-content">
-        <div class="current-points">
-          <span class="label">当前积分:</span>
-          <span class="value">{{ userInfo.points || 0 }}</span>
+      <el-form
+        ref="rechargeForm"
+        :model="rechargeForm"
+        :rules="rechargeRules"
+        label-width="100px"
+        v-loading="rechargeLoading"
+      >
+        <div class="recharge-info">
+          <div class="current-balance">
+            <span class="label">当前积分：</span>
+            <span class="balance">{{ userInfo.points || 0 }}</span>
+          </div>
+
+          <div class="recharge-rates">
+            <h4>充值说明</h4>
+            <ul>
+              <li>• 最低充值10积分，最高单次充值10000积分</li>
+              <li>• 充值的积分立即到账，可用于购买各种服务</li>
+              <li>• 充值记录可在积分明细中查看</li>
+            </ul>
+          </div>
         </div>
 
-        <el-form
-          :model="rechargeForm"
-          :rules="rechargeRules"
-          ref="rechargeForm"
-          label-width="100px"
-        >
-          <el-form-item label="充值金额" prop="amount">
-            <el-input-number
-              v-model="rechargeForm.amount"
-              :min="1"
-              :max="10000"
-              :step="1"
-              placeholder="请输入充值金额"
-              style="width: 100%"
-            />
-            <div class="amount-tips">
-              <span>充值比例: 1元 = 10积分</span>
-            </div>
-          </el-form-item>
+        <el-form-item label="充值数量" prop="points">
+          <el-input-number
+            v-model="rechargeForm.points"
+            :min="10"
+            :max="10000"
+            :step="10"
+            style="width: 100%"
+            placeholder="请输入充值积分数量"
+          />
+        </el-form-item>
 
-          <el-form-item label="充值积分">
-            <el-input
-              :value="rechargeForm.amount * 10"
-              disabled
-              placeholder="0"
-            >
-              <template slot="append">积分</template>
-            </el-input>
-          </el-form-item>
+        <el-form-item label="充值说明" prop="description">
+          <el-input
+            v-model="rechargeForm.description"
+            placeholder="可选择添加充值说明"
+            maxlength="100"
+            show-word-limit
+          />
+        </el-form-item>
 
-          <el-form-item label="支付方式">
-            <el-radio-group v-model="rechargeForm.paymentMethod">
-              <el-radio label="alipay">支付宝</el-radio>
-              <el-radio label="wechat">微信支付</el-radio>
-              <el-radio label="demo">演示模式(假充值)</el-radio>
-            </el-radio-group>
-          </el-form-item>
-        </el-form>
-
-        <div class="recharge-summary">
-          <p>充值总结:</p>
-          <p>
-            支付金额:
-            <span class="highlight">¥{{ rechargeForm.amount || 0 }}</span>
-          </p>
-          <p>
-            获得积分:
-            <span class="highlight"
-              >{{ (rechargeForm.amount || 0) * 10 }} 积分</span
-            >
-          </p>
-          <p>
-            充值后积分:
-            <span class="highlight"
-              >{{
-                (userInfo.points || 0) + (rechargeForm.amount || 0) * 10
-              }}
-              积分</span
-            >
-          </p>
+        <div class="quick-amounts">
+          <span class="quick-label">快速选择：</span>
+          <el-button size="mini" @click="setQuickAmount(100)">100</el-button>
+          <el-button size="mini" @click="setQuickAmount(500)">500</el-button>
+          <el-button size="mini" @click="setQuickAmount(1000)">1000</el-button>
+          <el-button size="mini" @click="setQuickAmount(5000)">5000</el-button>
         </div>
-      </div>
+
+        <div class="recharge-preview" v-if="rechargeForm.points > 0">
+          <div class="preview-item">
+            <span>充值后积分：</span>
+            <span class="new-balance">{{
+              (userInfo.points || 0) + rechargeForm.points
+            }}</span>
+          </div>
+        </div>
+      </el-form>
 
       <div slot="footer" class="dialog-footer">
-        <el-button @click="closeRechargeDialog">取消</el-button>
+        <el-button @click="rechargeDialogVisible = false">取消</el-button>
         <el-button
           type="primary"
-          @click="confirmRecharge"
+          @click="submitRecharge"
           :loading="rechargeLoading"
-          :disabled="!rechargeForm.amount || rechargeForm.amount <= 0"
         >
           确认充值
         </el-button>
       </div>
     </el-dialog>
-
-    <!-- 登出按钮 -->
-    <div class="logout-section">
-      <el-button
-        type="danger"
-        icon="el-icon-switch-button"
-        @click="handleLogout"
-        class="logout-btn"
-      >
-        退出登录
-      </el-button>
-    </div>
   </div>
 </template>
 
@@ -453,7 +417,6 @@ import {
   getUserInfo,
   updateUserInfo,
   getUserPoints,
-  changeUsername,
   getPointsHistory,
   rechargePoints,
 } from '@/utils/api';
@@ -495,64 +458,9 @@ export default {
         Birthday: null,
         Organization: '',
         Profile: '',
-        ConfirmPassword: '', // 用于用户名修改时的密码确认
+        Password: '', // 添加密码字段
       },
-      originalUsername: '', // 用于存储原始用户名，检测是否改变
-
-      // 积分历史相关
-      pointsHistoryVisible: false,
-      pointsHistoryLoading: false,
-      pointsHistoryData: [],
-      pointsHistoryTotal: 0,
-      pointsFilter: {
-        pointsSource: 0, // 默认显示全部来源
-        page: 1,
-        pageSize: 20,
-      },
-
-      // 充值相关
-      rechargeDialogVisible: false,
-      rechargeLoading: false,
-      rechargeForm: {
-        amount: null, // 充值金额
-        paymentMethod: 'demo', // 支付方式，默认演示模式
-      },
-      rechargeRules: {
-        amount: [
-          { required: true, message: '请输入充值金额', trigger: 'change' },
-          {
-            type: 'number',
-            min: 1,
-            max: 10000,
-            message: '充值金额应在1-10000元之间',
-            trigger: 'change',
-          },
-        ],
-      },
-    };
-  },
-
-  computed: {
-    ...mapState('user', ['userId', 'userName']),
-
-    // 判断邮箱是否已绑定（如果有邮箱值则认为已绑定）
-    isEmailBound() {
-      return !!(this.userInfo.email && this.userInfo.email.trim());
-    },
-
-    // 判断手机号是否已绑定（如果有手机号值则认为已绑定）
-    isPhoneBound() {
-      return !!(this.userInfo.phone && this.userInfo.phone.trim());
-    },
-
-    // 检测用户名是否改变
-    isUsernameChanged() {
-      return this.editForm.UserName !== this.originalUsername;
-    },
-
-    // 动态验证规则
-    editRules() {
-      const rules = {
+      editRules: {
         UserName: [
           { required: true, message: '请输入用户名', trigger: 'blur' },
           {
@@ -576,65 +484,69 @@ export default {
             trigger: 'blur',
           },
         ],
-      };
+        Password: [
+          { required: true, message: '请输入当前密码', trigger: 'blur' },
+          {
+            min: 6,
+            message: '密码长度至少6位',
+            trigger: 'blur',
+          },
+        ],
+      },
 
-      // 邮箱验证规则 - 只有未绑定时才要求必填
-      if (!this.isEmailBound) {
-        rules.Email = [
-          { required: true, message: '请输入邮箱地址', trigger: 'blur' },
+      // 积分明细相关
+      pointsHistoryDialogVisible: false,
+      pointsLoading: false,
+      currentPointsTab: 'all', // 当前选中的积分标签页
+      currentPointsPage: 1, // 当前页码
+      pointsPageSize: 5, // 每页显示的记录数
+      pointsData: [], // 积分记录数据
+
+      // 充值积分相关
+      rechargeDialogVisible: false,
+      rechargeLoading: false,
+      rechargeForm: {
+        points: 100,
+        description: '用户充值积分',
+      },
+      rechargeRules: {
+        points: [
+          { required: true, message: '请输入充值积分数量', trigger: 'blur' },
           {
-            type: 'email',
-            message: '请输入有效的邮箱地址',
+            type: 'number',
+            min: 10,
+            max: 10000,
+            message: '充值积分需在10-10000之间',
             trigger: 'blur',
           },
-        ];
-      } else {
-        rules.Email = [
-          {
-            type: 'email',
-            message: '请输入有效的邮箱地址',
-            trigger: 'blur',
-          },
-        ];
+        ],
+      },
+    };
+  },
+
+  computed: {
+    ...mapState('user', ['userId', 'userName']),
+
+    // 积分明细相关计算属性
+    filteredPointsData() {
+      if (this.currentPointsTab === 'all') {
+        return this.pointsData;
+      } else if (this.currentPointsTab === 'in') {
+        return this.pointsData.filter((item) => item.badge === 'in');
+      } else if (this.currentPointsTab === 'out') {
+        return this.pointsData.filter((item) => item.badge === 'out');
       }
+      return this.pointsData;
+    },
 
-      // 手机号验证规则 - 只有未绑定时才要求必填
-      if (!this.isPhoneBound) {
-        rules.Phone = [
-          { required: true, message: '请输入手机号', trigger: 'blur' },
-          {
-            pattern: /^1[3-9]\d{9}$/,
-            message: '请输入有效的手机号',
-            trigger: 'blur',
-          },
-        ];
-      } else {
-        rules.Phone = [
-          {
-            pattern: /^1[3-9]\d{9}$/,
-            message: '请输入有效的手机号',
-            trigger: 'blur',
-          },
-        ];
-      }
+    paginatedPointsData() {
+      const start = (this.currentPointsPage - 1) * this.pointsPageSize;
+      const end = start + this.pointsPageSize;
+      return this.filteredPointsData.slice(start, end);
+    },
 
-      // 密码确认验证规则 - 仅在用户名改变时需要
-      if (this.isUsernameChanged) {
-        rules.ConfirmPassword = [
-          {
-            required: true,
-            message: '修改用户名需要验证当前密码',
-            trigger: 'blur',
-          },
-          {
-            min: 1,
-            message: '请输入当前密码',
-            trigger: 'blur',
-          },
-        ];
-      }
-
-      return rules;
+    totalPointsPages() {
+      return Math.ceil(this.filteredPointsData.length / this.pointsPageSize);
     },
   },
 
@@ -644,6 +556,36 @@ export default {
 
   methods: {
     ...mapActions('user', ['logout']),
+
+    // 登出功能
+    handleLogout() {
+      this.$confirm('确定要退出登录吗？', '确认退出', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning',
+      })
+        .then(async () => {
+          try {
+            // 调用store中的logout action
+            const result = await this.logout();
+
+            // 显示logout action返回的消息
+            this.$message.success(result.message || '已成功退出登录');
+
+            // 跳转到登录页面或首页
+            this.$router.push('/').catch(() => {
+              // 如果没有登录页面，跳转到首页
+              this.$router.push('/');
+            });
+          } catch (error) {
+            console.error('退出登录失败:', error);
+            this.$message.error('退出登录失败，请重试');
+          }
+        })
+        .catch(() => {
+          // 用户取消登出，不需要处理
+        });
+    },
 
     async loadUserInfo() {
       try {
@@ -711,149 +653,43 @@ export default {
     // 积分相关方法 - 仅用于购买机器人
     // 已删除会员等级相关方法
 
-    async viewPointsHistory() {
-      // 打开积分历史对话框并加载数据
-      this.pointsHistoryVisible = true;
-      await this.loadPointsHistory();
-    },
-
-    // 加载积分历史数据
-    async loadPointsHistory() {
-      try {
-        this.pointsHistoryLoading = true;
-        console.log('加载积分历史，参数:', this.pointsFilter);
-
-        const response = await getPointsHistory(
-          this.pointsFilter.pointsSource,
-          this.pointsFilter.page,
-          this.pointsFilter.pageSize
-        );
-
-        console.log('积分历史API响应:', response);
-        console.log('响应状态:', response.status);
-        console.log('响应数据:', response.data);
-
-        if (response && response.data) {
-          // 如果返回的是数组，直接使用
-          if (Array.isArray(response.data)) {
-            this.pointsHistoryData = response.data;
-            this.pointsHistoryTotal = response.data.length; // 如果没有total字段，使用数组长度
-            console.log('积分历史数据设置为数组:', this.pointsHistoryData);
-          } else if (response.data.data && Array.isArray(response.data.data)) {
-            // 如果返回的是包装对象
-            this.pointsHistoryData = response.data.data;
-            this.pointsHistoryTotal =
-              response.data.total || response.data.data.length;
-            console.log(
-              '积分历史数据设置为包装对象内的数组:',
-              this.pointsHistoryData
-            );
-          } else {
-            console.log('积分历史响应数据格式不符合预期:', response.data);
-            this.pointsHistoryData = [];
-            this.pointsHistoryTotal = 0;
-          }
-        } else {
-          console.log('积分历史响应为空');
-          this.pointsHistoryData = [];
-          this.pointsHistoryTotal = 0;
-        }
-
-        console.log('最终积分历史数据:', this.pointsHistoryData);
-        console.log('总记录数:', this.pointsHistoryTotal);
-      } catch (error) {
-        console.error('加载积分历史失败 - 详细错误:', error);
-        console.error('错误响应:', error.response);
-        console.error('错误请求:', error.request);
-        console.error('错误配置:', error.config);
-        this.$message.error(
-          '加载积分历史失败：' + (error.message || '未知错误')
-        );
-        this.pointsHistoryData = [];
-        this.pointsHistoryTotal = 0;
-      } finally {
-        this.pointsHistoryLoading = false;
-      }
-    },
-
-    // 关闭积分历史对话框
-    closePointsHistory() {
-      this.pointsHistoryVisible = false;
-      this.pointsHistoryData = [];
-      this.pointsHistoryTotal = 0;
-      this.pointsFilter = {
-        pointsSource: 0,
-        page: 1,
-        pageSize: 20,
-      };
-    },
-
-    // 分页大小改变
-    handleSizeChange(val) {
-      this.pointsFilter.pageSize = val;
-      this.pointsFilter.page = 1; // 重置到第一页
-      this.loadPointsHistory();
-    },
-
-    // 当前页改变
-    handleCurrentChange(val) {
-      this.pointsFilter.page = val;
-      this.loadPointsHistory();
-    },
-
-    // 获取交易类型文本
-    getTransactionTypeText(type) {
-      const typeMap = {
-        1: '收入',
-        2: '支出',
-        3: '奖励',
-        4: '消费',
-        5: '退款',
-        6: '转账',
-        7: '系统调整',
-      };
-      return typeMap[type] || '未知';
-    },
-
-    // 格式化日期时间
-    formatDateTime(dateString) {
-      if (!dateString) return '未知';
-      return new Date(dateString).toLocaleString('zh-CN', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-      });
-    },
-
     earnPointsDialog() {
       this.$msgbox({
         title: '积分用途',
         message: `
           <div>
-            <p>� <strong>积分可用于：</strong></p>
+            <p>💰 <strong>积分可用于：</strong></p>
             <ul>
-              <li>🤖 购买机器人功能</li>
-              <li>🛒 机器人市场消费</li>
-              <li>⭐ 解锁高级机器人</li>
+              <li>🤖 订阅AI代理服务</li>
+              <li>� 使用AI聊天服务</li>
+              <li>�🛒 机器人市场消费</li>
+              <li>⭐ 解锁高级功能</li>
             </ul>
             <br>
-            <p>�💡 <strong>如何获取积分：</strong></p>
+            <p>💡 <strong>如何获取积分：</strong></p>
             <ul>
-              <li>🤖 创建机器人：+50积分</li>
-              <li>💬 发表评论：+10积分</li>
-              <li>👍 获得点赞：+5积分</li>
-              <li>📝 发表文章：+30积分</li>
-              <li>📅 每日签到：+10积分</li>
+              <li>🎁 新用户注册：+100积分</li>
+              <li>🤖 创建AI代理：+200积分</li>
+              <li>� 充值购买：直接获得积分</li>
             </ul>
+            <br>
+            <p style="color: #909399; font-size: 12px;">
+              💡 提示：积分实时到账，可在积分明细中查看详细记录
+            </p>
           </div>
         `,
         dangerouslyUseHTMLString: true,
         showCancelButton: false,
         confirmButtonText: '知道了',
-      });
+      })
+        .then(() => {
+          // 用户点击确定按钮
+          console.log('用户查看了积分说明');
+        })
+        .catch(() => {
+          // 用户点击X按钮或按ESC键关闭弹窗
+          console.log('用户关闭了积分说明弹窗');
+        });
     },
 
     // 编辑用户信息相关方法
@@ -867,10 +703,8 @@ export default {
         Birthday: this.userInfo.birthday || null,
         Organization: this.userInfo.organization || '',
         Profile: this.userInfo.profile || '',
-        ConfirmPassword: '', // 重置密码字段
+        Password: '', // 重置密码字段
       };
-      // 记录原始用户名，用于检测是否改变
-      this.originalUsername = this.userInfo.user_name || '';
       this.editDialogVisible = true;
     },
 
@@ -885,69 +719,18 @@ export default {
         await this.$refs.editForm.validate();
         this.saveLoading = true;
 
-        const updateData = { ...this.editForm };
+        // 转换为后端期望的格式
+        const updateData = {
+          NewUsername: this.editForm.UserName,
+          NewGender: this.editForm.Gender,
+          NewAge: this.editForm.Age,
+          Password: this.editForm.Password, // 需要添加密码字段
+        };
+
         console.log('准备更新的数据:', updateData);
         console.log('用户ID:', this.userId);
 
-        // 如果用户名发生了改变，使用专门的改名接口
-        if (this.isUsernameChanged) {
-          console.log('用户名发生变化，使用改名接口...');
-          try {
-            const changeUsernameResponse = await changeUsername(
-              this.userId,
-              updateData.UserName,
-              updateData.ConfirmPassword
-            );
-            console.log('改名API响应:', changeUsernameResponse);
-            this.$message.success('用户名修改成功！');
-
-            // 如果还有其他信息需要更新（除了用户名）
-            const hasOtherUpdates =
-              updateData.Email !== this.userInfo.email ||
-              updateData.Phone !== this.userInfo.phone ||
-              updateData.Gender !== this.userInfo.gender ||
-              updateData.Age !== this.userInfo.age ||
-              updateData.Birthday !== this.userInfo.birthday ||
-              updateData.Organization !== this.userInfo.organization ||
-              updateData.Profile !== this.userInfo.profile;
-
-            if (hasOtherUpdates) {
-              // 更新其他信息，但不包括用户名
-              const otherUpdateData = { ...updateData };
-              delete otherUpdateData.UserName; // 移除用户名，因为已经通过专门接口更新了
-              delete otherUpdateData.ConfirmPassword; // 移除密码字段
-
-              const updateResponse = await updateUserInfo(
-                this.userId,
-                otherUpdateData
-              );
-              console.log('其他信息更新API响应:', updateResponse);
-              this.$message.success('其他个人信息也已更新！');
-            }
-
-            this.editDialogVisible = false;
-            await this.loadUserInfo(); // 重新加载用户信息
-            return;
-          } catch (usernameError) {
-            console.error('用户名修改失败:', usernameError);
-            if (usernameError.response && usernameError.response.data) {
-              this.$message.error(
-                usernameError.response.data.message || '用户名修改失败'
-              );
-            } else {
-              this.$message.error(
-                '用户名修改失败：' + (usernameError.message || '未知错误')
-              );
-            }
-            return;
-          }
-        }
-
-        // 如果用户名没有改变，只更新其他信息
-        const otherUpdateData = { ...updateData };
-        delete otherUpdateData.ConfirmPassword; // 移除密码字段
-
-        const response = await updateUserInfo(this.userId, otherUpdateData);
+        const response = await updateUserInfo(this.userId, updateData);
         console.log('API响应:', response);
 
         // 检查不同的响应格式
@@ -1005,267 +788,260 @@ export default {
       }
     },
 
-    // 充值相关方法
-    openRechargeDialog() {
-      this.rechargeDialogVisible = true;
-      this.rechargeForm.amount = null;
-      this.rechargeForm.paymentMethod = 'demo';
+    // 积分明细相关方法
+    viewPointsHistory() {
+      this.pointsHistoryDialogVisible = true;
+      this.loadPointsHistory();
     },
 
-    closeRechargeDialog() {
-      this.rechargeDialogVisible = false;
-      this.rechargeForm.amount = null;
-      this.rechargeForm.paymentMethod = 'demo';
+    async loadPointsHistory() {
+      this.pointsLoading = true;
+      try {
+        // 调用真实的API获取积分记录
+        const response = await getPointsHistory(
+          this.currentPointsPage,
+          this.pointsPageSize
+        );
+
+        console.log('积分记录API响应:', response);
+
+        if (response && response.data) {
+          // 处理API返回的数据
+          let records = response.data.records || response.data || [];
+
+          console.log('原始记录数据:', records);
+          console.log('第一条记录结构:', records[0]);
+
+          // 如果API返回的是数组，直接使用
+          if (Array.isArray(records)) {
+            // 转换数据格式以匹配模板
+            this.pointsData = records.map((record) => {
+              console.log('正在处理记录:', record);
+
+              // 根据后端API返回的字段名获取值
+              const pointsChange =
+                record.points_change ||
+                record.change_amount ||
+                record.amount ||
+                record.points ||
+                0;
+              const transactionType =
+                record.transaction_type ||
+                record.change_type ||
+                record.type ||
+                'unknown';
+
+              // 判断是获取还是消耗积分
+              const isEarn =
+                pointsChange > 0 ||
+                transactionType === 'earn' ||
+                transactionType === 'PURCHASE';
+
+              return {
+                id:
+                  record.transaction_id ||
+                  record.id ||
+                  record.point_id ||
+                  Math.random(),
+                type: isEarn ? '获取' : '消耗',
+                badge: isEarn ? 'in' : 'out',
+                change:
+                  pointsChange > 0
+                    ? `+${pointsChange}`
+                    : pointsChange.toString(),
+                desc:
+                  record.source_description ||
+                  record.description ||
+                  record.reason ||
+                  record.desc ||
+                  '积分变动',
+                time:
+                  record.transaction_date ||
+                  record.created_at ||
+                  record.timestamp ||
+                  record.time ||
+                  new Date().toLocaleString(),
+              };
+            });
+
+            console.log('转换后的积分数据:', this.pointsData);
+          } else {
+            console.warn('API返回的数据格式不是数组:', records);
+            this.pointsData = this.getMockPointsData();
+          }
+        } else {
+          console.warn('API返回数据为空，使用模拟数据');
+          this.pointsData = this.getMockPointsData();
+        }
+      } catch (error) {
+        console.error('加载积分记录失败:', error);
+        console.error('错误详情:', error.response);
+
+        // API调用失败时才使用模拟数据
+        this.$message.warning('无法加载积分记录，显示示例数据');
+        this.pointsData = this.getMockPointsData();
+      } finally {
+        this.pointsLoading = false;
+      }
+    },
+
+    switchPointsTab(tabName) {
+      this.currentPointsTab = tabName;
+      this.currentPointsPage = 1; // 切换标签页时重置页码
+      this.loadPointsHistory();
+    },
+
+    handlePointsPageChange(page) {
+      this.currentPointsPage = page;
+      this.loadPointsHistory();
+    },
+
+    getMockPointsData() {
+      const allData = [
+        {
+          id: 1,
+          type: '获取',
+          badge: 'in',
+          change: '+50',
+          desc: '创建机器人奖励',
+          time: '2024-01-15 10:30:00',
+        },
+        {
+          id: 2,
+          type: '消耗',
+          badge: 'out',
+          change: '-30',
+          desc: '购买高级功能',
+          time: '2024-01-14 15:45:00',
+        },
+        {
+          id: 3,
+          type: '获取',
+          badge: 'in',
+          change: '+10',
+          desc: '每日签到奖励',
+          time: '2024-01-14 09:00:00',
+        },
+        {
+          id: 4,
+          type: '获取',
+          badge: 'in',
+          change: '+30',
+          desc: '发表文章奖励',
+          time: '2024-01-13 14:20:00',
+        },
+        {
+          id: 5,
+          type: '消耗',
+          badge: 'out',
+          change: '-20',
+          desc: '购买机器人',
+          time: '2024-01-12 11:10:00',
+        },
+        {
+          id: 6,
+          type: '获取',
+          badge: 'in',
+          change: '+5',
+          desc: '获得点赞奖励',
+          time: '2024-01-11 16:30:00',
+        },
+      ];
+
+      // 根据当前标签页过滤数据
+      if (this.currentPointsTab === 'in') {
+        return allData.filter((item) => item.badge === 'in');
+      } else if (this.currentPointsTab === 'out') {
+        return allData.filter((item) => item.badge === 'out');
+      }
+      return allData;
+    },
+
+    formatPointsAmount(amount) {
+      return amount > 0 ? `+${amount}` : amount.toString();
+    },
+
+    getPointsTypeClass(type) {
+      return type === 'in' ? 'points-in' : 'points-out';
+    },
+
+    // 积分对话框相关方法
+    resetPointsHistory() {
+      this.currentPointsPage = 1;
+      this.currentPointsTab = 'all';
+      this.pointsData = [];
+    },
+
+    changePointsPage(page) {
+      this.currentPointsPage = page;
+    },
+
+    // 充值积分相关方法
+    openRechargeDialog() {
+      this.rechargeDialogVisible = true;
+      this.resetRechargeForm();
+    },
+
+    resetRechargeForm() {
       if (this.$refs.rechargeForm) {
         this.$refs.rechargeForm.resetFields();
       }
+      this.rechargeForm = {
+        points: 100,
+        description: '用户充值积分',
+      };
     },
 
-    async confirmRecharge() {
-      try {
-        // 验证表单
-        await this.$refs.rechargeForm.validate();
+    setQuickAmount(amount) {
+      this.rechargeForm.points = amount;
+    },
 
+    async submitRecharge() {
+      try {
+        await this.$refs.rechargeForm.validate();
         this.rechargeLoading = true;
 
-        const rechargeAmount = this.rechargeForm.amount;
-        const pointsToAdd = rechargeAmount * 10; // 1元 = 10积分
+        console.log('准备充值积分:', this.rechargeForm);
 
-        console.log('开始充值:', {
-          amount: rechargeAmount,
-          points: pointsToAdd,
-          paymentMethod: this.rechargeForm.paymentMethod,
-        });
-
-        // 模拟支付过程
-        if (this.rechargeForm.paymentMethod === 'demo') {
-          // 演示模式，直接成功
-          await this.simulatePayment(rechargeAmount, pointsToAdd);
-        } else {
-          // 其他支付方式，暂时也用演示模式
-          this.$message.info('真实支付功能开发中，使用演示模式进行充值');
-          await this.simulatePayment(rechargeAmount, pointsToAdd);
-        }
-      } catch (error) {
-        console.error('充值过程出错:', error);
-        // 不显示错误消息，因为simulatePayment已经处理了
-        // this.$message.error('充值失败：' + (error.message || '未知错误'));
-      } finally {
-        this.rechargeLoading = false;
-      }
-    },
-
-    // 测试后端连接的方法
-    async testBackendConnection() {
-      try {
-        console.log('=== 测试后端连接 ===');
-
-        // 先测试获取用户积分
-        const pointsResponse = await getUserPoints();
-        console.log('获取积分API测试:', pointsResponse);
-
-        // 再测试获取用户信息
-        const userResponse = await getUserInfo();
-        console.log('获取用户信息API测试:', userResponse);
-
-        this.$message.success('后端连接正常');
-      } catch (error) {
-        console.error('后端连接测试失败:', error);
-        this.$message.error('后端连接异常: ' + (error.message || '未知错误'));
-      }
-    },
-
-    async simulatePayment(amount, points) {
-      // 模拟支付延迟
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-
-      try {
-        // 添加调试信息
-        const token = this.$store.state.token;
-        console.log('=== 开始充值流程 ===');
-        console.log('当前用户token:', token ? '存在' : '不存在');
-        console.log('充值参数:', { amount, points });
-        console.log('用户信息:', this.userInfo);
-        console.log('当前用户ID:', this.userInfo.user_id);
-
-        // 检查用户是否已登录
-        if (!token) {
-          throw new Error('用户未登录，请先登录');
-        }
-
-        if (!this.userInfo.user_id) {
-          throw new Error('用户信息异常，请重新登录');
-        }
-
-        // 调用后端充值API
-        console.log('开始调用充值API...');
         const response = await rechargePoints(
-          points,
-          `用户充值积分 - ${this.rechargeForm.paymentMethod} - ¥${amount}`
+          this.rechargeForm.points,
+          this.rechargeForm.description
         );
 
-        console.log('=== 充值API调用完成 ===');
-        console.log('充值API响应:', response);
+        console.log('充值响应:', response);
 
         if (response && response.data) {
-          console.log('充值成功，响应数据:', response.data);
+          this.$message.success(
+            `充值成功！获得 ${this.rechargeForm.points} 积分，当前余额: ${response.data.new_balance}`
+          );
 
-          // 更新前端用户积分余额
-          if (response.data.new_balance !== undefined) {
-            this.userInfo.points = response.data.new_balance;
-            console.log('积分已更新为:', response.data.new_balance);
-          }
-
-          // 显示充值成功消息
-          this.$message.success(response.data.message || '充值成功！');
+          // 更新用户积分显示
+          this.userInfo.points = response.data.new_balance;
 
           // 关闭对话框
-          this.closeRechargeDialog();
+          this.rechargeDialogVisible = false;
 
-          // 显示充值成功详情
-          await this.showRechargeSuccess(amount, points);
-
-          // 重新加载用户信息以同步积分
-          await this.loadUserInfo();
+          // 如果积分明细对话框是打开的，刷新数据
+          if (this.pointsHistoryDialogVisible) {
+            this.loadPointsHistory();
+          }
         } else {
-          throw new Error('服务器响应格式错误');
+          throw new Error('服务器返回数据格式错误');
         }
       } catch (error) {
-        console.error('充值API调用失败:', error);
-        console.error('错误详情:', {
-          status: error.response?.status,
-          statusText: error.response?.statusText,
-          data: error.response?.data,
-          message: error.message,
-          config: error.config,
-        });
+        console.error('充值失败:', error);
 
-        // 尝试使用模拟充值作为fallback
-        console.log('使用模拟充值功能...');
-
-        try {
-          // 模拟充值：直接更新前端积分
-          const currentPoints = this.userInfo.points || 0;
-          const newBalance = currentPoints + points;
-
-          // 更新用户积分
-          this.userInfo.points = newBalance;
-
-          // 显示充值成功消息（模拟模式）
-          this.$message.success(`充值成功！获得${points}积分（演示模式）`);
-
-          // 关闭对话框
-          this.closeRechargeDialog();
-
-          // 显示充值成功详情
-          await this.showRechargeSuccess(amount, points);
-
-          // 尝试重新加载用户信息
-          try {
-            await this.loadUserInfo();
-          } catch (loadError) {
-            console.warn('重新加载用户信息失败:', loadError);
-          }
-
-          return; // 成功处理，退出方法
-        } catch (fallbackError) {
-          console.error('模拟充值也失败了:', fallbackError);
-        }
-
-        // 如果模拟充值也失败，显示错误信息
-        let errorMessage = '充值失败，请稍后重试';
-
-        if (error.response?.status === 401) {
-          errorMessage = '用户未授权，请重新登录';
-        } else if (error.response?.status === 400) {
-          errorMessage = error.response?.data?.message || '请求参数错误';
-        } else if (error.response?.status === 500) {
-          errorMessage = error.response?.data?.message || '服务器内部错误';
-        } else if (error.response?.data?.message) {
-          errorMessage = error.response.data.message;
+        let errorMessage = '充值失败，请重试';
+        if (error.response && error.response.data) {
+          errorMessage = error.response.data.message || errorMessage;
+        } else if (error.message) {
+          errorMessage = error.message;
         }
 
         this.$message.error(errorMessage);
-        // 不再抛出异常，已经通过模拟模式处理了
-        // throw new Error(errorMessage);
+      } finally {
+        this.rechargeLoading = false;
       }
-    },
-
-    showRechargeSuccess(amount, points) {
-      const h = this.$createElement;
-
-      return new Promise((resolve) => {
-        this.$msgbox({
-          title: '充值成功！',
-          message: h('div', null, [
-            h('p', { style: 'text-align: center; margin-bottom: 15px;' }, [
-              h('i', {
-                class: 'el-icon-success',
-                style: 'font-size: 48px; color: #67c23a; margin-bottom: 10px;',
-              }),
-            ]),
-            h(
-              'p',
-              { style: 'font-size: 16px; margin-bottom: 10px;' },
-              `💰 充值金额: ¥${amount}`
-            ),
-            h(
-              'p',
-              { style: 'font-size: 16px; margin-bottom: 10px;' },
-              `⭐ 获得积分: ${points} 积分`
-            ),
-            h(
-              'p',
-              { style: 'font-size: 16px; margin-bottom: 15px;' },
-              `🎯 当前积分: ${this.userInfo.points || 0} 积分`
-            ),
-            h(
-              'div',
-              {
-                style:
-                  'background: #f0f9ff; border: 1px solid #409eff; border-radius: 4px; padding: 10px; margin-top: 10px;',
-              },
-              [
-                h(
-                  'p',
-                  { style: 'margin: 0; font-size: 12px; color: #409eff;' },
-                  '💡 充值记录已自动添加到积分明细中'
-                ),
-              ]
-            ),
-          ]),
-          confirmButtonText: '确定',
-          showCancelButton: false,
-          beforeClose: (action, instance, done) => {
-            done();
-            resolve();
-          },
-        });
-      });
-    },
-
-    // 处理登出
-    handleLogout() {
-      this.$confirm('确定要退出登录吗？', '提示', {
-        confirmButtonText: '确定',
-        cancelButtonText: '取消',
-        type: 'warning',
-      })
-        .then(async () => {
-          try {
-            // 调用 Vuex 的 logout action
-            await this.logout();
-            this.$message.success('已成功退出登录');
-            // 跳转到登录页面
-            this.$router.push('/');
-          } catch (error) {
-            console.error('登出失败:', error);
-            this.$message.error('登出失败，请重试');
-          }
-        })
-        .catch(() => {
-          // 用户取消登出
-        });
     },
   },
 };
@@ -1332,8 +1108,10 @@ export default {
 
 .user-details {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 15px;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+  max-width: 800px;
+  column-gap: 40px;
 }
 
 .info-item {
@@ -1344,17 +1122,23 @@ export default {
   background: #f8f9fa;
   border-radius: 6px;
   border: 1px solid #e4e7ed;
+  width: 100%;
+  max-width: 100%;
 }
 
 .label {
   font-weight: bold;
   color: #606266;
-  min-width: 80px;
+  min-width: 70px;
+  flex-shrink: 0;
 }
 
 .value {
   color: #303133;
   flex: 1;
+  min-width: 0;
+  word-break: break-all;
+  overflow-wrap: break-word;
 }
 
 .profile-text {
@@ -1365,14 +1149,16 @@ export default {
   text-overflow: ellipsis;
   display: -webkit-box;
   -webkit-line-clamp: 3;
+  line-clamp: 3;
   -webkit-box-orient: vertical;
 }
 
 .action-buttons {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   gap: 10px;
   align-items: center;
+  justify-content: center;
 }
 
 // 积分卡片样式
@@ -1420,12 +1206,11 @@ export default {
   display: flex;
   justify-content: space-between;
   gap: 8px;
-  flex-wrap: wrap;
 }
 
 .points-actions .el-button {
   flex: 1;
-  min-width: 80px;
+  min-width: 0; // 允许按钮缩小
 }
 
 // 兴趣模块样式
@@ -1479,165 +1264,194 @@ export default {
   text-align: center;
 }
 
-// 登出按钮样式
-.logout-section {
-  margin-top: 30px;
-  text-align: center;
-  padding: 20px;
-}
-
-.logout-btn {
-  min-width: 120px;
-  font-size: 16px;
-  padding: 12px 30px;
-  border-radius: 6px;
-  transition: all 0.3s ease;
-
-  &:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(245, 101, 101, 0.3);
-  }
-}
-
-// 绑定提示样式
-.bind-tip {
-  margin-top: 5px;
-  font-size: 12px;
-  display: flex;
-  align-items: center;
-
-  i {
-    margin-right: 4px;
-    color: #f56c6c;
-  }
-
-  span {
-    color: #f56c6c;
-    font-weight: 500;
-  }
-}
-
-// 密码提示样式
-.password-tip {
-  margin-top: 5px;
-  font-size: 12px;
-  display: flex;
-  align-items: center;
-
-  i {
-    margin-right: 4px;
-    color: #409eff;
-  }
-
-  span {
-    color: #409eff;
-  }
-}
-
-// 禁用状态的输入框样式
-.el-input.is-disabled .el-input__inner {
-  background-color: #f5f7fa;
-  border-color: #e4e7ed;
-  color: #909399;
-  cursor: not-allowed;
-}
-
-// 积分历史对话框样式
-.points-history-content {
-  .filter-section {
+// 积分明细样式
+.points-dialog {
+  .el-tabs__header {
     margin-bottom: 20px;
-    padding-bottom: 15px;
-    border-bottom: 1px solid #e4e7ed;
   }
 
-  .points-history-list {
-    min-height: 400px;
+  .points-table {
+    .points-in {
+      color: #67c23a;
+      font-weight: bold;
+    }
+
+    .points-out {
+      color: #f56c6c;
+      font-weight: bold;
+    }
   }
 
-  .pagination-section {
-    margin-top: 20px;
+  .empty-state {
     text-align: center;
+    padding: 40px 0;
+    color: #999;
+
+    .el-icon-document {
+      font-size: 64px;
+      margin-bottom: 16px;
+    }
   }
 
-  .points-positive {
+  .pagination-wrapper {
+    display: flex;
+    justify-content: center;
+    padding: 20px 0;
+  }
+}
+
+// 积分明细对话框特定样式
+.points-dialog-content {
+  .current-points {
+    text-align: center;
+    margin-bottom: 20px;
+
+    h3 {
+      margin: 0;
+      color: #303133;
+    }
+
+    .points-highlight {
+      color: #409eff;
+      font-size: 1.2em;
+      font-weight: bold;
+    }
+  }
+
+  .points-info-section {
+    margin-bottom: 20px;
+
+    h4 {
+      margin: 0 0 10px 0;
+      color: #606266;
+    }
+
+    .points-info-list {
+      margin: 0;
+      padding-left: 20px;
+      color: #909399;
+
+      li {
+        margin-bottom: 5px;
+      }
+    }
+  }
+
+  .points-tabs {
+    margin-bottom: 20px;
+    text-align: center;
+
+    .el-button {
+      margin: 0 5px;
+    }
+  }
+
+  .points-table-container {
+    margin-bottom: 20px;
+  }
+
+  .text-green {
     color: #67c23a;
     font-weight: bold;
   }
 
-  .points-negative {
+  .text-red {
     color: #f56c6c;
     font-weight: bold;
   }
 
-  .el-table {
-    .el-table__empty-block {
-      min-height: 200px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
+  .points-pagination {
+    text-align: center;
   }
 }
 
 // 充值对话框样式
-.recharge-content {
-  .current-points {
-    background: #f8f9fa;
-    border: 1px solid #e9ecef;
-    border-radius: 4px;
+.recharge-info {
+  margin-bottom: 20px;
+
+  .current-balance {
     padding: 15px;
-    margin-bottom: 20px;
+    background: #f5f7fa;
+    border-radius: 6px;
+    margin-bottom: 15px;
     text-align: center;
 
     .label {
-      font-size: 14px;
       color: #606266;
       margin-right: 10px;
     }
 
-    .value {
-      font-size: 20px;
-      font-weight: bold;
+    .balance {
       color: #409eff;
+      font-size: 24px;
+      font-weight: bold;
     }
   }
 
-  .amount-tips {
-    margin-top: 5px;
-    font-size: 12px;
-    color: #909399;
-  }
-
-  .recharge-summary {
-    background: #f0f9ff;
-    border: 1px solid #d9ecff;
-    border-radius: 4px;
-    padding: 15px;
-    margin-top: 20px;
-
-    p {
-      margin: 5px 0;
+  .recharge-rates {
+    h4 {
+      margin: 0 0 10px 0;
+      color: #303133;
       font-size: 14px;
-      color: #333;
+    }
 
-      &:first-child {
-        font-weight: bold;
-        color: #409eff;
-        margin-bottom: 10px;
+    ul {
+      margin: 0;
+      padding-left: 20px;
+      color: #909399;
+      font-size: 13px;
+
+      li {
+        margin-bottom: 5px;
       }
     }
+  }
+}
 
-    .highlight {
-      font-weight: bold;
-      color: #409eff;
-    }
+.quick-amounts {
+  margin: 15px 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  .quick-label {
+    color: #606266;
+    font-size: 14px;
+    margin-right: 10px;
   }
 
-  .el-radio-group {
-    .el-radio {
-      display: block;
-      margin-bottom: 10px;
+  .el-button {
+    min-width: 60px;
+  }
+}
+
+.recharge-preview {
+  margin-top: 20px;
+  padding: 15px;
+  background: #f0f9ff;
+  border: 1px solid #b3d8ff;
+  border-radius: 6px;
+
+  .preview-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: #303133;
+
+    .new-balance {
+      color: #67c23a;
+      font-size: 18px;
+      font-weight: bold;
     }
+  }
+}
+
+// 禁用字段样式
+.el-form-item {
+  .el-input.is-disabled .el-input__inner {
+    background-color: #f5f7fa;
+    color: #909399;
+    cursor: not-allowed;
   }
 }
 </style>

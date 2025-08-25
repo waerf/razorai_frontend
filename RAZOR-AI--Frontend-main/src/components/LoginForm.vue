@@ -116,21 +116,40 @@ export default {
             if (result.success) {
               this.$message.success(result.message || '登录成功！'); // 提示登录成功
               this.closeDialog(); // 关闭对话框
+              // 登录成功时刷新页面以更新登录状态
+              setTimeout(() => {
+                location.reload();
+              }, 500); // 延迟0.5秒让用户看到成功消息
             } else {
               this.$message.error(
                 result.message || '登录失败，请检查用户名和密码'
               ); // 提示登录失败
+              // 登录失败时不刷新页面，保持在当前界面
             }
           } catch (error) {
             console.error(error); // 打印错误信息
             this.$message.error(error.message || '登录失败，打开控制台检查');
+            // 登录失败时不刷新页面
           } finally {
             // 无论成功或失败都会执行
             this.isLoading = false; // 结束加载状态
-            location.reload(); // 强制刷新页面
+            // 移除了无条件的页面刷新
           }
         } else {
-          this.$message.error('请正确填写表单');
+          // 获取具体的验证错误信息
+          this.$refs.loginForm.validate((valid, errorFields) => {
+            if (!valid && errorFields) {
+              const errorMessages = [];
+              Object.keys(errorFields).forEach((field) => {
+                errorFields[field].forEach((error) => {
+                  errorMessages.push(error.message);
+                });
+              });
+              this.$message.error(errorMessages.join('；'));
+            } else {
+              this.$message.error('请检查输入信息是否正确');
+            }
+          });
         }
       });
     },

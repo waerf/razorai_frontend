@@ -57,66 +57,9 @@
             }}</span>
           </div>
 
-          <!-- 帖子内容 -->
           <div class="post-content">
-            <div class="content-section">
-              <p>
-                随着订阅经济的兴起，我们每天都会面对大量的订阅内容 -
-                从技术博客到行业资讯，从专栏文章到视频课程。根据我的观察，一个活跃的学习者平均会订阅5-10个不同类型的内容源，但大多数人都面临着"订阅了却没时间看"的困境。
-              </p>
-              <p>
-                本文将分享我经过3年实践总结的订阅内容管理方法，帮助你解决以下问题：
-              </p>
-              <ul>
-                <li>如何筛选真正有价值的订阅源</li>
-                <li>建立高效的内容消费节奏</li>
-                <li>利用工具提高信息处理效率</li>
-                <li>将碎片化信息转化为系统化知识</li>
-              </ul>
-            </div>
-
-            <div class="content-section">
-              <h3>一、订阅源的精简与分类</h3>
-              <p>
-                我的经验是，优质的信息源不在于多而在于精。我会每季度对订阅源进行一次全面梳理，遵循"80/20原则"
-                - 80%的价值来自20%的订阅源。
-              </p>
-              <p>具体做法是建立三级分类体系：</p>
-              <ol>
-                <li>核心订阅（每日必看）：不超过5个</li>
-                <li>重要订阅（每周浏览）：10-15个</li>
-                <li>兴趣订阅（月度回顾）：不限数量，但需要定期清理</li>
-              </ol>
-            </div>
-
-            <div class="content-section">
-              <h3>二、高效阅读工具推荐</h3>
-              <p>经过多年试用，我筛选出几款提高阅读效率的工具：</p>
-              <ul>
-                <li><strong>Feedly</strong>：聚合各类订阅源，支持标签和过滤</li>
-                <li><strong> Pocket</strong>：稍后阅读，支持跨设备同步</li>
-                <li>
-                  <strong>Notion</strong>：建立个人知识库，整理有价值的内容
-                </li>
-              </ul>
-              <p>
-                这些工具的组合使用可以形成"收集-筛选-消化-归档"的完整流程，大幅提高信息处理效率。
-              </p>
-            </div>
-
-            <div class="content-section">
-              <h3>三、建立个人知识管理系统</h3>
-              <p>订阅内容的最终目的是转化为自己的知识，我的方法是：</p>
-              <p>
-                1. 阅读时使用高亮和批注工具记录即时想法<br />
-                2. 每周日花1小时整理本周有价值的内容<br />
-                3. 每月进行一次知识关联，建立内容之间的联系<br />
-                4. 每季度写一篇学习总结，检验知识吸收情况
-              </p>
-              <p>
-                这个过程虽然需要投入时间，但能让订阅的内容真正发挥价值，而不是成为数字垃圾。
-              </p>
-            </div>
+            <!-- 使用 v-html 渲染 API 返回的真实帖子内容 -->
+            <div class="content-section" v-html="post.content"></div>
           </div>
 
           <!-- 帖子底部操作 -->
@@ -135,183 +78,84 @@
                 <span>{{ post.bookmarks }}</span>
               </button>
             </div>
-            <div class="stats-group">
-              <span class="post-views">阅读 {{ post.views }}</span>
-              <button class="share-btn" @click="sharePost">
-                <i class="fa fa-share-alt mr-1.5"></i>
-                <span>分享</span>
-              </button>
-            </div>
+          </div>
+        </section>
+
+        <!-- 评论区 -->
+        <section class="comments-section">
+          <h3 class="comments-title">评论 ({{ totalComments }})</h3>
+
+          <!-- 评论输入框 -->
+          <div class="comment-input" v-if="isLoggedIn">
+            <textarea
+              v-model="newComment"
+              class="comment-textarea"
+              placeholder="写下你的评论..."
+              @keydown.ctrl.enter="publishComment"
+            ></textarea>
+            <button
+              class="publish-comment"
+              @click="publishComment"
+              :disabled="!newComment.trim() || isSubmittingComment"
+            >
+              {{ isSubmittingComment ? '发布中...' : '发布评论' }}
+            </button>
           </div>
 
-          <!-- 作者信息卡片 -->
-          <div class="author-card">
-            <img
-              :src="post.authorAvatar"
-              alt="作者头像"
-              class="author-card-avatar"
-            />
-            <div class="author-card-info">
-              <div class="author-card-name">{{ post.authorName }}</div>
-              <div class="author-card-bio">
-                内容策略师，专注于信息管理与知识体系构建，曾任职于多家知名科技公司
-              </div>
-              <button class="follow-btn" @click="followAuthor">
-                <i class="fa fa-plus mr-1"></i> 关注作者
-              </button>
-            </div>
+          <!-- 未登录提示 -->
+          <div v-else class="login-prompt">
+            <p>请先登录后再发表评论</p>
+            <button class="login-btn" @click="$router.push('/login')">
+              立即登录
+            </button>
           </div>
 
-          <!-- 评论区 -->
-          <div class="comments-section">
-            <h3 class="comments-title">评论 ({{ post.comments }})</h3>
+          <!-- 评论列表 -->
+          <div v-if="isLoadingComments" class="loading-comments">
+            正在加载评论...
+          </div>
 
-            <!-- 评论输入框 -->
-            <div class="comment-input">
-              <textarea
-                placeholder="分享你的想法..."
-                class="comment-textarea"
-                v-model="newComment"
-              ></textarea>
-              <button class="publish-comment" @click="publishComment">
-                发布评论
-              </button>
-            </div>
+          <div v-else-if="comments.length === 0" class="no-comments">
+            暂无评论，来发表第一条评论吧！
+          </div>
 
-            <!-- 评论列表 -->
-            <div class="comments-list">
-              <div
-                class="comment-item"
-                v-for="(comment, index) in comments"
-                :key="index"
-              >
-                <img
-                  :src="comment.avatar"
-                  alt="评论者头像"
-                  class="comment-avatar"
-                />
-                <div class="comment-content">
-                  <div class="comment-header">
-                    <span class="comment-author">{{ comment.author }}</span>
-                    <span class="comment-time">{{ comment.time }}</span>
+          <div v-else class="comments-list">
+            <div
+              v-for="comment in comments"
+              :key="comment.id"
+              class="comment-item"
+            >
+              <img
+                :src="comment.avatar || defaultAvatar"
+                :alt="comment.author"
+                class="comment-avatar"
+              />
+              <div class="comment-content">
+                <div class="comment-header">
+                  <div class="comment-author">{{ comment.author }}</div>
+                  <div class="comment-time">
+                    {{ formatTime(comment.createdAt) }}
                   </div>
-                  <div class="comment-text">{{ comment.content }}</div>
-                  <div class="comment-actions">
-                    <button
-                      class="comment-action-btn bg-razor-lightBlue text-razor-blue px-3 py-1 rounded-full hover:bg-razor-blue hover:text-white transition"
-                      @click="likeComment(index)"
-                    >
-                      <img
-                        :src="
-                          require(
-                            '@/assets/images/community/' +
-                              (comment.liked ? 'like.png' : 'like_empty.png')
-                          )
-                        "
-                        alt="点赞图标"
-                        class="like-icon mr-1"
-                        style="width: 20px; height: 20px"
-                      />
-                      {{ comment.likes }}
-                    </button>
-                    <button
-                      class="comment-action-btn bg-razor-lightBlue text-razor-blue px-3 py-1 rounded-full hover:bg-razor-blue hover:text-white transition"
-                      @click="toggleReplyBox(index)"
-                    >
-                      回复
-                    </button>
-                    <button
-                      v-if="comment.isMine"
-                      class="comment-action-btn delete-comment-btn"
-                      @click="deleteComment(index)"
-                    >
-                      删除
-                    </button>
-                  </div>
-                  <!-- 回复输入框 -->
-                  <div v-if="comment.showReplyBox" class="reply-input">
-                    <textarea
-                      :placeholder="
-                        comment.replyTarget
-                          ? `回复 @${comment.replyTarget}...`
-                          : `回复 ${comment.author}...`
-                      "
-                      class="reply-textarea"
-                      v-model="comment.replyText"
-                    ></textarea>
-                    <button class="publish-reply" @click="publishReply(index)">
-                      发布回复
-                    </button>
-                  </div>
-                  <!-- 回复列表 -->
-                  <div class="reply-list">
-                    <div
-                      class="reply-item"
-                      v-for="(reply, replyIndex) in comment.replies"
-                      :key="replyIndex"
-                    >
-                      <img
-                        :src="reply.avatar"
-                        alt="回复者头像"
-                        class="reply-avatar"
-                      />
-                      <div class="reply-content">
-                        <div class="reply-header">
-                          <span class="comment-author">{{ reply.author }}</span>
-                          <span class="comment-time">{{ reply.time }}</span>
-                        </div>
-                        <div class="reply-text">
-                          <span v-if="reply.replyTo" class="reply-mention"
-                            >@{{ reply.replyTo }} </span
-                          >{{ reply.content }}
-                        </div>
-                        <div class="comment-actions">
-                          <button
-                            class="comment-action-btn bg-razor-lightBlue text-razor-blue px-3 py-1 rounded-full hover:bg-razor-blue hover:text-white transition"
-                            @click="likeReply(index, replyIndex)"
-                          >
-                            <img
-                              :src="
-                                require(
-                                  '@/assets/images/community/' +
-                                    (reply.liked
-                                      ? 'like.png'
-                                      : 'like_empty.png')
-                                )
-                              "
-                              alt="点赞图标"
-                              class="like-icon mr-1"
-                              style="width: 20px; height: 20px"
-                            />
-                            {{ reply.likes }}
-                          </button>
-                          <button
-                            class="comment-action-btn bg-razor-lightBlue text-razor-blue px-3 py-1 rounded-full hover:bg-razor-blue hover:text-white transition"
-                            @click="replyToReply(index, reply.author)"
-                          >
-                            回复
-                          </button>
-                          <button
-                            v-if="reply.isMine"
-                            class="comment-action-btn delete-comment-btn"
-                            @click="deleteReply(index, replyIndex)"
-                          >
-                            删除
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+                </div>
+                <div class="comment-text">{{ comment.commentContent }}</div>
+                <div class="comment-actions">
+                  <button
+                    v-if="comment.userId === currentUserId"
+                    class="delete-comment-btn"
+                    @click="confirmDeleteComment(comment)"
+                  >
+                    <i class="fa fa-trash"></i> 删除
+                  </button>
                 </div>
               </div>
             </div>
+          </div>
 
-            <!-- 加载更多评论 -->
-            <div class="load-more-comments">
-              <button class="secondary-btn" @click="loadMoreComments">
-                查看更多评论
-              </button>
-            </div>
+          <!-- 加载更多按钮 -->
+          <div v-if="hasMoreComments" class="load-more-comments">
+            <button class="secondary-btn" @click="loadMoreComments">
+              加载更多评论
+            </button>
           </div>
         </section>
       </div>
@@ -349,365 +193,312 @@
 </template>
 
 <script>
+import {
+  getCommunityPostDetail,
+  getCommunityPostComments,
+  getCommunityCommentCount,
+  createCommunityComment,
+  deleteCommunityComment,
+} from '@/utils/api';
+import { mapState } from 'vuex';
+
 export default {
   props: ['id'],
+  computed: {
+    ...mapState('user', ['userId', 'userName', 'isLoggedIn']),
+    currentUserId() {
+      return this.userId;
+    },
+    defaultAvatar() {
+      return 'https://picsum.photos/id/1000/40/40';
+    },
+  },
   data() {
     return {
-      // 帖子数据
+      // 帖子数据（初始化空，等API填充）
       post: {
-        authorAvatar: 'https://picsum.photos/id/1005/48/48',
-        authorName: '张小明',
-        isAuthor: true,
-        postTime: '2小时前',
-        category: '订阅专栏',
-        title: '如何高效管理订阅内容？分享几个实用技巧',
-        tags: ['订阅管理', '效率工具', '信息整理'],
-        likes: 128,
-        comments: 32,
-        bookmarks: 45,
-        views: '5.2k',
+        authorAvatar: '',
+        authorName: '',
+        isAuthor: false,
+        postTime: '',
+        category: '',
+        title: '',
+        tags: [],
+        likes: 0,
+        comments: 0,
+        bookmarks: 0,
+        views: 0,
+        content: '',
       },
 
-      // 当前用户信息
-      currentUser: {
-        avatar: 'https://picsum.photos/id/1000/40/40',
-        name: '王小红', // 用户自己的名字
-      },
-
-      // 评论数据
-      comments: [
-        {
-          avatar: 'https://picsum.photos/id/1012/40/40',
-          author: '李华',
-          time: '1小时前',
-          content: '非常实用的方法！',
-          likes: 15,
-          liked: false,
-          isMine: false,
-          replies: [
-            {
-              avatar: 'https://picsum.photos/id/1015/40/40',
-              author: '小王',
-              time: '50分钟前',
-              content: '我也觉得很棒！',
-              likes: 3,
-              liked: false,
-              replyTo: null,
-              isMine: false,
-            },
-            {
-              avatar: 'https://picsum.photos/id/1020/40/40',
-              author: '张三',
-              time: '45分钟前',
-              content: '同意，特别是Feedly这个工具推荐得很好',
-              likes: 5,
-              liked: false,
-              replyTo: '李华',
-              isMine: false,
-            },
-            {
-              avatar: 'https://picsum.photos/id/1000/40/40',
-              author: '王小红',
-              time: '40分钟前',
-              content: '请问有具体的使用教程吗？',
-              likes: 2,
-              liked: false,
-              replyTo: '张三',
-              isMine: true,
-            },
-          ],
-          showReplyBox: false,
-          replyText: '',
-        },
-        {
-          avatar: 'https://picsum.photos/id/1025/40/40',
-          author: '科技前沿',
-          time: '1.5小时前',
-          content:
-            '请问你是如何处理不同平台的订阅内容同步问题的？比如有些专栏只在特定平台发布。',
-          likes: 8,
-          liked: false,
-          isMine: false,
-          replies: [],
-          showReplyBox: false,
-          replyText: '',
-        },
-        {
-          avatar: 'https://picsum.photos/id/1000/40/40',
-          author: '王小红',
-          time: '2小时前',
-          content:
-            'Notion确实是个好工具，但对于新手来说可能有点复杂。有没有更简单的替代方案推荐？',
-          likes: 5,
-          liked: false,
-          isMine: true, // 这是用户自己的评论
-          replies: [],
-          showReplyBox: false,
-          replyText: '',
-        },
-      ],
-
-      // 新评论
+      // 评论相关数据
+      comments: [],
+      totalComments: 0,
       newComment: '',
+      isLoadingComments: false,
+      isSubmittingComment: false,
+      hasMoreComments: false,
 
-      // 删除确认弹窗状态
+      // 弹窗相关
       showDeleteModal: false,
-      deleteTarget: null, // 存储要删除的目标信息 {type: 'comment'|'reply', commentIndex: number, replyIndex?: number}
+      deleteTarget: null,
     };
   },
+  created() {
+    if (this.id) {
+      this.loadPostData(this.id);
+      this.loadComments(this.id);
+      this.loadCommentCount(this.id);
+    } else {
+      console.error('无法获取帖子ID');
+      this.$router.push('/community');
+    }
+  },
   watch: {
-    // 监听路由参数变化，重新加载帖子数据
-    $route(to, from) {
-      if (to.params.id && to.params.id !== from.params.id) {
+    $route(to) {
+      if (to.name === 'PostDetail') {
         this.loadPostData(to.params.id);
+        this.loadComments(to.params.id);
+        this.loadCommentCount(to.params.id);
+      } else {
+        // 如果跳到别的页面（非帖子详情），就清空当前内容，避免页面残留
+        this.post = { title: '', content: '' };
+        this.comments = [];
+        this.totalComments = 0;
       }
     },
   },
-  created() {
-    console.log('PostDetail组件被创建');
-    // 获取路由参数中的帖子ID
-    const postId = this.$route.params.id || this.id;
-    console.log('获取到的帖子ID:', postId);
-    // 加载对应ID的帖子数据
-    if (postId) {
-      this.loadPostData(postId);
-    } else {
-      console.warn('没有获取到有效的帖子ID');
-    }
-  },
-  mounted() {
-    // 这里可以添加根据this.id加载帖子详情的逻辑
-    if (this.id) {
-      console.log('加载帖子ID:', this.id);
-    }
-  },
+
   methods: {
-    // 点赞功能
+    async loadPostData(postId) {
+      if (!postId) {
+        console.warn('loadPostData: 无效的帖子ID:', postId);
+        return;
+      }
+
+      // 避免重复加载相同ID
+      if (this.post._loadedId === postId) {
+        console.log('已加载过该帖子，无需重复加载:', postId);
+        return;
+      }
+      this.post._loadedId = postId; // 标记已加载
+      try {
+        console.log('加载帖子数据 ID:', postId);
+        const res = await getCommunityPostDetail(postId);
+        console.log('帖子详情接口返回:', res);
+
+        const p = res.data.post;
+
+        let contentObj = {};
+        try {
+          contentObj = p.postContent ? JSON.parse(p.postContent) : {};
+        } catch (e) {
+          console.error('解析 postContent 失败:', e, p.postContent);
+        }
+
+        this.post = {
+          authorAvatar: '', // 目前接口没给，先占位
+          authorName: contentObj.author || `用户${p.userId}` || '匿名用户',
+          isAuthor: false,
+          postTime: p.createdAt || '',
+          category: contentObj.category || '',
+          title: contentObj.title || '未命名帖子',
+          tags: contentObj.tags || [],
+          likes: 0,
+          comments: this.totalComments, // 使用实际的评论数
+          bookmarks: 0,
+          views: 0,
+          content: contentObj.content || '', // 详情页显示正文
+        };
+
+        console.log('帖子详情加载完成:', this.post);
+      } catch (err) {
+        console.error('加载帖子失败:', err);
+      }
+    },
+
     likePost() {
       this.post.likes++;
     },
 
-    // 收藏功能
     bookmarkPost() {
       this.post.bookmarks++;
     },
 
-    // 分享功能
-    sharePost() {
-      console.log(`分享帖子: ${this.post.title}`);
-      alert('分享功能已触发');
+    // 加载评论列表
+    async loadComments(postId) {
+      if (!postId) return;
+
+      this.isLoadingComments = true;
+      try {
+        const response = await getCommunityPostComments(postId);
+        console.log('评论列表响应:', response);
+
+        if (response.data && response.data.comments) {
+          this.comments = response.data.comments.map((comment) => ({
+            ...comment,
+            author: comment.userId ? `用户${comment.userId}` : '匿名用户',
+            avatar: this.defaultAvatar,
+          }));
+        } else {
+          this.comments = [];
+        }
+      } catch (error) {
+        console.error('加载评论失败:', error);
+        this.comments = [];
+        this.$message?.error('加载评论失败，请稍后重试');
+      } finally {
+        this.isLoadingComments = false;
+      }
     },
 
-    // 关注作者
-    followAuthor() {
-      console.log(`关注作者: ${this.post.authorName}`);
-      alert(`已关注 ${this.post.authorName}`);
+    // 加载评论数量
+    async loadCommentCount(postId) {
+      if (!postId) return;
+
+      try {
+        const response = await getCommunityCommentCount(postId);
+        console.log('评论数量响应:', response);
+
+        if (response.data && typeof response.data.commentCount === 'number') {
+          this.totalComments = response.data.commentCount;
+          this.post.comments = this.totalComments;
+        }
+      } catch (error) {
+        console.error('加载评论数量失败:', error);
+        this.totalComments = 0;
+      }
     },
 
     // 发布评论
-    publishComment() {
-      if (!this.newComment.trim()) return;
+    async publishComment() {
+      if (!this.newComment.trim()) {
+        this.$message?.warning('评论内容不能为空');
+        return;
+      }
 
-      this.comments.unshift({
-        avatar: this.currentUser.avatar,
-        author: this.currentUser.name,
-        time: '刚刚',
-        content: this.newComment,
-        likes: 0,
-        liked: false,
-        isMine: true, // 新发布的评论标记为用户自己的
-        replies: [],
-        showReplyBox: false,
-        replyText: '',
-      });
+      if (!this.isLoggedIn) {
+        this.$message?.warning('请先登录');
+        this.$router.push('/login');
+        return;
+      }
 
-      this.post.comments++;
-      this.newComment = '';
-    },
+      this.isSubmittingComment = true;
+      try {
+        const payload = {
+          userId: this.currentUserId,
+          commentContent: this.newComment.trim(),
+        };
 
-    // 加载更多评论
-    loadMoreComments() {
-      console.log('加载更多评论');
-      // 模拟加载更多评论
-      this.comments.push(
-        {
-          avatar: 'https://picsum.photos/id/1074/40/40',
-          author: '效率控',
-          time: '昨天',
-          content:
-            '每月总结的方法很棒，我之前试过但没坚持下来，看来需要找个 accountability partner 一起坚持。',
-          likes: 3,
-          replies: [],
-          showReplyBox: false,
-          replyText: '',
-        },
-        {
-          avatar: 'https://picsum.photos/id/1066/40/40',
-          author: '信息过载患者',
-          time: '昨天',
-          content:
-            '感谢分享！我已经把Feedly和Pocket都下载好了，准备开始整理我的订阅列表。',
-          likes: 2,
-          replies: [],
-          showReplyBox: false,
-          replyText: '',
+        console.log('发布评论请求:', payload);
+        const response = await createCommunityComment(this.id, payload);
+        console.log('发布评论响应:', response);
+
+        if (response.data && response.data.comment) {
+          // 添加新评论到列表顶部
+          const newComment = {
+            ...response.data.comment,
+            author: this.userName || `用户${this.currentUserId}`,
+            avatar: this.defaultAvatar,
+          };
+          this.comments.unshift(newComment);
+
+          // 更新评论数量
+          this.totalComments++;
+          this.post.comments = this.totalComments;
+
+          // 清空输入框
+          this.newComment = '';
+
+          this.$message?.success('评论发布成功');
         }
-      );
-    },
-    likeComment(index) {
-      const comment = this.comments[index];
-      if (comment.liked) {
-        comment.likes = Math.max(0, comment.likes - 1);
-        comment.liked = false;
-      } else {
-        comment.likes++;
-        comment.liked = true;
+      } catch (error) {
+        console.error('发布评论失败:', error);
+        this.$message?.error('发布评论失败，请稍后重试');
+      } finally {
+        this.isSubmittingComment = false;
       }
     },
-    toggleReplyBox(index) {
-      const comment = this.comments[index];
-      comment.showReplyBox = !comment.showReplyBox;
-      // 直接回复评论时，清除回复目标
-      if (comment.showReplyBox) {
-        comment.replyTarget = null;
-      }
-    },
-    replyToReply(commentIndex, replyToAuthor) {
-      // 直接在该评论下显示回复框，并预设回复目标
-      const comment = this.comments[commentIndex];
-      comment.showReplyBox = true;
-      comment.replyText = '';
-      comment.replyTarget = replyToAuthor; // 记录回复目标
-    },
-    publishReply(index) {
-      const comment = this.comments[index];
-      if (!comment.replyText.trim()) return;
 
-      const replyContent = comment.replyText;
-      const replyTo = comment.replyTarget || null;
-
-      comment.replies.push({
-        avatar: this.currentUser.avatar,
-        author: this.currentUser.name,
-        time: '刚刚',
-        content: replyContent,
-        likes: 0,
-        liked: false,
-        replyTo: replyTo,
-        isMine: true, // 新发布的回复标记为用户自己的
-      });
-
-      comment.replyText = '';
-      comment.showReplyBox = false;
-      comment.replyTarget = null; // 清除回复目标
-    },
-    likeReply(commentIndex, replyIndex) {
-      const reply = this.comments[commentIndex].replies[replyIndex];
-      if (reply.liked) {
-        reply.likes = Math.max(0, reply.likes - 1);
-        reply.liked = false;
-      } else {
-        reply.likes++;
-        reply.liked = true;
-      }
-    },
-    deleteComment(index) {
-      this.deleteTarget = { type: 'comment', commentIndex: index };
+    // 确认删除评论
+    confirmDeleteComment(comment) {
+      this.deleteTarget = { type: 'comment', data: comment };
       this.showDeleteModal = true;
     },
-    deleteReply(commentIndex, replyIndex) {
-      this.deleteTarget = {
-        type: 'reply',
-        commentIndex: commentIndex,
-        replyIndex: replyIndex,
-      };
-      this.showDeleteModal = true;
-    },
-    confirmDelete() {
-      if (this.deleteTarget?.type === 'comment') {
-        this.comments.splice(this.deleteTarget.commentIndex, 1);
-        this.post.comments--;
-      } else if (this.deleteTarget?.type === 'reply') {
-        this.comments[this.deleteTarget.commentIndex].replies.splice(
-          this.deleteTarget.replyIndex,
-          1
-        );
-      }
-      this.cancelDelete();
-    },
+
+    // 取消删除
     cancelDelete() {
       this.showDeleteModal = false;
       this.deleteTarget = null;
     },
 
-    // 根据帖子ID加载帖子数据
-    loadPostData(postId) {
-      // 根据postId获取帖子详情数据
-      console.log('加载帖子数据，ID:', postId);
+    // 执行删除
+    async confirmDelete() {
+      if (!this.deleteTarget || this.deleteTarget.type !== 'comment') {
+        return;
+      }
 
-      // 模拟帖子数据库
-      const postsData = {
-        1: {
-          authorAvatar: 'https://picsum.photos/id/1005/48/48',
-          authorName: '张小明',
-          isAuthor: true,
-          postTime: '2小时前',
-          category: '订阅专栏',
-          title: '如何高效管理订阅内容？分享几个实用技巧',
-          tags: ['订阅管理', '效率工具', '信息整理'],
-          likes: 128,
-          comments: 32,
-          bookmarks: 45,
-          views: '5.2k',
-        },
-        2: {
-          authorAvatar: 'https://picsum.photos/id/1012/48/48',
-          authorName: '李华',
-          isAuthor: true,
-          postTime: '昨天',
-          category: '专栏推荐',
-          title: '2025年值得订阅的10个优质专栏推荐',
-          tags: ['专栏推荐', '2025精选', '内容推荐'],
-          likes: 356,
-          comments: 89,
-          bookmarks: 210,
-          views: '12.8k',
-        },
-        3: {
-          authorAvatar: 'https://picsum.photos/id/1025/48/48',
-          authorName: '科技前沿',
-          isAuthor: false,
-          postTime: '3天前',
-          category: '技术讨论',
-          title: 'AI辅助编程工具对比：GitHub Copilot vs. RAZOR-AI',
-          tags: ['AI编程', '工具对比', '编程技巧'],
-          likes: 247,
-          comments: 63,
-          bookmarks: 178,
-          views: '8.5k',
-        },
-      };
+      const comment = this.deleteTarget.data;
 
-      // 如果找到对应的帖子数据，则更新当前帖子
-      if (postsData[postId]) {
-        this.post = { ...this.post, ...postsData[postId] };
-        console.log('帖子数据加载成功:', this.post);
-      } else {
-        console.warn('未找到对应ID的帖子:', postId);
-        // 设置一个默认的错误帖子
-        this.post = {
-          ...this.post,
-          title: `帖子未找到 (ID: ${postId})`,
-          authorName: '未知作者',
-          authorAvatar: 'https://picsum.photos/id/1000/48/48',
-          postTime: '未知时间',
-          category: '未知分类',
-          tags: ['错误'],
-          likes: 0,
-          comments: 0,
-          bookmarks: 0,
-          views: '0',
+      try {
+        const payload = {
+          userId: this.currentUserId,
         };
+
+        console.log('删除评论请求:', comment.id, payload);
+        const response = await deleteCommunityComment(comment.id, payload);
+        console.log('删除评论响应:', response);
+
+        // 从列表中移除评论
+        const index = this.comments.findIndex((c) => c.id === comment.id);
+        if (index !== -1) {
+          this.comments.splice(index, 1);
+
+          // 更新评论数量
+          this.totalComments = Math.max(0, this.totalComments - 1);
+          this.post.comments = this.totalComments;
+        }
+
+        this.$message?.success('评论删除成功');
+      } catch (error) {
+        console.error('删除评论失败:', error);
+        this.$message?.error('删除评论失败，请稍后重试');
+      } finally {
+        this.cancelDelete();
+      }
+    },
+
+    // 加载更多评论（预留功能）
+    loadMoreComments() {
+      // TODO: 实现分页加载评论
+      console.log('加载更多评论');
+    },
+
+    // 格式化时间
+    formatTime(timeStr) {
+      if (!timeStr) return '';
+
+      try {
+        const time = new Date(timeStr);
+        const now = new Date();
+        const diff = now - time;
+
+        const minutes = Math.floor(diff / (1000 * 60));
+        const hours = Math.floor(diff / (1000 * 60 * 60));
+        const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+
+        if (minutes < 60) {
+          return minutes <= 0 ? '刚刚' : `${minutes}分钟前`;
+        } else if (hours < 24) {
+          return `${hours}小时前`;
+        } else if (days < 7) {
+          return `${days}天前`;
+        } else {
+          return time.toLocaleDateString('zh-CN');
+        }
+      } catch (error) {
+        console.error('时间格式化失败:', error);
+        return timeStr;
       }
     },
   },
@@ -1025,6 +816,7 @@ export default {
   font-family: inherit;
   font-size: 14px;
   transition: border-color 0.2s ease;
+  box-sizing: border-box;
 }
 
 .comment-textarea:focus {
@@ -1045,8 +837,56 @@ export default {
   margin-top: 12px;
 }
 
-.publish-comment:hover {
+.publish-comment:hover:not(:disabled) {
   background-color: #0a6fca;
+}
+
+.publish-comment:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+/* 未登录提示 */
+.login-prompt {
+  text-align: center;
+  padding: 20px;
+  background-color: #f8fafc;
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+
+.login-prompt p {
+  margin-bottom: 12px;
+  color: #666;
+}
+
+.login-btn {
+  background-color: #0f88eb;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 20px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.login-btn:hover {
+  background-color: #0a6fca;
+}
+
+/* 加载和空状态 */
+.loading-comments,
+.no-comments {
+  text-align: center;
+  padding: 20px;
+  color: #666;
+  font-size: 14px;
+}
+
+.no-comments {
+  background-color: #f8fafc;
+  border-radius: 8px;
 }
 
 .comments-list {
@@ -1059,6 +899,14 @@ export default {
 .comment-item {
   display: flex;
   gap: 12px;
+  padding: 16px;
+  background-color: #f8fafc;
+  border-radius: 8px;
+  transition: background-color 0.2s ease;
+}
+
+.comment-item:hover {
+  background-color: #f1f5f9;
 }
 
 .comment-avatar {
@@ -1066,6 +914,7 @@ export default {
   height: 40px;
   border-radius: 50%;
   object-fit: cover;
+  flex-shrink: 0;
 }
 
 .comment-content {
@@ -1075,12 +924,14 @@ export default {
 .comment-header {
   display: flex;
   justify-content: space-between;
-  margin-bottom: 6px;
+  align-items: center;
+  margin-bottom: 8px;
 }
 
 .comment-author {
   font-weight: 500;
   font-size: 14px;
+  color: #1a1a1a;
 }
 
 .comment-time {
@@ -1093,6 +944,7 @@ export default {
   font-size: 14px;
   line-height: 1.6;
   margin-bottom: 8px;
+  word-wrap: break-word;
 }
 
 .comment-actions {
@@ -1109,6 +961,7 @@ export default {
   font-size: 12px;
   display: flex;
   align-items: center;
+  gap: 4px;
 }
 
 .comment-action-btn:hover {
@@ -1362,6 +1215,16 @@ export default {
   .action-btn,
   .share-btn {
     font-size: 14px;
+  }
+
+  .fade-enter-active,
+  .fade-leave-active {
+    transition: opacity 0.5s;
+  }
+
+  .fade-enter,
+  .fade-leave-to {
+    opacity: 0;
   }
 }
 </style>

@@ -22,7 +22,7 @@
           <i class="el-icon-user-solid"></i>
           <span>管理员审核</span>
         </div>
-        <div class="nav-item" @click="$router.push('/admin/review')">
+        <div class="nav-item active">
           <i class="el-icon-cpu"></i>
           <span>机器人审核</span>
         </div>
@@ -30,7 +30,7 @@
           <i class="el-icon-document"></i>
           <span>帖子审核</span>
         </div>
-        <div class="nav-item active">
+        <div class="nav-item" @click="$router.push('/admin/feedback')">
           <i class="el-icon-chat-dot-round"></i>
           <span>用户反馈</span>
         </div>
@@ -41,7 +41,7 @@
     <main class="main-content">
       <!-- 顶部导航栏 -->
       <header class="header">
-        <h1 class="title">用户反馈管理</h1>
+        <h1 class="title">机器人审核详情</h1>
         <div style="display: flex; align-items: center; margin-left: auto">
           <el-button
             type="warning"
@@ -96,35 +96,95 @@
 
       <!-- 主要内容 -->
       <div class="content">
-        <el-card class="post-list-card" shadow="hover">
-          <div class="card-header">
-            <h2 class="card-title">用户反馈列表</h2>
-            <span class="text-sm text-gray-500"
-              >共 {{ feedbackList.length }} 条反馈</span
-            >
-          </div>
-          <div class="p-6">
-            <div class="space-y-4">
-              <div
-                v-for="(feedback, index) in feedbackList"
-                :key="index"
-                class="p-4 border border-gray-100 rounded-lg card-hover cursor-pointer"
-                @click="$router.push('/admin/feedback/detail')"
-              >
-                <div class="flex items-center justify-between mb-2">
-                  <p class="font-medium">{{ feedback.name }}</p>
-                  <p class="text-sm text-gray-500">{{ feedback.createdAt }}</p>
-                </div>
-                <el-tag
-                  :type="feedback.status === 'pending' ? 'warning' : 'success'"
+        <el-card class="robot-detail-card" shadow="hover">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div>
+              <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-500 mb-1"
+                  >机器人名称</label
                 >
-                  {{ feedback.status === 'pending' ? '待处理' : '已解决' }}
-                </el-tag>
-                <p class="text-gray-600 text-sm mt-2">
-                  {{ feedback.content }}
-                </p>
+                <p class="text-lg font-medium" v-if="robot">{{ robot.name }}</p>
+                <p v-else class="text-lg text-gray-400">加载中...</p>
+              </div>
+              <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-500 mb-1"
+                  >机器人类型</label
+                >
+                <p class="text-lg" v-if="robot">{{ robot.type }}</p>
+                <p v-else class="text-lg text-gray-400">加载中...</p>
+              </div>
+              <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-500 mb-1"
+                  >LLM名称</label
+                >
+                <p class="text-lg" v-if="robot">{{ robot.llm }}</p>
+                <p v-else class="text-lg text-gray-400">加载中...</p>
               </div>
             </div>
+            <div>
+              <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-500 mb-1"
+                  >当前状态</label
+                >
+                <el-tag
+                  v-if="robot"
+                  :type="
+                    robot.status === 'pending'
+                      ? 'warning'
+                      : robot.status === 'approved'
+                        ? 'success'
+                        : 'danger'
+                  "
+                >
+                  {{
+                    robot.status === 'pending'
+                      ? '待审核'
+                      : robot.status === 'approved'
+                        ? '已通过'
+                        : '已拒绝'
+                  }}
+                </el-tag>
+                <span v-else class="text-gray-400">加载中...</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="mb-6">
+            <label class="block text-sm font-medium text-gray-500 mb-2"
+              >提示词</label
+            >
+            <div class="bg-gray-50 p-4 rounded-lg">
+              <p class="text-gray-800" v-if="robot">{{ robot.prompt }}</p>
+              <p v-else class="text-gray-400">加载中...</p>
+            </div>
+          </div>
+
+          <div class="mb-6">
+            <label class="block text-sm font-medium text-gray-500 mb-2"
+              >拒绝理由</label
+            >
+            <el-input
+              type="textarea"
+              :rows="3"
+              placeholder="请输入拒绝理由"
+              v-model="rejectReason"
+              class="test-input"
+              maxlength="200"
+              show-word-limit
+            ></el-input>
+          </div>
+
+          <div class="flex space-x-4">
+            <el-button type="success" @click="approveRobot">通过审核</el-button>
+            <el-button
+              type="danger"
+              :disabled="!rejectReason"
+              @click="rejectRobot"
+              >拒绝审核</el-button
+            >
+            <el-button type="primary" @click="$router.push('/admin/review')"
+              >返回列表</el-button
+            >
           </div>
         </el-card>
       </div>
@@ -133,9 +193,11 @@
 </template>
 
 <script>
+import MyStorage from '@/utils/storage';
 import { changeAdminPassword, adminLogout, getAdminInfo } from '@/utils/api';
+
 export default {
-  name: 'AdminFeedbackPage',
+  name: 'AdminRobotReviewDetail',
   data() {
     return {
       isSidebarCollapsed: false,
@@ -166,23 +228,9 @@ export default {
           },
         ],
       },
-      feedbackList: [
-        {
-          id: 1,
-          name: '李四',
-          createdAt: '2025-1-10 3:14',
-          content:
-            '机器人无法正确识别"退款"相关的问题，总是将用户引导到错误的页面。',
-          status: 'pending',
-        },
-        {
-          id: 2,
-          name: '王五',
-          createdAt: '2025-1-9 16:53',
-          content: '数据分析机器人导出报表功能有时会出错。',
-          status: 'resolved',
-        },
-      ],
+      robot: null,
+      rejectReason: '',
+      loading: false,
     };
   },
   methods: {
@@ -264,8 +312,115 @@ export default {
       this.pwdForm.confirmPwd = '';
       if (this.$refs.pwdFormRef) this.$refs.pwdFormRef.clearValidate();
     },
+    async fetchRobotDetail() {
+      this.loading = true;
+      const id = this.$route.params.id;
+      try {
+        // 这里建议将 token 存储在 localStorage 或 Vuex，实际项目请替换获取方式
+        const token = MyStorage.get('admin_token');
+        const res = await fetch(
+          `http://localhost:5253/admin/agent-review/${id}`,
+          {
+            method: 'GET',
+            headers: {
+              Accept: 'application/json',
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+        const data = await res.json();
+        if (data.success) {
+          // 适配字段
+          this.robot = {
+            id: data.data.id,
+            name: data.data.name,
+            type: data.data.type === 1 ? '文本' : data.data.type,
+            llm: data.data.llm || '-',
+            status:
+              data.data.reviewStatus === 0
+                ? 'pending'
+                : data.data.reviewStatus === 1
+                  ? 'approved'
+                  : 'rejected',
+            prompt: data.data.chatPrompt,
+            description: data.data.description,
+            price: data.data.price,
+            creatorName: data.data.creatorName,
+            createdAt: data.data.createdAt,
+            reviewRemarks: data.data.reviewRemarks,
+          };
+        } else {
+          this.$message.error(data.message || '获取机器人详情失败');
+        }
+      } catch (err) {
+        this.$message.error(err.message || '获取机器人详情失败');
+      }
+      this.loading = false;
+    },
+    approveRobot() {
+      if (!this.robot) return;
+      const token = MyStorage.get('admin_token');
+      fetch(
+        `http://localhost:5253/admin/agent-review/${this.robot.id}/approve`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Accept: 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ remarks: '审核通过，机器人质量良好' }),
+        }
+      )
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.success) {
+            this.robot.status = 'approved';
+            this.$message.success(data.message || '审核已通过');
+          } else {
+            this.$message.error(data.message || '审核失败');
+          }
+        })
+        .catch((err) => {
+          this.$message.error(err.message || '审核失败');
+        });
+    },
+    rejectRobot() {
+      if (!this.robot) return;
+      if (!this.rejectReason) {
+        this.$message.warning('请输入拒绝理由');
+        return;
+      }
+      const token = MyStorage.get('admin_token');
+      fetch(
+        `http://localhost:5253/admin/agent-review/${this.robot.id}/reject`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Accept: 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ remarks: this.rejectReason }),
+        }
+      )
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.success) {
+            this.robot.status = 'rejected';
+            this.$message.error(data.message || '审核已拒绝');
+            this.rejectReason = '';
+          } else {
+            this.$message.error(data.message || '审核失败');
+          }
+        })
+        .catch((err) => {
+          this.$message.error(err.message || '审核失败');
+        });
+    },
   },
   mounted() {
+    this.fetchRobotDetail();
     this.fetchAdminInfo();
   },
 };
@@ -414,6 +569,21 @@ export default {
 
     .content {
       padding: 24px;
+
+      .robot-detail-card {
+        padding: 24px;
+      }
+
+      .test-input {
+        width: 100%;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        transition: border-color 0.3s;
+
+        &:focus {
+          border-color: #165dff;
+        }
+      }
 
       .card-hover {
         transition: all 0.3s ease;

@@ -25,14 +25,12 @@ import ScoreMessage from '@/views/ScoreMessage.vue';
 import AdminPage from '@/views/AdminPage.vue';
 import AdminLogin from '@/views/AdminLoginPage.vue';
 import AdminFeedback from '@/views/AdminFeedbackPage.vue';
-import AdminNotifications from '@/views/AdminNotificationsPage.vue';
 
 Vue.use(VueRouter);
 
 const routes = [
   {
     path: '/',
-    name: 'layout',
     component: Layout,
     children: [
       {
@@ -172,15 +170,20 @@ const routes = [
         },
       },
       {
-        path: '/community',
+        path: 'community',
         name: 'Community',
         component: community,
-        meta: {
-          title: '社区动态',
-        },
+        meta: { title: '社区动态' },
       },
       {
-        path: '/community/news',
+        path: 'community/post/:id',
+        name: 'PostDetail',
+        component: PostDetail,
+        meta: { title: '帖子详情' },
+        props: true,
+      },
+      {
+        path: 'community/news',
         name: 'CommunityNews',
         component: () => import('@/views/CommunityPage.vue'),
         meta: {
@@ -188,7 +191,7 @@ const routes = [
         },
       },
       {
-        path: '/community/my-posts',
+        path: 'community/my-posts',
         name: 'MyPosts',
         component: () => import('@/views/MyPostsPage.vue'),
         meta: {
@@ -196,19 +199,11 @@ const routes = [
         },
       },
       {
-        path: '/community/createPost',
+        path: 'community/createPost',
         name: 'CreatePost',
         component: () => import('@/views/CreatePost.vue'),
         meta: {
           title: '发布帖子',
-        },
-      },
-      {
-        path: '/community/post/:id', // 添加id参数用于识别不同帖子
-        name: 'PostDetail',
-        component: PostDetail,
-        meta: {
-          title: '帖子详情',
         },
       },
     ],
@@ -226,6 +221,32 @@ const router = new VueRouter({
       component: AdminLogin,
       meta: {
         title: 'RazorAI-管理员登录',
+      },
+    },
+    {
+      path: '/admin/admin-review',
+      name: 'AdminAdminReview',
+      component: () => import('@/views/AdminAdminReviewPage.vue'),
+      meta: {
+        title: 'RazorAI-管理员审核',
+        requiresAdmin: true,
+      },
+    },
+    {
+      path: '/admin/feedback',
+      name: 'AdminFeedback',
+      component: AdminFeedback,
+      meta: {
+        title: 'RazorAI-管理员审核',
+        requiresAdmin: true,
+      },
+    },
+    {
+      path: '/admin/register',
+      name: 'AdminRegister',
+      component: () => import('@/views/AdminRegisterPage.vue'),
+      meta: {
+        title: 'RazorAI-管理员注册',
       },
     },
     {
@@ -247,20 +268,11 @@ const router = new VueRouter({
       },
     },
     {
-      path: '/admin/feedback',
-      name: 'AdminFeedback',
-      component: AdminFeedback,
+      path: '/admin/robots/:id',
+      name: 'AdminRobotReviewDetail',
+      component: () => import('@/views/AdminRobotReviewDetail.vue'),
       meta: {
-        title: 'RazorAI-用户反馈',
-        requiresAdmin: true,
-      },
-    },
-    {
-      path: '/admin/notifications',
-      name: 'AdminNotifications',
-      component: AdminNotifications,
-      meta: {
-        title: 'RazorAI-通知管理',
+        title: 'RazorAI-机器人审核详情',
         requiresAdmin: true,
       },
     },

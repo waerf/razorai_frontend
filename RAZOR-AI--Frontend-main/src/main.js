@@ -5,6 +5,7 @@ import router from './router';
 import store from './store';
 import ElementUI from 'element-ui';
 import 'element-ui/lib/theme-chalk/index.css';
+import axios from 'axios';
 
 // 引入全局样式
 /*
@@ -18,16 +19,37 @@ import '@/assets/styles/layout.scss';
 import '@/assets/styles/global.scss';
 Vue.config.productionTip = false;
 Vue.use(ElementUI);
+Vue.prototype.$axios = axios;
+
+// 监听token过期事件
+window.addEventListener('tokenExpired', () => {
+  // 触发Vuex的自动登出
+  store.dispatch('user/autoLogout');
+  // 可以在这里添加用户提示或其他处理逻辑
+  console.log('Token已过期，已自动登出');
+});
 
 // 初始化应用程序
 async function initApp() {
   try {
+    // 首先检查token有效性
+    const isTokenValid = await store.dispatch('user/checkTokenValidity');
+    if (!isTokenValid) {
+      console.log('Token无效或已过期，用户需要重新登录');
+    }
+
+    // 只有在用户已登录的情况下才进行其他初始化
+    const userId = store.state.user.userId;
+    if (!userId || !store.state.user.isLoggedIn) {
+      console.log('用户未登录，跳过数据初始化');
+      return;
+    }
+
     // 检查 Vuex 中 haveSubscribed 的状态并初始化
     if (
       !store.state.agent.haveSubscribed ||
       store.state.agent.haveSubscribed.length === 0
     ) {
-      const userId = store.state.user.userId;
       if (userId) {
         await store.dispatch('agent/fetchUserSubscriptions', userId);
         console.log('初始化用户订阅机器人信息成功');
@@ -44,7 +66,6 @@ async function initApp() {
       console.log('初始化所有AI 机器人信息成功');
     }
     if (store.state.chat.chats.length === 0 || store.state.user.userId) {
-      const userId = store.state.user.userId;
       if (userId) {
         // 把userId转化为json格式
         const jsonUserId = {

@@ -5,7 +5,7 @@
       <div class="content-layout">
         <!-- 中间帖子列表 -->
         <section class="post-feed">
-          <!-- 发布按钮区域 -->
+          <!-- 发布按钮 -->
           <div class="action-bar">
             <button
               class="primary-btn"
@@ -16,56 +16,46 @@
             </button>
           </div>
 
-          <!-- 排序筛选 -->
-          <div class="filter-card">
+          <!-- 筛选区 -->
+          <div class="filter-card top-filter">
             <div class="filter-header">
               <h2 class="feed-title">社区讨论</h2>
               <p class="feed-count">
-                共 <span class="count-number">328</span> 个帖子
+                共 <span class="count-number">{{ totalCount }}</span> 个帖子
               </p>
             </div>
 
             <div class="filter-tabs">
-              <button class="tab-item active">推荐</button>
-              <button class="tab-item">最新</button>
-              <button class="tab-item">最热</button>
-              <button class="tab-item">关注</button>
+              <button
+                class="tab-item"
+                :class="{ active: activeTab === 'latest' }"
+                @click="switchTab('latest')"
+              >
+                最新
+              </button>
+              <button
+                class="tab-item"
+                :class="{ active: activeTab === 'hottest' }"
+                @click="switchTab('hottest')"
+              >
+                最热
+              </button>
             </div>
           </div>
 
           <!-- 帖子列表 -->
           <div class="post-list" id="postList">
-            <!-- 帖子卡片 -->
-            <article
-              class="post-card"
-              v-for="(post, index) in posts"
-              :key="index"
-            >
+            <article class="post-card" v-for="post in posts" :key="post.id">
               <div class="post-header">
-                <div class="post-author">
-                  <img
-                    :src="post.authorAvatar"
-                    alt="用户头像"
-                    class="author-avatar"
-                  />
-                  <div class="author-info">
-                    <div class="author-name-wrap">
-                      <p class="author-name">{{ post.authorName }}</p>
-                      <span v-if="post.isAuthor" class="author-badge"
-                        >专栏作者</span
-                      >
-                    </div>
-                    <p class="post-time">
-                      {{ post.postTime }} · 发布于 {{ post.category }}
-                    </p>
+                <div class="author-info">
+                  <div class="author-name-wrap">
+                    <p class="author-name">{{ post.authorName }}</p>
                   </div>
+                  <p class="post-time">{{ post.createTime }}</p>
                 </div>
-                <button class="more-btn" aria-label="更多操作">
-                  <i class="fa fa-ellipsis-h"></i>
-                </button>
               </div>
 
-              <!-- 帖子标题添加路由链接 -->
+              <!-- 帖子标题 -->
               <router-link
                 :to="`/community/post/${post.id}`"
                 class="post-title-link"
@@ -75,41 +65,58 @@
 
               <p class="post-excerpt">{{ post.excerpt }}</p>
 
+              <!-- 标签 -->
               <div class="post-tags">
-                <span class="tag-item" v-for="(tag, i) in post.tags" :key="i">{{
-                  tag
-                }}</span>
+                <span
+                  class="tag-item"
+                  v-for="(tag, i) in getPostTags(post.id)"
+                  :key="i"
+                >
+                  {{ tag }}
+                </span>
               </div>
 
+              <!-- 点赞评论 -->
               <div class="post-actions">
                 <div class="action-group">
-                  <button class="action-btn" @click="likePost(index)">
-                    <i class="fa fa-thumbs-o-up mr-1.5"></i>
-                    <span>{{ post.likes }}</span>
-                  </button>
-                  <button class="action-btn">
-                    <i class="fa fa-comment-o mr-1.5"></i>
-                    <span>{{ post.comments }}</span>
-                  </button>
-                  <button class="action-btn" @click="bookmarkPost(index)">
-                    <i class="fa fa-bookmark-o mr-1.5"></i>
-                    <span>{{ post.bookmarks }}</span>
-                  </button>
+                  <!-- 点赞仅展示 -->
+                  <div class="action-display">
+                    <i class="fa fa-thumbs-o-up text-blue-500 mr-1.5"></i>
+                    <span>{{ post.likeCount }}</span>
+                  </div>
+                  <!-- 评论仅展示 -->
+                  <div class="action-display">
+                    <i class="fa fa-comment-o text-green-500 mr-1.5"></i>
+                    <span>{{ post.commentCount }}</span>
+                  </div>
                 </div>
                 <div class="stats-group">
-                  <span class="post-views">阅读 {{ post.views }}</span>
-                  <button class="share-btn" @click="sharePost(index)">
+                  <button class="share-btn" @click="sharePost(post.id)">
                     <i class="fa fa-share-alt mr-1.5"></i>
                     <span>分享</span>
                   </button>
                 </div>
               </div>
             </article>
+
+            <!-- 无数据提示 -->
+            <div v-if="posts.length === 0 && !loading" class="no-posts">
+              暂无帖子数据
+            </div>
+          </div>
+
+          <!-- 加载中 -->
+          <div v-if="loading" class="loading-state">
+            <i class="fa fa-spinner fa-spin"></i> 加载中...
           </div>
 
           <!-- 加载更多 -->
           <div class="load-more">
-            <button class="secondary-btn load-more-btn" @click="loadMorePosts">
+            <button
+              class="secondary-btn load-more-btn"
+              @click="loadMorePosts"
+              v-if="hasMore"
+            >
               加载更多 <i class="fa fa-angle-down ml-2"></i>
             </button>
           </div>
@@ -120,86 +127,111 @@
 </template>
 
 <script>
+import {
+  getRecommendedPosts,
+  getCommunityLikeCount,
+  getCommunityCommentCount,
+} from '@/utils/api';
+
 export default {
   data() {
     return {
-      // 帖子数据
-      posts: [
-        {
-          id: 1,
-          authorAvatar: 'https://picsum.photos/id/1005/48/48',
-          authorName: '张小明',
-          isAuthor: true,
-          postTime: '2小时前',
-          category: '订阅专栏',
-          title: '如何高效管理订阅内容？分享几个实用技巧',
-          excerpt:
-            '随着订阅的内容越来越多，如何高效筛选和管理成为了难题。本文分享几个我使用了3年的方法，帮助你从信息海洋中快速找到有价值的内容。这些方法不仅提高了我的阅读效率，还让我能够更好地消化和吸收知识。',
-          tags: ['订阅管理', '效率工具', '信息整理'],
-          likes: 128,
-          comments: 32,
-          bookmarks: 45,
-          views: '5.2k',
-        },
-        {
-          id: 2,
-          authorAvatar: 'https://picsum.photos/id/1012/48/48',
-          authorName: '李华',
-          isAuthor: true,
-          postTime: '昨天',
-          category: '专栏推荐',
-          title: '2025年值得订阅的10个优质专栏推荐',
-          excerpt:
-            '经过半年的体验和筛选，整理出这份2025年最值得订阅的专栏清单，涵盖科技、职场、生活等多个领域，每个都经过实际验证。无论你是想提升专业技能，还是寻找灵感创意，这份清单都能满足你的需求。',
-          tags: ['专栏推荐', '2025精选', '内容推荐'],
-          likes: 356,
-          comments: 89,
-          bookmarks: 210,
-          views: '12.8k',
-        },
-        {
-          id: 3,
-          authorAvatar: 'https://picsum.photos/id/1025/48/48',
-          authorName: '科技前沿',
-          isAuthor: false,
-          postTime: '3天前',
-          category: '技术讨论',
-          title: 'AI辅助编程工具对比：GitHub Copilot vs. RAZOR-AI',
-          excerpt:
-            '随着AI技术的发展，编程辅助工具越来越受到开发者的欢迎。本文详细对比了当前市场上两款主流的AI辅助编程工具：GitHub Copilot和RAZOR-AI。通过实际代码示例，分析它们的优缺点和适用场景，帮助开发者选择最适合自己的工具。',
-          tags: ['AI编程', '工具对比', '编程技巧'],
-          likes: 247,
-          comments: 63,
-          bookmarks: 178,
-          views: '8.5k',
-        },
-      ],
+      posts: [],
+      totalCount: 0,
+      loading: false,
+      hasMore: true,
+      activeTab: 'latest',
+      page: 1,
+      pageSize: 10,
     };
   },
-  computed: {
-    filteredPosts() {
-      return this.posts;
-    },
+  created() {
+    this.fetchPosts(true);
   },
   methods: {
-    // 点赞功能
-    likePost(index) {
-      this.posts[index].likes++;
+    // 获取帖子列表
+    async fetchPosts(reset = false) {
+      if (reset) {
+        this.page = 1;
+        this.posts = [];
+      }
+      this.loading = true;
+      try {
+        const res = await getRecommendedPosts(this.pageSize * this.page);
+        const data = res.data;
+
+        const records = data.posts || data || [];
+        const total = data.total || records.length;
+
+        this.totalCount = total;
+        if (records && records.length) {
+          this.posts = records.map((p) => {
+            let contentObj = {};
+            try {
+              contentObj = p.postContent ? JSON.parse(p.postContent) : {};
+            } catch (e) {
+              console.error('解析 postContent 失败:', e, p.postContent);
+            }
+
+            return {
+              id: p.postId || p.id,
+              authorName:
+                contentObj.author ||
+                p.author?.name ||
+                p.authorName ||
+                '匿名用户',
+              createTime: p.createdAt || p.createTime || '',
+              title: contentObj.title || p.title || '未命名帖子',
+              excerpt: contentObj.content?.slice(0, 50) || p.excerpt || '',
+              likeCount: 0, // 默认值
+              commentCount: 0, // 默认值
+              views: p.views || 0,
+              tags: contentObj.tags || p.tags || [],
+            };
+          });
+
+          // 🔥 并行获取点赞数和评论数
+          await Promise.all(
+            this.posts.map(async (post) => {
+              try {
+                const [likeRes, commentRes] = await Promise.all([
+                  getCommunityLikeCount(post.id),
+                  getCommunityCommentCount(post.id),
+                ]);
+                post.likeCount = likeRes.data?.likeCount ?? 0;
+                post.commentCount = commentRes.data?.commentCount ?? 0;
+              } catch (e) {
+                console.error(`获取帖子 ${post.id} 的点赞/评论数失败:`, e);
+              }
+            })
+          );
+
+          this.hasMore = this.posts.length < this.totalCount;
+        } else {
+          this.hasMore = false;
+        }
+      } catch (error) {
+        console.error('获取帖子失败:', error);
+      } finally {
+        this.loading = false;
+      }
     },
 
-    // 收藏功能
-    bookmarkPost(index) {
-      this.posts[index].bookmarks++;
-    },
-
-    // 分享功能
-    sharePost(index) {
-      console.log(`分享帖子: ${this.posts[index].title}`);
-    },
-
-    // 加载更多帖子
+    // 加载更多
     loadMorePosts() {
-      console.log('加载更多帖子');
+      this.page++;
+      this.fetchPosts();
+    },
+    // 切换tab
+    switchTab(tab) {
+      if (this.activeTab === tab) return;
+      this.activeTab = tab;
+      this.fetchPosts(true);
+    },
+    // 获取帖子标签
+    getPostTags(postId) {
+      const post = this.posts.find((p) => p.id === postId);
+      return post && post.tags ? post.tags : [];
     },
   },
 };
@@ -217,9 +249,10 @@ export default {
 }
 
 .container {
-  max-width: 900px;
-  margin: 0 auto;
-  padding: 0 20px;
+  max-width: 100%;
+  width: 100%;
+  margin: 0;
+  padding: 0 200px; /* 两边保留点空隙 */
 }
 
 .text-primary {
@@ -233,8 +266,8 @@ export default {
 }
 
 .content-layout {
-  display: flex;
-  gap: 24px;
+  display: block; /* 不需要多列 */
+  width: 100%;
 }
 
 .post-feed {
@@ -398,17 +431,13 @@ export default {
 }
 
 .post-title-link:hover .post-title-title {
-  color: #0f88eb; /* 浅紫色文字 */
+  color: #0f88eb;
   transition: color 0.2s ease; /* 平滑过渡效果 */
 }
 
 .tab-item:active,
 .action-btn:active,
 .share-btn:active,
-.secondary-btn:active {
-  color: #0f88eb !important;
-  background-color: rgba(90, 24, 154, 0.1) !important;
-}
 
 /* 链接点击状态 */
 .post-title-link:active .post-title-title {
