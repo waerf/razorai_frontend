@@ -216,6 +216,24 @@ export const fetchAllFeedbacks = () => {
     headers: { Accept: 'application/json', skipAuth: true },
   });
 };
+
+// 获取最近用户反馈（仅取最近2条）
+export const fetchRecentFeedbacks = () => {
+  return api
+    .get('/feedback/all', {
+      headers: { Accept: 'application/json', skipAuth: true },
+    })
+    .then((res) => {
+      // 只返回前两条
+      if (res && res.data && Array.isArray(res.data.feedbacks)) {
+        return {
+          ...res,
+          data: { ...res.data, feedbacks: res.data.feedbacks.slice(0, 2) },
+        };
+      }
+      return res;
+    });
+};
 // 获取待审核机器人详情（通过审核记录ID）
 export const getPendingAgentDetail = (auditId) => {
   return adminApi.get(`/admin/agent-review/pending/${auditId}`);
