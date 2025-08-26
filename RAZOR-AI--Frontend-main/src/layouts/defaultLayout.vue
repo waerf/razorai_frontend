@@ -289,7 +289,10 @@
 <script>
 import LoginForm from '@/components/LoginForm.vue'; // 引入登录表单组件
 import { mapGetters, mapState, mapActions } from 'vuex'; // 引入 mapGetters, mapActions
-import { sendUserFeedback } from '@/utils/api'; // 引入反馈API
+import {
+  sendUserFeedback,
+  fetchAllChats as apiFetchAllChats,
+} from '@/utils/api'; // 引入反馈API和对话API
 import user from '@/store/user';
 export default {
   components: {
@@ -360,10 +363,16 @@ export default {
     ...mapActions('chat', ['fetchChats']), // 映射 actions, 用于获取聊天列表
     async getAllChats() {
       try {
-        const response = await this.fetchChats({
-          user_id: user.state.userId,
+        const result = await apiFetchAllChats({
+          userId: user.state.userId,
         });
-        console.log('获取聊天列表成功：', response);
+        if (result.status === 200) {
+          // 确保存入Vuex的是数组
+          const chatsData = Array.isArray(result.data) ? result.data : [];
+          this.$store.commit('chat/SET_CHATS', chatsData);
+          this.$message.success(`对话记录加载成功，共${chatsData.length}条`);
+        }
+        console.log('获取聊天列表成功：', result);
       } catch (error) {
         console.error('获取聊天列表失败：', error);
       }
@@ -426,6 +435,7 @@ export default {
           userId: this.userId,
           message: `在"${this.currentRoute}"路由中提出以下反馈：${this.feedbackMessage}`,
         };
+        console.log('反馈负载：', feedbackload);
 
         const response = await sendUserFeedback(feedbackload);
 

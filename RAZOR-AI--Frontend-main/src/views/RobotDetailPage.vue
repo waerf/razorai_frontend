@@ -916,10 +916,23 @@ export default {
       }
     },
     // 开始对话
-    startConversation() {
+    async startConversation() {
+      const userId = this.$store.state.user?.userId;
+      if (!userId) {
+        this.$message.error('未获取到用户信息，请重新登录');
+        return;
+      }
+
+      const payload = {
+        name: this.robot.name || `chat_${Date.now()}`,
+        agentId: this.robot.id,
+        userId: userId,
+      };
+      console.log('进入会话参数:', payload);
+
       this.$router.push({
-        name: 'ConversationHistory',
-        params: { id: this.robot.id },
+        path: `/chatRobot/null`,
+        query: payload,
       });
     },
     // 打开续订对话框
@@ -937,7 +950,7 @@ export default {
           agentId: this.robot.id,
           startTime: currentTime,
           duration: Duration,
-          subscriptionType: 1, // 续订类型，可以根据需要调整
+          subscriptionType: 2, // 续订类型
         };
         console.log('续订请求 payload:', payload);
 

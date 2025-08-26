@@ -66,16 +66,14 @@
           <div class="post-actions">
             <div class="action-group">
               <button class="action-btn" @click="likePost">
-                <i class="fa fa-thumbs-o-up mr-1.5"></i>
-                <span>{{ post.likes }}</span>
+                <span>{{ post.likes }}个点赞</span>
               </button>
               <button class="action-btn">
-                <i class="fa fa-comment-o mr-1.5"></i>
-                <span>{{ post.comments }}</span>
+                <span>{{ post.comments }}个评论</span>
               </button>
-              <button class="action-btn" @click="bookmarkPost">
-                <i class="fa fa-bookmark-o mr-1.5"></i>
-                <span>{{ post.bookmarks }}</span>
+              <button class="action-btn report-btn" @click="openReportDialog">
+                <i class="el-icon-warning-outline"></i>
+                <span>举报该帖子</span>
               </button>
             </div>
           </div>
@@ -111,11 +109,57 @@
         </div>
       </div>
     </div>
+
+    <!-- 举报弹窗 -->
+    <el-dialog
+      title="举报帖子"
+      :visible.sync="reportDialogVisible"
+      width="500px"
+      :close-on-click-modal="false"
+      class="report-dialog"
+    >
+      <div class="report-form">
+        <div class="report-post-title">
+          <span class="label">举报帖子：</span>
+          <span class="post-title">{{ post.title }}</span>
+        </div>
+        <el-form
+          :model="reportForm"
+          :rules="reportRules"
+          ref="reportForm"
+          label-width="80px"
+        >
+          <el-form-item label="举报原因" prop="reportContent">
+            <el-input
+              type="textarea"
+              v-model="reportForm.reportContent"
+              placeholder="请描述举报原因..."
+              :rows="4"
+              maxlength="500"
+              show-word-limit
+            >
+            </el-input>
+          </el-form-item>
+        </el-form>
+      </div>
+      <span slot="footer" class="dialog-footer">
+        <el-button @click="reportDialogVisible = false">取消</el-button>
+        <el-button
+          type="primary"
+          @click="submitReport"
+          :loading="reportSubmitting"
+          >提交举报</el-button
+        >
+      </span>
+    </el-dialog>
   </div>
 </template>
 
 <script>
-import { getCommunityPostDetail } from '@/utils/api'; // 你的api文件路径
+import {
+  getCommunityPostDetail,
+  reportCommunityPost as apiReportCommunityPost,
+} from '@/utils/api'; // 你的api文件路径
 
 export default {
   props: ['id'],
@@ -162,6 +206,19 @@ export default {
       newComment: '',
       showDeleteModal: false,
       deleteTarget: null,
+
+      // 举报相关
+      reportDialogVisible: false,
+      reportSubmitting: false,
+      reportForm: {
+        reportContent: '',
+      },
+      reportRules: {
+        reportContent: [
+          { required: true, message: '请输入举报原因', trigger: 'blur' },
+          { min: 10, message: '举报原因至少需要10个字符', trigger: 'blur' },
+        ],
+      },
     };
   },
   created() {
@@ -254,6 +311,48 @@ export default {
       });
       this.post.comments++;
       this.newComment = '';
+    },
+
+    // 打开举报弹窗
+    openReportDialog() {
+      this.reportDialogVisible = true;
+      this.reportForm.reportContent = '';
+    },
+
+    // 提交举报
+    async submitReport() {
+      this.$refs.reportForm.validate(async (valid) => {
+        if (valid) {
+          this.reportSubmitting = true;
+          try {
+            const currentTime = new Date().toISOString();
+            const reportload = {
+              reporterName: this.$store.state.user.userName, // 举报人姓名
+              postAuthorName: this.post.authorName, // 帖子作者姓名
+              postId: this.id, // 帖子ID
+              reportTime: currentTime, // 举报时间
+              postTitle: this.post.title, // 帖子标题
+              reportContent: this.reportForm.reportContent, // 举报内容
+            };
+
+            console.log('举报提交的payload:', reportload);
+            const response = await apiReportCommunityPost(reportload);
+
+            if (response.data.success) {
+              this.$message.success('举报提交成功，我们会尽快处理');
+              this.reportDialogVisible = false;
+              this.reportForm.reportContent = '';
+            } else {
+              this.$message.error(response.data.message || '举报提交失败');
+            }
+          } catch (error) {
+            console.error('举报提交失败:', error);
+            this.$message.error('举报提交失败，请稍后重试');
+          } finally {
+            this.reportSubmitting = false;
+          }
+        }
+      });
     },
   },
 };
@@ -934,5 +1033,68 @@ export default {
   .fade-leave-to {
     opacity: 0;
   }
+}
+
+/* 举报按钮样式 */
+.report-btn {
+  color: #f56565 !important;
+  border-color: transparent !important;
+}
+
+.report-btn:hover {
+  background-color: #fee2e2 !important;
+  color: #dc2626 !important;
+}
+
+/* 举报弹窗样式 */
+.report-dialog .el-dialog__header {
+  background-color: #f8f9fa;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.report-dialog .el-dialog__title {
+  color: #1a1a1a;
+  font-weight: 600;
+}
+
+.report-form {
+  padding: 20px 0;
+}
+
+.report-post-title {
+  margin-bottom: 20px;
+  padding: 15px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  border-left: 4px solid #007bff;
+}
+
+.report-post-title .label {
+  color: #666;
+  font-size: 14px;
+  margin-right: 8px;
+}
+
+.report-post-title .post-title {
+  color: #1a1a1a;
+  font-weight: 500;
+  font-size: 16px;
+}
+
+.report-dialog .el-textarea__inner {
+  min-height: 100px !important;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+}
+
+.report-dialog .el-textarea__inner:focus {
+  border-color: #007bff;
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+.report-dialog .dialog-footer {
+  text-align: right;
+  padding-top: 20px;
+  border-top: 1px solid #e9ecef;
 }
 </style>
