@@ -327,15 +327,15 @@ export default {
           try {
             const currentTime = new Date().toISOString();
             const reportload = {
-              reporterName: this.$store.state.user.userName, // 举报人姓名
-              postAuthorName: this.post.authorName, // 帖子作者姓名
               postId: this.id, // 帖子ID
-              reportTime: currentTime, // 举报时间
               postTitle: this.post.title, // 帖子标题
-              reportContent: this.reportForm.reportContent, // 举报内容
+              postAuthorName: this.post.authorName, // 帖子作者姓名
+              reportTime: currentTime, // 举报时间
+              reportReason: this.reportForm.reportContent, // 举报原因(至少10个字符)
+              reportContent: this.post.content,
             };
 
-            console.log('举报提交的payload:', reportload);
+            console.log('举报提交的reportload:', reportload);
             const response = await apiReportCommunityPost(reportload);
 
             if (response.data.success) {
