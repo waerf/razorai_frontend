@@ -661,16 +661,14 @@ export default {
             <p>💰 <strong>积分可用于：</strong></p>
             <ul>
               <li>🤖 订阅AI代理服务</li>
-              <li>� 使用AI聊天服务</li>
-              <li>�🛒 机器人市场消费</li>
-              <li>⭐ 解锁高级功能</li>
+              <li>⭐ 续订机器人</li>
             </ul>
             <br>
             <p>💡 <strong>如何获取积分：</strong></p>
             <ul>
-              <li>🎁 新用户注册：+100积分</li>
-              <li>🤖 创建AI代理：+200积分</li>
-              <li>� 充值购买：直接获得积分</li>
+              <li>🎁 新用户注册</li>
+              <li>🤖 创建AI代理</li>
+              <li>� 充值购买</li>
             </ul>
             <br>
             <p style="color: #909399; font-size: 12px;">
