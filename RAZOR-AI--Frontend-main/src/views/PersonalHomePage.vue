@@ -567,9 +567,10 @@ export default {
         .then(async () => {
           try {
             // 调用store中的logout action
-            await this.logout();
+            const result = await this.logout();
 
-            this.$message.success('已成功退出登录');
+            // 显示logout action返回的消息
+            this.$message.success(result.message || '已成功退出登录');
 
             // 跳转到登录页面或首页
             this.$router.push('/').catch(() => {
@@ -657,27 +658,36 @@ export default {
         title: '积分用途',
         message: `
           <div>
-            <p>� <strong>积分可用于：</strong></p>
+            <p>💰 <strong>积分可用于：</strong></p>
             <ul>
-              <li>🤖 购买机器人功能</li>
-              <li>🛒 机器人市场消费</li>
-              <li>⭐ 解锁高级机器人</li>
+              <li>🤖 订阅AI代理服务</li>
+              <li>⭐ 续订机器人</li>
             </ul>
             <br>
-            <p>�💡 <strong>如何获取积分：</strong></p>
+            <p>💡 <strong>如何获取积分：</strong></p>
             <ul>
-              <li>🤖 创建机器人：+50积分</li>
-              <li>💬 发表评论：+10积分</li>
-              <li>👍 获得点赞：+5积分</li>
-              <li>📝 发表文章：+30积分</li>
-              <li>📅 每日签到：+10积分</li>
+              <li>🎁 新用户注册</li>
+              <li>🤖 创建AI代理</li>
+              <li>� 充值购买</li>
             </ul>
+            <br>
+            <p style="color: #909399; font-size: 12px;">
+              💡 提示：积分实时到账，可在积分明细中查看详细记录
+            </p>
           </div>
         `,
         dangerouslyUseHTMLString: true,
         showCancelButton: false,
         confirmButtonText: '知道了',
-      });
+      })
+        .then(() => {
+          // 用户点击确定按钮
+          console.log('用户查看了积分说明');
+        })
+        .catch(() => {
+          // 用户点击X按钮或按ESC键关闭弹窗
+          console.log('用户关闭了积分说明弹窗');
+        });
     },
 
     // 编辑用户信息相关方法
@@ -1096,8 +1106,10 @@ export default {
 
 .user-details {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 15px;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+  max-width: 800px;
+  column-gap: 40px;
 }
 
 .info-item {
@@ -1108,17 +1120,23 @@ export default {
   background: #f8f9fa;
   border-radius: 6px;
   border: 1px solid #e4e7ed;
+  width: 100%;
+  max-width: 100%;
 }
 
 .label {
   font-weight: bold;
   color: #606266;
-  min-width: 80px;
+  min-width: 70px;
+  flex-shrink: 0;
 }
 
 .value {
   color: #303133;
   flex: 1;
+  min-width: 0;
+  word-break: break-all;
+  overflow-wrap: break-word;
 }
 
 .profile-text {
@@ -1129,6 +1147,7 @@ export default {
   text-overflow: ellipsis;
   display: -webkit-box;
   -webkit-line-clamp: 3;
+  line-clamp: 3;
   -webkit-box-orient: vertical;
 }
 

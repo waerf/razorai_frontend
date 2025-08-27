@@ -78,6 +78,84 @@
             </div>
           </div>
         </section>
+
+        <!-- 评论区 -->
+        <section class="comments-section">
+          <h3 class="comments-title">评论 ({{ totalComments }})</h3>
+
+          <!-- 评论输入框 -->
+          <div class="comment-input" v-if="isLoggedIn">
+            <textarea
+              v-model="newComment"
+              class="comment-textarea"
+              placeholder="写下你的评论..."
+              @keydown.ctrl.enter="publishComment"
+            ></textarea>
+            <button
+              class="publish-comment"
+              @click="publishComment"
+              :disabled="!newComment.trim() || isSubmittingComment"
+            >
+              {{ isSubmittingComment ? '发布中...' : '发布评论' }}
+            </button>
+          </div>
+
+          <!-- 未登录提示 -->
+          <div v-else class="login-prompt">
+            <p>请先登录后再发表评论</p>
+            <button class="login-btn" @click="$router.push('/login')">
+              立即登录
+            </button>
+          </div>
+
+          <!-- 评论列表 -->
+          <div v-if="isLoadingComments" class="loading-comments">
+            正在加载评论...
+          </div>
+
+          <div v-else-if="comments.length === 0" class="no-comments">
+            暂无评论，来发表第一条评论吧！
+          </div>
+
+          <div v-else class="comments-list">
+            <div
+              v-for="comment in comments"
+              :key="comment.id"
+              class="comment-item"
+            >
+              <img
+                :src="comment.avatar || defaultAvatar"
+                :alt="comment.author"
+                class="comment-avatar"
+              />
+              <div class="comment-content">
+                <div class="comment-header">
+                  <div class="comment-author">{{ comment.author }}</div>
+                  <div class="comment-time">
+                    {{ formatTime(comment.createdAt) }}
+                  </div>
+                </div>
+                <div class="comment-text">{{ comment.commentContent }}</div>
+                <div class="comment-actions">
+                  <button
+                    v-if="comment.userId === currentUserId"
+                    class="delete-comment-btn"
+                    @click="confirmDeleteComment(comment)"
+                  >
+                    <i class="fa fa-trash"></i> 删除
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 加载更多按钮 -->
+          <div v-if="hasMoreComments" class="load-more-comments">
+            <button class="secondary-btn" @click="loadMoreComments">
+              加载更多评论
+            </button>
+          </div>
+        </section>
       </div>
     </main>
 
@@ -158,11 +236,25 @@
 <script>
 import {
   getCommunityPostDetail,
+  getCommunityPostComments,
+  getCommunityCommentCount,
+  createCommunityComment,
+  deleteCommunityComment,
   reportCommunityPost as apiReportCommunityPost,
 } from '@/utils/api'; // 你的api文件路径
+import { mapState } from 'vuex';
 
 export default {
   props: ['id'],
+  computed: {
+    ...mapState('user', ['userId', 'userName', 'isLoggedIn']),
+    currentUserId() {
+      return this.userId;
+    },
+    defaultAvatar() {
+      return 'https://picsum.photos/id/1000/40/40';
+    },
+  },
   data() {
     return {
       // 帖子数据（初始化空，等API填充）
@@ -181,29 +273,15 @@ export default {
         content: '',
       },
 
-      // 当前用户信息（写评论时需要）
-      currentUser: {
-        avatar: 'https://picsum.photos/id/1000/40/40',
-        name: '测试用户',
-      },
-
-      // 评论数据（先假数据）
-      comments: [
-        {
-          avatar: 'https://picsum.photos/id/1012/40/40',
-          author: '李华',
-          time: '1小时前',
-          content: '非常实用的方法！',
-          likes: 15,
-          liked: false,
-          isMine: false,
-          replies: [],
-          showReplyBox: false,
-          replyText: '',
-        },
-      ],
-
+      // 评论相关数据
+      comments: [],
+      totalComments: 0,
       newComment: '',
+      isLoadingComments: false,
+      isSubmittingComment: false,
+      hasMoreComments: false,
+
+      // 弹窗相关
       showDeleteModal: false,
       deleteTarget: null,
 
@@ -224,6 +302,8 @@ export default {
   created() {
     if (this.id) {
       this.loadPostData(this.id);
+      this.loadComments(this.id);
+      this.loadCommentCount(this.id);
     } else {
       console.error('无法获取帖子ID');
       this.$router.push('/community');
@@ -233,9 +313,13 @@ export default {
     $route(to) {
       if (to.name === 'PostDetail') {
         this.loadPostData(to.params.id);
+        this.loadComments(to.params.id);
+        this.loadCommentCount(to.params.id);
       } else {
         // 如果跳到别的页面（非帖子详情），就清空当前内容，避免页面残留
         this.post = { title: '', content: '' };
+        this.comments = [];
+        this.totalComments = 0;
       }
     },
   },
@@ -276,7 +360,7 @@ export default {
           title: contentObj.title || '未命名帖子',
           tags: contentObj.tags || [],
           likes: 0,
-          comments: 0,
+          comments: this.totalComments, // 使用实际的评论数
           bookmarks: 0,
           views: 0,
           content: contentObj.content || '', // 详情页显示正文
@@ -291,26 +375,186 @@ export default {
     likePost() {
       this.post.likes++;
     },
+
     bookmarkPost() {
       this.post.bookmarks++;
     },
 
-    publishComment() {
-      if (!this.newComment.trim()) return;
-      this.comments.unshift({
-        avatar: this.currentUser.avatar,
-        author: this.currentUser.name,
-        time: '刚刚',
-        content: this.newComment,
-        likes: 0,
-        liked: false,
-        isMine: true,
-        replies: [],
-        showReplyBox: false,
-        replyText: '',
-      });
-      this.post.comments++;
-      this.newComment = '';
+    // 加载评论列表
+    async loadComments(postId) {
+      if (!postId) return;
+
+      this.isLoadingComments = true;
+      try {
+        const response = await getCommunityPostComments(postId);
+        console.log('评论列表响应:', response);
+
+        if (response.data && response.data.comments) {
+          this.comments = response.data.comments.map((comment) => ({
+            ...comment,
+            author: comment.userId ? `用户${comment.userId}` : '匿名用户',
+            avatar: this.defaultAvatar,
+          }));
+        } else {
+          this.comments = [];
+        }
+      } catch (error) {
+        console.error('加载评论失败:', error);
+        this.comments = [];
+        this.$message?.error('加载评论失败，请稍后重试');
+      } finally {
+        this.isLoadingComments = false;
+      }
+    },
+
+    // 加载评论数量
+    async loadCommentCount(postId) {
+      if (!postId) return;
+
+      try {
+        const response = await getCommunityCommentCount(postId);
+        console.log('评论数量响应:', response);
+
+        if (response.data && typeof response.data.commentCount === 'number') {
+          this.totalComments = response.data.commentCount;
+          this.post.comments = this.totalComments;
+        }
+      } catch (error) {
+        console.error('加载评论数量失败:', error);
+        this.totalComments = 0;
+      }
+    },
+
+    // 发布评论
+    async publishComment() {
+      if (!this.newComment.trim()) {
+        this.$message?.warning('评论内容不能为空');
+        return;
+      }
+
+      if (!this.isLoggedIn) {
+        this.$message?.warning('请先登录');
+        this.$router.push('/login');
+        return;
+      }
+
+      this.isSubmittingComment = true;
+      try {
+        const payload = {
+          userId: this.currentUserId,
+          commentContent: this.newComment.trim(),
+        };
+
+        console.log('发布评论请求:', payload);
+        const response = await createCommunityComment(this.id, payload);
+        console.log('发布评论响应:', response);
+
+        if (response.data && response.data.comment) {
+          // 添加新评论到列表顶部
+          const newComment = {
+            ...response.data.comment,
+            author: this.userName || `用户${this.currentUserId}`,
+            avatar: this.defaultAvatar,
+          };
+          this.comments.unshift(newComment);
+
+          // 更新评论数量
+          this.totalComments++;
+          this.post.comments = this.totalComments;
+
+          // 清空输入框
+          this.newComment = '';
+
+          this.$message?.success('评论发布成功');
+        }
+      } catch (error) {
+        console.error('发布评论失败:', error);
+        this.$message?.error('发布评论失败，请稍后重试');
+      } finally {
+        this.isSubmittingComment = false;
+      }
+    },
+
+    // 确认删除评论
+    confirmDeleteComment(comment) {
+      this.deleteTarget = { type: 'comment', data: comment };
+      this.showDeleteModal = true;
+    },
+
+    // 取消删除
+    cancelDelete() {
+      this.showDeleteModal = false;
+      this.deleteTarget = null;
+    },
+
+    // 执行删除
+    async confirmDelete() {
+      if (!this.deleteTarget || this.deleteTarget.type !== 'comment') {
+        return;
+      }
+
+      const comment = this.deleteTarget.data;
+
+      try {
+        const payload = {
+          userId: this.currentUserId,
+        };
+
+        console.log('删除评论请求:', comment.id, payload);
+        const response = await deleteCommunityComment(comment.id, payload);
+        console.log('删除评论响应:', response);
+
+        // 从列表中移除评论
+        const index = this.comments.findIndex((c) => c.id === comment.id);
+        if (index !== -1) {
+          this.comments.splice(index, 1);
+
+          // 更新评论数量
+          this.totalComments = Math.max(0, this.totalComments - 1);
+          this.post.comments = this.totalComments;
+        }
+
+        this.$message?.success('评论删除成功');
+      } catch (error) {
+        console.error('删除评论失败:', error);
+        this.$message?.error('删除评论失败，请稍后重试');
+      } finally {
+        this.cancelDelete();
+      }
+    },
+
+    // 加载更多评论（预留功能）
+    loadMoreComments() {
+      // TODO: 实现分页加载评论
+      console.log('加载更多评论');
+    },
+
+    // 格式化时间
+    formatTime(timeStr) {
+      if (!timeStr) return '';
+
+      try {
+        const time = new Date(timeStr);
+        const now = new Date();
+        const diff = now - time;
+
+        const minutes = Math.floor(diff / (1000 * 60));
+        const hours = Math.floor(diff / (1000 * 60 * 60));
+        const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+
+        if (minutes < 60) {
+          return minutes <= 0 ? '刚刚' : `${minutes}分钟前`;
+        } else if (hours < 24) {
+          return `${hours}小时前`;
+        } else if (days < 7) {
+          return `${days}天前`;
+        } else {
+          return time.toLocaleDateString('zh-CN');
+        }
+      } catch (error) {
+        console.error('时间格式化失败:', error);
+        return timeStr;
+      }
     },
 
     // 打开举报弹窗
@@ -685,6 +929,7 @@ export default {
   font-family: inherit;
   font-size: 14px;
   transition: border-color 0.2s ease;
+  box-sizing: border-box;
 }
 
 .comment-textarea:focus {
@@ -705,8 +950,56 @@ export default {
   margin-top: 12px;
 }
 
-.publish-comment:hover {
+.publish-comment:hover:not(:disabled) {
   background-color: #0a6fca;
+}
+
+.publish-comment:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+/* 未登录提示 */
+.login-prompt {
+  text-align: center;
+  padding: 20px;
+  background-color: #f8fafc;
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+
+.login-prompt p {
+  margin-bottom: 12px;
+  color: #666;
+}
+
+.login-btn {
+  background-color: #0f88eb;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 20px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.login-btn:hover {
+  background-color: #0a6fca;
+}
+
+/* 加载和空状态 */
+.loading-comments,
+.no-comments {
+  text-align: center;
+  padding: 20px;
+  color: #666;
+  font-size: 14px;
+}
+
+.no-comments {
+  background-color: #f8fafc;
+  border-radius: 8px;
 }
 
 .comments-list {
@@ -719,6 +1012,14 @@ export default {
 .comment-item {
   display: flex;
   gap: 12px;
+  padding: 16px;
+  background-color: #f8fafc;
+  border-radius: 8px;
+  transition: background-color 0.2s ease;
+}
+
+.comment-item:hover {
+  background-color: #f1f5f9;
 }
 
 .comment-avatar {
@@ -726,6 +1027,7 @@ export default {
   height: 40px;
   border-radius: 50%;
   object-fit: cover;
+  flex-shrink: 0;
 }
 
 .comment-content {
@@ -735,12 +1037,14 @@ export default {
 .comment-header {
   display: flex;
   justify-content: space-between;
-  margin-bottom: 6px;
+  align-items: center;
+  margin-bottom: 8px;
 }
 
 .comment-author {
   font-weight: 500;
   font-size: 14px;
+  color: #1a1a1a;
 }
 
 .comment-time {
@@ -753,6 +1057,7 @@ export default {
   font-size: 14px;
   line-height: 1.6;
   margin-bottom: 8px;
+  word-wrap: break-word;
 }
 
 .comment-actions {
@@ -769,6 +1074,7 @@ export default {
   font-size: 12px;
   display: flex;
   align-items: center;
+  gap: 4px;
 }
 
 .comment-action-btn:hover {

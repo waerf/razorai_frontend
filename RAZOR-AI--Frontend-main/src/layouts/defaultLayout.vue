@@ -320,6 +320,16 @@ export default {
       this.currentActiveTab = 'RAZOR-AI';
       this.navigation = 'RAZOR-AI';
     }
+
+    // 监听全局事件，用于打开登录弹窗
+    this.$root.$on('openLoginDialog', () => {
+      this.loginDialogVisible = true;
+    });
+  },
+
+  beforeDestroy() {
+    // 清除事件监听
+    this.$root.$off('openLoginDialog');
   },
   computed: {
     ...mapGetters('user', ['isLoggedIn', 'userId', 'userName']), // 映射 getters

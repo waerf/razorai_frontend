@@ -26,6 +26,18 @@ const Storage = {
       return dataStr;
     }
   },
+
+  // 获取原始数据（包含过期时间信息）
+  getRaw(key) {
+    const dataStr = localStorage.getItem(key);
+    if (!dataStr) return null;
+    try {
+      return JSON.parse(dataStr);
+    } catch (error) {
+      return null;
+    }
+  },
+
   remove(key) {
     localStorage.removeItem(key);
   },

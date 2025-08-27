@@ -526,6 +526,10 @@ export default {
             // 更新本地状态
             this.notifications[index].status = 1;
             this.notifications[index].clicked = true;
+
+            // 重新加载通知列表以更新计数
+            await this.loadUserNotifications();
+
             this.$message.success('通知已标记为已读');
           } else {
             console.error('标记通知已读失败:', response);
@@ -556,9 +560,8 @@ export default {
         console.log('删除通知响应:', response);
 
         if (response.status === 200) {
-          // 从本地列表中移除
-          this.notifications.splice(index, 1);
-          this.notificationCount = Math.max(0, this.notificationCount - 1);
+          // 重新加载通知列表以获取最新数据和计数
+          await this.loadUserNotifications();
           this.$message.success('通知已删除');
         } else {
           console.error('删除通知失败:', response);
@@ -573,7 +576,16 @@ export default {
     // 刷新通知列表（在路由变化时调用）
     async refreshNotifications() {
       if (this.isLoggedIn && this.userId) {
-        await this.loadUserNotifications();
+        try {
+          this.$message.info('正在刷新通知...');
+          await this.loadUserNotifications();
+          this.$message.success('通知已刷新');
+        } catch (error) {
+          console.error('刷新通知失败:', error);
+          this.$message.error('刷新通知失败，请稍后重试');
+        }
+      } else {
+        this.$message.warning('请先登录');
       }
     },
     // === 通知相关方法结束 ===
@@ -654,6 +666,34 @@ export default {
       flex: 1;
       max-width: 300px;
       min-width: 300px;
+      max-height: 20vh;
+      overflow-y: scroll;
+      background-color: white;
+
+      // 自定义滚动条样式
+      &::-webkit-scrollbar {
+        width: 10px;
+      }
+
+      &::-webkit-scrollbar-track {
+        background: white;
+        border-radius: 5px;
+        box-shadow: inset 0 0 1px rgba(0, 0, 0, 0.1);
+      }
+
+      &::-webkit-scrollbar-thumb {
+        background: #ccc;
+        border-radius: 5px;
+        border: 2px solid white;
+      }
+
+      &::-webkit-scrollbar-thumb:hover {
+        background: #aaa;
+      }
+
+      // 确保滚动条在各浏览器中都显示
+      scrollbar-width: thin;
+      scrollbar-color: #ccc white;
 
       // 占位通知区域样式
       &.placeholder-notification {
