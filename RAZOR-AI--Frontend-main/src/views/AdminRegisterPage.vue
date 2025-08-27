@@ -45,9 +45,9 @@
             prefix-icon="el-icon-lock"
           ></el-input>
         </el-form-item>
-        <el-form-item label="注册理由" prop="registerReason">
+        <el-form-item label="注册理由" prop="RegistrationReason">
           <el-input
-            v-model="registerForm.registerReason"
+            v-model="registerForm.RegistrationReason"
             type="textarea"
             placeholder="请填写注册理由"
             :rows="3"
@@ -81,7 +81,7 @@ export default {
         password: '',
         confirmPassword: '',
         phone: '',
-        registerReason: '',
+        RegistrationReason: '',
       },
       registerRules: {
         adminName: [
@@ -109,7 +109,7 @@ export default {
             trigger: ['blur', 'change'],
           },
         ],
-        registerReason: [
+        RegistrationReason: [
           { required: true, message: '请填写注册理由', trigger: 'blur' },
         ],
       },
@@ -132,7 +132,7 @@ export default {
               AdminName: this.registerForm.adminName,
               Email: this.registerForm.email,
               Password: this.registerForm.password,
-              RegisterReason: this.registerForm.registerReason,
+              RegistrationReason: this.registerForm.RegistrationReason,
             };
             if (this.registerForm.phone) {
               payload.Phone = this.registerForm.phone;
@@ -149,7 +149,7 @@ export default {
                 password: '',
                 confirmPassword: '',
                 phone: '',
-                registerReason: '',
+                RegistrationReason: '',
               };
             } else {
               this.$message.error(response.data.message || '注册失败');

@@ -1,7 +1,7 @@
 // utils/storage.js
 const Storage = {
-  set(key, value, ttl = 3600000) {
-    // 默认过期时间为 1 小时
+  set(key, value, ttl = 7 * 24 * 60 * 60 * 1000) {
+    // 默认过期时间为 7 天
     const data = {
       value,
       expiry: ttl ? Date.now() + ttl : null, // 计算过期时间
