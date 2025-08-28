@@ -8,7 +8,7 @@ import axios from 'axios';
 import MyStorage from './storage'; // 引入 Storage 工具类
 
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: 'http://localhost:5253',
   timeout: 5000,
 });
 
@@ -532,7 +532,7 @@ export const deleteCommunityComment = (commentId, payload) =>
 
 // 举报帖子
 export const reportCommunityPost = (reportload) =>
-  api.post(`/community/posts/${reportload.postId}/report`, reportload, {
+  api.post(`/api/PostReport/create`, reportload, {
     headers: { skipAuth: false },
   });
 
