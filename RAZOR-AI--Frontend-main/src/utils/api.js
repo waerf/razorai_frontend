@@ -4,7 +4,7 @@ import axios from 'axios';
 import MyStorage from './storage'; // 引入 Storage 工具类
 
 const api = axios.create({
-  baseURL: 'http://47.99.66.142:5253',
+  baseURL: '/api',
   timeout: 5000,
 });
 
