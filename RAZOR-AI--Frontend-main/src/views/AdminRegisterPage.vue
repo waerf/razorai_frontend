@@ -137,10 +137,9 @@ export default {
             if (this.registerForm.phone) {
               payload.Phone = this.registerForm.phone;
             }
-            const response = await this.$axios.post(
-              'http://47.99.66.142:5253/api/admin/register',
-              payload
-            );
+            // 调用api.js中的adminRegister方法
+            const { adminRegister } = await import('@/utils/api');
+            const response = await adminRegister(payload);
             if (response.data.success) {
               this.$message.success(response.data.message || '注册成功');
               this.registerForm = {

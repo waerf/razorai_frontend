@@ -244,6 +244,7 @@ import {
   adminLogout,
   getAdminInfo,
   fetchRecentFeedbacks,
+  fetchAllFeedbacks,
 } from '@/utils/api';
 
 export default {
@@ -290,33 +291,36 @@ export default {
       feedbackTotal: 0,
       async fetchRecentFeedbacks() {
         try {
+          // 获取最新两条用于展示
           const res = await fetchRecentFeedbacks();
           if (res && res.data && Array.isArray(res.data.feedbacks)) {
-            // 适配后端字段到前端展示结构
             this.recentFeedbacks = res.data.feedbacks.map((fb) => ({
               id: fb.id,
               user: fb.userName || `用户${fb.userId}`,
               time: fb.time,
               content: fb.feedback,
             }));
-            // 获取全部反馈数量（如果后端返回了total字段，优先用total，否则尝试用feedbacksAll或feedbacks的长度）
-            if (typeof res.data.total === 'number') {
-              this.feedbackTotal = res.data.total;
-            } else if (Array.isArray(res.data.feedbacksAll)) {
-              this.feedbackTotal = res.data.feedbacksAll.length;
-            } else if (Array.isArray(res.data.feedbacks)) {
-              this.feedbackTotal = res.data.feedbacks.length;
-            } else {
-              this.feedbackTotal = 0;
-            }
           } else {
             this.recentFeedbacks = [];
-            this.feedbackTotal = 0;
           }
         } catch (err) {
           this.recentFeedbacks = [];
-          this.feedbackTotal = 0;
           this.$message.error(err.message || '获取最新用户反馈失败');
+        }
+      },
+      async fetchAllFeedbackTotal() {
+        try {
+          const res = await fetchAllFeedbacks();
+          if (res && res.data && Array.isArray(res.data.feedbacks)) {
+            // 只统计未处理的反馈数量（假设有status字段，未处理为pending或未读）
+            this.feedbackTotal = res.data.feedbacks.filter(
+              (fb) => !fb.state || fb.state === '0'
+            ).length;
+          } else {
+            this.feedbackTotal = 0;
+          }
+        } catch (err) {
+          this.feedbackTotal = 0;
         }
       },
     };
@@ -432,6 +436,7 @@ export default {
     this.fetchPendingRobots();
     this.fetchAdminInfo();
     this.fetchRecentFeedbacks();
+    this.fetchAllFeedbackTotal();
   },
 };
 </script>

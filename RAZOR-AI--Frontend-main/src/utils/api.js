@@ -1,3 +1,7 @@
+// 管理员注册
+export const adminRegister = (payload) => {
+  return adminApi.post('/api/admin/register', payload);
+};
 // src/utils/api.js
 //api.js 文件用于封装 API 请求，方便在项目中进行统一管理和调用。
 import axios from 'axios';
