@@ -312,7 +312,7 @@ export default {
         try {
           const res = await fetchAllFeedbacks();
           if (res && res.data && Array.isArray(res.data.feedbacks)) {
-            // 只统计未处理的反馈数量（假设有status字段，未处理为pending或未读）
+            // 只统计未处理的反馈数量（state字段未处理为0）
             this.feedbackTotal = res.data.feedbacks.filter(
               (fb) => !fb.state || fb.state === '0'
             ).length;
