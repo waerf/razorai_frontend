@@ -361,14 +361,14 @@ export const getAdminInfo = () => {
 
 // 根据用户ID获取该用户所有反馈
 export const fetchUserFeedbacks = (userId) => {
-  return api.get(`/feedback/user/${userId}`, {
+  return adminApi.get(`/feedback/user/${userId}`, {
     headers: { Accept: 'application/json', skipAuth: true },
   });
 };
 
 // 更新用户反馈状态（如标记为已处理）
 export const updateFeedbackState = (feedbackId) => {
-  return api.put('/feedback/update-state', { FeedbackId: feedbackId });
+  return adminApi.put('/feedback/update-state', { FeedbackId: feedbackId });
 };
 
 // 根据用户id获取对应通知
