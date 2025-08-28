@@ -144,6 +144,13 @@
                   >
                     <i class="fa fa-trash"></i> 删除
                   </button>
+                  <button
+                    v-if="comment.userId !== currentUserId"
+                    class="report-comment-btn"
+                    @click="openReportCommentDialog(comment)"
+                  >
+                    <i class="el-icon-warning-outline"></i> 举报
+                  </button>
                 </div>
               </div>
             </div>
@@ -230,6 +237,54 @@
         >
       </span>
     </el-dialog>
+
+    <!-- 评论举报弹窗 -->
+    <el-dialog
+      title="举报评论"
+      :visible.sync="reportCommentDialogVisible"
+      width="500px"
+      :close-on-click-modal="false"
+      class="report-dialog"
+    >
+      <div class="report-form">
+        <div class="report-comment-info">
+          <span class="label">举报：</span>
+          <span class="comment-author-name">{{
+            reportTargetComment?.author
+          }}</span>
+          <span class="comment-content-preview">{{
+            reportTargetComment?.commentContent
+          }}</span>
+        </div>
+        <el-form
+          :model="reportCommentForm"
+          :rules="reportCommentRules"
+          ref="reportCommentForm"
+          label-width="80px"
+        >
+          <el-form-item label="举报原因" prop="reportReason">
+            <el-input
+              type="textarea"
+              v-model="reportCommentForm.reportReason"
+              placeholder="请描述举报原因..."
+              :rows="4"
+              maxlength="500"
+              show-word-limit
+            >
+            </el-input>
+          </el-form-item>
+        </el-form>
+      </div>
+      <span slot="footer" class="dialog-footer">
+        <el-button @click="reportCommentDialogVisible = false">取消</el-button>
+        <el-button
+          type="primary"
+          @click="submitCommentReport"
+          :loading="reportCommentSubmitting"
+          >提交举报</el-button
+        >
+      </span>
+    </el-dialog>
   </div>
 </template>
 
@@ -241,6 +296,7 @@ import {
   createCommunityComment,
   deleteCommunityComment,
   reportCommunityPost as apiReportCommunityPost,
+  reportCommunityComment as apiReportCommunityComment,
 } from '@/utils/api'; // 你的api文件路径
 import { mapState } from 'vuex';
 
@@ -293,6 +349,20 @@ export default {
       },
       reportRules: {
         reportContent: [
+          { required: true, message: '请输入举报原因', trigger: 'blur' },
+          { min: 10, message: '举报原因至少需要10个字符', trigger: 'blur' },
+        ],
+      },
+
+      // 评论举报相关
+      reportCommentDialogVisible: false,
+      reportCommentSubmitting: false,
+      reportTargetComment: null,
+      reportCommentForm: {
+        reportReason: '',
+      },
+      reportCommentRules: {
+        reportReason: [
           { required: true, message: '请输入举报原因', trigger: 'blur' },
           { min: 10, message: '举报原因至少需要10个字符', trigger: 'blur' },
         ],
@@ -576,7 +646,7 @@ export default {
               postAuthorName: this.post.authorName, // 帖子作者姓名
               reportTime: currentTime, // 举报时间
               reportReason: this.reportForm.reportContent, // 举报原因(至少10个字符)
-              reportContent: this.post.content,
+              reportContent: this.post.content, //帖子内容
             };
 
             console.log('举报提交的reportload:', reportload);
@@ -594,6 +664,49 @@ export default {
             this.$message.error('举报提交失败，请稍后重试');
           } finally {
             this.reportSubmitting = false;
+          }
+        }
+      });
+    },
+
+    // 打开评论举报弹窗
+    openReportCommentDialog(comment) {
+      this.reportTargetComment = comment;
+      this.reportCommentDialogVisible = true;
+      this.reportCommentForm.reportReason = '';
+    },
+
+    // 提交评论举报
+    async submitCommentReport() {
+      this.$refs.reportCommentForm.validate(async (valid) => {
+        if (valid) {
+          this.reportCommentSubmitting = true;
+          try {
+            const currentTime = new Date().toISOString();
+            const reportload = {
+              commentId: this.reportTargetComment.id,
+              reportReason: this.reportCommentForm.reportReason,
+              reportDetails: '',
+              reportContent: this.reportTargetComment.commentContent,
+              reportTime: currentTime,
+            };
+
+            console.log('评论举报提交的reportload:', reportload);
+            const response = await apiReportCommunityComment(reportload);
+
+            if (response.data.success) {
+              this.$message.success('举报提交成功，我们会尽快处理');
+              this.reportCommentDialogVisible = false;
+              this.reportCommentForm.reportReason = '';
+              this.reportTargetComment = null;
+            } else {
+              this.$message.error(response.data.message || '举报提交失败');
+            }
+          } catch (error) {
+            console.error('评论举报提交失败:', error);
+            this.$message.error('举报提交失败，请稍后重试');
+          } finally {
+            this.reportCommentSubmitting = false;
           }
         }
       });
@@ -1402,5 +1515,63 @@ export default {
   text-align: right;
   padding-top: 20px;
   border-top: 1px solid #e9ecef;
+}
+
+/* 评论举报按钮样式 */
+.report-comment-btn {
+  color: #f56565 !important;
+  border: none !important;
+  background: none !important;
+  padding: 4px 8px !important;
+  font-size: 12px !important;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all 0.3s ease;
+}
+
+.report-comment-btn:hover {
+  background-color: #fee2e2 !important;
+  color: #dc2626 !important;
+}
+
+/* 评论操作区域样式调整 */
+.comment-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  align-items: center;
+}
+
+/* 评论举报弹窗特定样式 */
+.report-comment-info {
+  margin-bottom: 20px;
+  padding: 15px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  border-left: 4px solid #f56565;
+}
+
+.report-comment-info .label {
+  color: #666;
+  font-size: 14px;
+  margin-right: 8px;
+}
+
+.report-comment-info .comment-author-name {
+  color: #1a1a1a;
+  font-weight: 500;
+  font-size: 16px;
+  margin-right: 8px;
+}
+
+.report-comment-info .comment-content-preview {
+  color: #555;
+  font-size: 14px;
+  font-style: italic;
+  display: block;
+  margin-top: 8px;
+  word-wrap: break-word;
+  max-height: 100px;
+  overflow-y: auto;
 }
 </style>

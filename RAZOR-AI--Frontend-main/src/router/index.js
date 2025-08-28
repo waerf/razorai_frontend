@@ -25,6 +25,7 @@ import ScoreMessage from '@/views/ScoreMessage.vue';
 import AdminPage from '@/views/AdminPage.vue';
 import AdminLogin from '@/views/AdminLoginPage.vue';
 import AdminFeedback from '@/views/AdminFeedbackPage.vue';
+import Editpost from '@/views/EditPostsPage.vue';
 
 Vue.use(VueRouter);
 
@@ -181,6 +182,13 @@ const routes = [
         name: 'PostDetail',
         component: PostDetail,
         meta: { title: '帖子详情' },
+        props: true,
+      },
+      {
+        path: 'community/editpost/:id',
+        name: 'EditPost',
+        component: Editpost,
+        meta: { title: '编辑帖子' },
         props: true,
       },
       {

@@ -479,6 +479,12 @@ export const deleteCommunityComment = (commentId, payload) =>
     headers: { skipAuth: false },
   });
 
+// 举报评论
+export const reportCommunityComment = (reportload) =>
+  api.post(`/api/CommentReport/create`, reportload, {
+    headers: { skipAuth: false },
+  });
+
 // 举报帖子
 export const reportCommunityPost = (reportload) =>
   api.post(`/community/posts/${reportload.postId}/report`, reportload, {
