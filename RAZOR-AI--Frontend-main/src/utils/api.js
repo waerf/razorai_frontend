@@ -13,7 +13,7 @@ const api = axios.create({
 });
 
 const adminApi = axios.create({
-  baseURL: 'http://47.99.66.142:5253',
+  baseURL: 'http://localhost:5253',
   timeout: 10000,
 });
 
@@ -200,6 +200,30 @@ export const getFeedbacks = () => {
 export const getPendingAdmins = () => {
   return adminApi.get('/api/admin/pending');
 };
+
+// ====================== 帖子举报相关（管理员）API ======================
+
+// 管理员获取举报列表
+export const getPostReportList = (params = {}) =>
+  adminApi.get('/api/PostReport/list', { params });
+
+// 管理员获取举报统计信息
+export const getPostReportStats = () => adminApi.get('/api/PostReport/stats');
+
+// 管理员审核举报
+export const reviewPostReport = ({ reportId, status, reviewComment = '' }) =>
+  adminApi.post(`/api/PostReport/review/${reportId}`, {
+    status,
+    reviewComment,
+  });
+
+// 管理员获取举报详情
+export const getPostReportDetail = (reportId) =>
+  adminApi.get(`/api/PostReport/${reportId}`);
+
+// 管理员获取待审核的帖子列表（AUDIT表）
+export const getPendingPostAudits = (params = {}) =>
+  adminApi.get('/api/PostReport/pending-audits', { params });
 
 // 管理员审核接口
 export function reviewAdmin({ adminId, status, reviewComment = '' }) {

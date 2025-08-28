@@ -216,7 +216,12 @@
 </template>
 
 <script>
-import { changeAdminPassword, adminLogout, getAdminInfo } from '@/utils/api';
+import {
+  changeAdminPassword,
+  adminLogout,
+  getAdminInfo,
+  getPendingPostAudits,
+} from '@/utils/api';
 export default {
   name: 'AdminPostReviewPage',
   data() {
@@ -254,38 +259,47 @@ export default {
       typeFilter: 'all',
       pageSize: 10,
       currentPage: 1,
-      posts: [
-        {
-          id: 1,
-          title: '违规内容举报',
-          subtitle: '举报用户ID:123456发布不当内容',
-          author: '李四',
-          time: '2025-07-15 14:30',
-          type: '举报内容',
-          status: 'pending',
-          selected: false,
-        },
-        {
-          id: 2,
-          title: '敏感词检测',
-          subtitle: '检测到敏感词"政治"',
-          author: '王五',
-          time: '2025-07-15 10:45',
-          type: '敏感词检测',
-          status: 'pending',
-          selected: false,
-        },
-        {
-          id: 3,
-          title: '关于机器人API的使用问题',
-          subtitle: '如何调用情感分析API?',
-          author: '赵六',
-          time: '2025-07-14 18:20',
-          type: '普通帖子',
-          status: 'approved',
-          selected: false,
-        },
-      ],
+      posts: [],
+      async fetchPendingPosts() {
+        try {
+          const res = await getPendingPostAudits({
+            page: this.currentPage,
+            pageSize: this.pageSize,
+          });
+          if (res.data && res.data.success) {
+            this.posts = (res.data.data || []).map((item) => ({
+              id: item.AuditId || item.auditId || item.id,
+              title: item.ReportReason || item.reportReason || '无标题',
+              subtitle: item.ReportDetails || item.reportDetails || '',
+              author: item.AdminName || item.adminName || '未知',
+              time: item.CreatedAt || item.createdAt || '',
+              type: '举报内容',
+              status: this.mapStatus(item.Status || item.status),
+              selected: false,
+              raw: item,
+            }));
+          } else {
+            this.$message.error(res.data.message || '获取待审核帖子失败');
+          }
+        } catch (err) {
+          this.$message.error(err.message || '获取待审核帖子失败');
+        }
+      },
+      mapStatus(status) {
+        switch (status) {
+          case 0:
+          case '0':
+            return 'pending';
+          case 1:
+          case '1':
+            return 'approved';
+          case 2:
+          case '2':
+            return 'rejected';
+          default:
+            return 'pending';
+        }
+      },
     };
   },
   computed: {
@@ -497,6 +511,7 @@ export default {
   },
   mounted() {
     this.fetchAdminInfo();
+    this.fetchPendingPosts();
   },
 };
 </script>
