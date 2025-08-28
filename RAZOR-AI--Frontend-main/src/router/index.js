@@ -295,6 +295,15 @@ const router = new VueRouter({
         requiresAdmin: true,
       },
     },
+    {
+      path: '/admin/post-report/:id',
+      name: 'AdminPostReviewDetail',
+      component: () => import('@/views/AdminPostReviewDetail.vue'),
+      meta: {
+        title: 'RazorAI-举报详情',
+        requiresAdmin: true,
+      },
+    },
   ],
 });
 

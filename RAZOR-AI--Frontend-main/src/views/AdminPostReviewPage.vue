@@ -139,12 +139,11 @@
             </div>
           </div>
 
-          <el-table :data="filteredPosts" style="width: 100%">
-            <el-table-column width="50">
-              <template #default="scope">
-                <el-checkbox v-model="scope.row.selected"></el-checkbox>
-              </template>
-            </el-table-column>
+          <el-table
+            :data="filteredPosts"
+            style="width: 100%"
+            @row-click="viewPost"
+          >
             <el-table-column label="帖子标题" width="300">
               <template #default="scope">
                 <p class="post-title">{{ scope.row.title }}</p>
@@ -173,27 +172,6 @@
                 </el-tag>
               </template>
             </el-table-column>
-            <el-table-column label="操作" width="200" align="right">
-              <template #default="scope">
-                <el-button type="text" @click="viewPost(scope.row)"
-                  >查看</el-button
-                >
-                <el-button
-                  type="text"
-                  @click="approvePost(scope.row)"
-                  :disabled="scope.row.status !== 'pending'"
-                >
-                  通过
-                </el-button>
-                <el-button
-                  type="text"
-                  @click="rejectPost(scope.row)"
-                  :disabled="scope.row.status !== 'pending'"
-                >
-                  拒绝
-                </el-button>
-              </template>
-            </el-table-column>
           </el-table>
 
           <!-- 分页 -->
@@ -220,7 +198,7 @@ import {
   changeAdminPassword,
   adminLogout,
   getAdminInfo,
-  getPendingPostAudits,
+  getPostReportList,
 } from '@/utils/api';
 export default {
   name: 'AdminPostReviewPage',
@@ -262,22 +240,34 @@ export default {
       posts: [],
       async fetchPendingPosts() {
         try {
-          const res = await getPendingPostAudits({
+          const res = await getPostReportList({
+            status: 0,
             page: this.currentPage,
             pageSize: this.pageSize,
           });
           if (res.data && res.data.success) {
-            this.posts = (res.data.data || []).map((item) => ({
-              id: item.AuditId || item.auditId || item.id,
-              title: item.ReportReason || item.reportReason || '无标题',
-              subtitle: item.ReportDetails || item.reportDetails || '',
-              author: item.AdminName || item.adminName || '未知',
-              time: item.CreatedAt || item.createdAt || '',
-              type: '举报内容',
-              status: this.mapStatus(item.Status || item.status),
-              selected: false,
-              raw: item,
-            }));
+            this.posts = (res.data.data || []).map((item) => {
+              let parsedTitle = {};
+              try {
+                parsedTitle =
+                  typeof item.postTitle === 'string'
+                    ? JSON.parse(item.postTitle)
+                    : item.postTitle || {};
+              } catch (e) {
+                parsedTitle = { title: item.postTitle || '无标题' };
+              }
+              return {
+                id: item.reportId || item.ReportId || item.id,
+                title: parsedTitle.title || '无标题',
+                subtitle: parsedTitle.content || item.reportReason || '',
+                author: parsedTitle.author || item.reporterName || '未知',
+                time: item.createdAt || item.CreatedAt || '',
+                type: '举报内容',
+                status: this.mapStatus(item.status || item.Status),
+                selected: false,
+                raw: item,
+              };
+            });
           } else {
             this.$message.error(res.data.message || '获取待审核帖子失败');
           }
@@ -416,8 +406,11 @@ export default {
       });
     },
     viewPost(post) {
-      // 查看帖子详情逻辑
-      console.log('查看帖子:', post);
+      // 跳转到举报详情页
+      this.$router.push({
+        name: 'AdminPostReviewDetail',
+        params: { id: post.id },
+      });
     },
     approvePost(post) {
       post.status = 'approved';
