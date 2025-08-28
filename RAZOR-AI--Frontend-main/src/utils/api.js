@@ -67,6 +67,26 @@ api.interceptors.response.use(
     if (error.response) {
       console.log('Error response in api.js:', error.response);
       const { status, data } = error.response;
+
+      // 处理token过期（401未授权）
+      if (status === 401) {
+        // 清除本地存储的token和用户信息
+        MyStorage.remove('token');
+        MyStorage.remove('user_id');
+        MyStorage.remove('userName');
+
+        // 如果在浏览器环境中，使用事件通知主应用处理登录状态
+        if (typeof window !== 'undefined') {
+          // 不直接跳转，而是触发全局事件让主应用处理
+          window.dispatchEvent(new CustomEvent('tokenExpired'));
+        }
+
+        return Promise.reject({
+          code: 401,
+          message: 'token已过期，请重新登录',
+        });
+      }
+
       return Promise.reject({ code: status, message: data.message }); // 返回错误状态码和消息
     } else if (error.request) {
       // 请求已发出但没有收到响应
@@ -101,6 +121,16 @@ export const register = (payload) =>
   api.post('/user/register', payload, {
     headers: { skipAuth: true }, // 跳过 Authorization 头
   });
+
+// 普通用户登出
+export const logout = (userId) =>
+  api.post(
+    '/user/logout',
+    { UserId: userId },
+    {
+      headers: { skipAuth: false }, // 需要 Authorization 头
+    }
+  );
 
 // 获取用户信息
 export const getUserInfo = (userId) => api.get(`/user/${userId}`);
@@ -399,6 +429,12 @@ export const updateFeedbackState = (feedbackId) => {
   return adminApi.put('/feedback/update-state', { FeedbackId: feedbackId });
 };
 
+// 发送用户反馈
+export const sendUserFeedback = (feedbackload) =>
+  api.post('/user/feedback', feedbackload, {
+    headers: { skipAuth: false },
+  });
+
 // 根据用户id获取对应通知
 export const getUserNotifications = (userId) =>
   api.get(`/notifications/${userId}`);
@@ -491,6 +527,12 @@ export const createCommunityComment = (postId, payload) =>
 export const deleteCommunityComment = (commentId, payload) =>
   api.delete(`/community/comments/${commentId}`, {
     data: payload, // DELETE 请求携带请求体
+    headers: { skipAuth: false },
+  });
+
+// 举报帖子
+export const reportCommunityPost = (reportload) =>
+  api.post(`/community/posts/${reportload.postId}/report`, reportload, {
     headers: { skipAuth: false },
   });
 

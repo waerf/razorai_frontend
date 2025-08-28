@@ -13,6 +13,9 @@
         placeholder="请输入用户名"
         class="register-input"
       ></el-input>
+      <div style="font-size: 12px; color: #909399; margin-top: 2px">
+        用户名只能包含字母、数字、下划线和中文，3-20个字符
+      </div>
     </el-form-item>
     <el-form-item label="密码" prop="Password">
       <el-input
@@ -94,6 +97,28 @@ export default {
             min: 3,
             max: 20,
             message: '用户名长度应为3-20个字符',
+            trigger: 'blur',
+          },
+          {
+            validator: (rule, value, callback) => {
+              if (!value) {
+                callback();
+                return;
+              }
+
+              // 用户名只允许字母、数字、下划线和中文
+              const usernamePattern = /^[a-zA-Z0-9_\u4e00-\u9fa5]{3,20}$/;
+
+              if (!usernamePattern.test(value)) {
+                callback(
+                  new Error(
+                    '用户名只能包含字母、数字、下划线和中文，不允许特殊字符（如@等）'
+                  )
+                );
+              } else {
+                callback();
+              }
+            },
             trigger: 'blur',
           },
         ],
@@ -190,8 +215,31 @@ export default {
           // 清空表单
           this.resetForm();
 
-          // 跳转到首页
-          this.$router.push('/');
+          // 检查当前路由，避免重复导航
+          if (this.$route.path === '/') {
+            // 如果已经在首页，直接打开登录弹窗
+            this.$nextTick(() => {
+              this.$root.$emit('openLoginDialog');
+            });
+          } else {
+            // 否则跳转到首页并打开登录弹窗
+            this.$router
+              .push('/')
+              .then(() => {
+                this.$nextTick(() => {
+                  this.$root.$emit('openLoginDialog');
+                });
+              })
+              .catch((err) => {
+                // 捕获重复导航错误，但仍然打开登录弹窗
+                if (err.name !== 'NavigationDuplicated') {
+                  console.error('路由跳转错误:', err);
+                }
+                this.$nextTick(() => {
+                  this.$root.$emit('openLoginDialog');
+                });
+              });
+          }
         } else {
           console.error('注册失败，错误信息:', result.message);
           throw new Error(result.message || '注册失败');
@@ -285,9 +333,66 @@ export default {
                 done(); // 关闭弹窗
                 resolve(); // 执行resolve，标记Promise完成
                 instance.confirmButtonLoading = false; // 恢复按钮状态
+
+                // 检查当前路由，避免重复导航
+                if (this.$route.path === '/') {
+                  // 如果已经在首页，直接打开登录弹窗
+                  this.$nextTick(() => {
+                    this.$root.$emit('openLoginDialog');
+                  });
+                } else {
+                  // 否则跳转到首页并打开登录弹窗
+                  this.$router
+                    .push('/')
+                    .then(() => {
+                      this.$nextTick(() => {
+                        this.$root.$emit('openLoginDialog');
+                      });
+                    })
+                    .catch((err) => {
+                      // 捕获重复导航错误，但仍然打开登录弹窗
+                      if (err.name !== 'NavigationDuplicated') {
+                        console.error('路由跳转错误:', err);
+                      }
+                      this.$nextTick(() => {
+                        this.$root.$emit('openLoginDialog');
+                      });
+                    });
+                }
               }, 500); // 延迟0.5秒，等待弹窗的用户交互
-            } else {
+            } else if (action === 'cancel' || action === 'close') {
+              // 用户点击X按钮或取消按钮也跳转到首页
               done();
+              resolve(); // 确保Promise正常完成
+              // 检查当前路由，避免重复导航
+              if (this.$route.path === '/') {
+                // 如果已经在首页，直接打开登录弹窗
+                this.$nextTick(() => {
+                  this.$root.$emit('openLoginDialog');
+                });
+              } else {
+                // 否则跳转到首页并打开登录弹窗
+                this.$router
+                  .push('/')
+                  .then(() => {
+                    this.$nextTick(() => {
+                      this.$root.$emit('openLoginDialog');
+                    });
+                  })
+                  .catch((err) => {
+                    // 捕获重复导航错误，但仍然打开登录弹窗
+                    if (err.name !== 'NavigationDuplicated') {
+                      console.error('路由跳转错误:', err);
+                    }
+                    this.$nextTick(() => {
+                      this.$root.$emit('openLoginDialog');
+                    });
+                  });
+              }
+            } else {
+              // 其他情况直接关闭
+              done();
+              resolve();
             }
           },
         });
