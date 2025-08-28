@@ -212,14 +212,14 @@ export const markFeedbackAsRead = (feedbackId) => {
 
 // 获取所有用户反馈（平台全部反馈）
 export const fetchAllFeedbacks = () => {
-  return api.get('/feedback/all', {
+  return adminApi.get('/feedback/all', {
     headers: { Accept: 'application/json', skipAuth: true },
   });
 };
 
 // 获取最近用户反馈（仅取最近2条）
 export const fetchRecentFeedbacks = () => {
-  return api
+  return adminApi
     .get('/feedback/all', {
       headers: { Accept: 'application/json', skipAuth: true },
     })
