@@ -100,7 +100,12 @@
         <template v-else>
           <!-- 统计卡片 -->
           <div class="stats-grid">
-            <el-card class="stat-card" shadow="hover">
+            <el-card
+              class="stat-card"
+              shadow="hover"
+              style="cursor: pointer"
+              @click.native="handleStatCardClick('/admin/review')"
+            >
               <div class="stat-content">
                 <div>
                   <p class="stat-label">待审核机器人</p>
@@ -112,11 +117,16 @@
               </div>
             </el-card>
 
-            <el-card class="stat-card" shadow="hover">
+            <el-card
+              class="stat-card"
+              shadow="hover"
+              style="cursor: pointer"
+              @click.native="handleStatCardClick('/admin/feedback')"
+            >
               <div class="stat-content">
                 <div>
                   <p class="stat-label">未处理反馈</p>
-                  <p class="stat-value">8</p>
+                  <p class="stat-value">{{ feedbackTotal }}</p>
                 </div>
                 <div class="stat-icon">
                   <i class="el-icon-chat-dot-round"></i>
@@ -124,7 +134,12 @@
               </div>
             </el-card>
 
-            <el-card class="stat-card" shadow="hover">
+            <el-card
+              class="stat-card"
+              shadow="hover"
+              style="cursor: pointer"
+              @click.native="handleStatCardClick('/admin/posts')"
+            >
               <div class="stat-content">
                 <div>
                   <p class="stat-label">待审核帖子</p>
@@ -227,7 +242,9 @@ import {
   changeAdminPassword,
   getPendingRobots,
   adminLogout,
-  getAdminInfo, // 新增获取管理员信息的API
+  getAdminInfo,
+  fetchRecentFeedbacks,
+  fetchAllFeedbacks,
 } from '@/utils/api';
 
 export default {
@@ -270,24 +287,48 @@ export default {
         { id: 1, name: '违规内容举报', time: '2025-07-15 14:30' },
         { id: 2, name: '敏感词检测', time: '2025-07-15 10:45' },
       ],
-      recentFeedbacks: [
-        {
-          id: 1,
-          user: '李四',
-          time: '2025-07-10 15:14',
-          content:
-            '机器人无法正确识别"退款"相关的问题，总是将用户引导到错误的页面。',
-        },
-        {
-          id: 2,
-          user: '王五',
-          time: '2025-07-09 16:53',
-          content: '数据分析机器人导出报表功能有时会出错。',
-        },
-      ],
+      recentFeedbacks: [],
+      feedbackTotal: 0,
+      async fetchRecentFeedbacks() {
+        try {
+          // 获取最新两条用于展示
+          const res = await fetchRecentFeedbacks();
+          if (res && res.data && Array.isArray(res.data.feedbacks)) {
+            this.recentFeedbacks = res.data.feedbacks.map((fb) => ({
+              id: fb.id,
+              user: fb.userName || `用户${fb.userId}`,
+              time: fb.time,
+              content: fb.feedback,
+            }));
+          } else {
+            this.recentFeedbacks = [];
+          }
+        } catch (err) {
+          this.recentFeedbacks = [];
+          this.$message.error(err.message || '获取最新用户反馈失败');
+        }
+      },
+      async fetchAllFeedbackTotal() {
+        try {
+          const res = await fetchAllFeedbacks();
+          if (res && res.data && Array.isArray(res.data.feedbacks)) {
+            // 只统计未处理的反馈数量（state字段未处理为0）
+            this.feedbackTotal = res.data.feedbacks.filter(
+              (fb) => !fb.state || fb.state === '0'
+            ).length;
+          } else {
+            this.feedbackTotal = 0;
+          }
+        } catch (err) {
+          this.feedbackTotal = 0;
+        }
+      },
     };
   },
   methods: {
+    handleStatCardClick(path) {
+      this.$router.push(path);
+    },
     async fetchAdminInfo() {
       try {
         const res = await getAdminInfo();
@@ -393,7 +434,9 @@ export default {
   },
   mounted() {
     this.fetchPendingRobots();
-    this.fetchAdminInfo(); // 新增调用获取管理员信息的方法
+    this.fetchAdminInfo();
+    this.fetchRecentFeedbacks();
+    this.fetchAllFeedbackTotal();
   },
 };
 </script>

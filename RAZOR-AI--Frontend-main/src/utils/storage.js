@@ -1,7 +1,7 @@
 // utils/storage.js
 const Storage = {
-  set(key, value, ttl = 3600000) {
-    // 默认过期时间为 1 小时
+  set(key, value, ttl = 7 * 24 * 60 * 60 * 1000) {
+    // 默认过期时间为 7 天
     const data = {
       value,
       expiry: ttl ? Date.now() + ttl : null, // 计算过期时间
@@ -26,6 +26,18 @@ const Storage = {
       return dataStr;
     }
   },
+
+  // 获取原始数据（包含过期时间信息）
+  getRaw(key) {
+    const dataStr = localStorage.getItem(key);
+    if (!dataStr) return null;
+    try {
+      return JSON.parse(dataStr);
+    } catch (error) {
+      return null;
+    }
+  },
+
   remove(key) {
     localStorage.removeItem(key);
   },

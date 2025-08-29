@@ -73,7 +73,9 @@
                 </a>
                 <a
                   class="action-link edit-link"
-                  @click.prevent="$router.push(`/edit-post/${post.id}`)"
+                  @click.prevent="
+                    $router.push(`/community/editpost/${post.id}`)
+                  "
                 >
                   <i class="fa fa-pencil mr-1.5"></i>
                   编辑帖子

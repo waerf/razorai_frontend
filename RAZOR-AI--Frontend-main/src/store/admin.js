@@ -20,7 +20,7 @@ const mutations = {
     state.adminName = adminName;
     state.isAdminLoggedIn = !!token;
 
-    const TTL = 1 * 24 * 60 * 60 * 1000; // 1天过期
+    const TTL = 7 * 24 * 60 * 60 * 1000; // 7天过期
     Storage.set('admin_token', token, TTL);
     Storage.set('admin_id', adminId, TTL);
     Storage.set('admin_name', adminName, TTL);

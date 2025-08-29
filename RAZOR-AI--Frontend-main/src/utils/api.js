@@ -9,7 +9,7 @@ const api = axios.create({
 });
 
 const adminApi = axios.create({
-  baseURL: 'http://localhost:5253',
+  baseURL: '/api',
   timeout: 10000,
 });
 
@@ -63,6 +63,26 @@ api.interceptors.response.use(
     if (error.response) {
       console.log('Error response in api.js:', error.response);
       const { status, data } = error.response;
+
+      // 处理token过期（401未授权）
+      if (status === 401) {
+        // 清除本地存储的token和用户信息
+        MyStorage.remove('token');
+        MyStorage.remove('user_id');
+        MyStorage.remove('userName');
+
+        // 如果在浏览器环境中，使用事件通知主应用处理登录状态
+        if (typeof window !== 'undefined') {
+          // 不直接跳转，而是触发全局事件让主应用处理
+          window.dispatchEvent(new CustomEvent('tokenExpired'));
+        }
+
+        return Promise.reject({
+          code: 401,
+          message: 'token已过期，请重新登录',
+        });
+      }
+
       return Promise.reject({ code: status, message: data.message }); // 返回错误状态码和消息
     } else if (error.request) {
       // 请求已发出但没有收到响应
@@ -97,6 +117,16 @@ export const register = (payload) =>
   api.post('/user/register', payload, {
     headers: { skipAuth: true }, // 跳过 Authorization 头
   });
+
+// 普通用户登出
+export const logout = (userId) =>
+  api.post(
+    '/user/logout',
+    { UserId: userId },
+    {
+      headers: { skipAuth: false }, // 需要 Authorization 头
+    }
+  );
 
 // 获取用户信息
 export const getUserInfo = (userId) => api.get(`/user/${userId}`);
@@ -163,6 +193,11 @@ export const deductUserPoints = (
     relatedId,
   });
 
+// 管理员注册
+export const adminRegister = (payload) => {
+  return adminApi.post('/api/admin/register', payload);
+};
+
 export const adminLogin = (data) => {
   return adminApi.post('/api/admin/login', data);
 };
@@ -197,13 +232,46 @@ export const getPendingAdmins = () => {
   return adminApi.get('/api/admin/pending');
 };
 
-// 管理员审核接口
-export function reviewAdmin({ adminId, status, reviewComment = '' }) {
-  return adminApi.post('/api/Admin/review', {
-    adminId,
+// ====================== 帖子举报相关（管理员）API ======================
+
+// 管理员获取举报列表
+export const getPostReportList = (params = {}) =>
+  adminApi.get('/api/PostReport/list', { params });
+
+// 管理员获取举报统计信息
+export const getPostReportStats = () => adminApi.get('/api/PostReport/stats');
+
+// 管理员审核举报
+export const reviewPostReport = ({ reportId, status, reviewComment = '' }) =>
+  adminApi.post(`/api/PostReport/review/${reportId}`, {
     status,
     reviewComment,
   });
+
+// 管理员获取举报详情
+export const getPostReportDetail = (reportId) =>
+  adminApi.get(`/api/PostReport/${reportId}`);
+
+// 管理员获取待审核的帖子列表（AUDIT表）
+export const getPendingPostAudits = (params = {}) =>
+  adminApi.get('/api/PostReport/pending-audits', { params });
+
+// 管理员审核接口
+// status: 1=通过, 2=拒绝
+export function reviewAdmin({ adminId, status, reviewComment = '' }) {
+  if (status === 1) {
+    // 通过
+    return adminApi.post(`/api/Admin/review/${adminId}/approve`, {
+      reviewComment,
+    });
+  } else if (status === 2) {
+    // 拒绝
+    return adminApi.post(`/api/Admin/review/${adminId}/reject`, {
+      reviewComment,
+    });
+  } else {
+    return Promise.reject({ code: 400, message: '未知的审核操作' });
+  }
 }
 // 获取待审核管理员列表
 export const markFeedbackAsRead = (feedbackId) => {
@@ -212,10 +280,29 @@ export const markFeedbackAsRead = (feedbackId) => {
 
 // 获取所有用户反馈（平台全部反馈）
 export const fetchAllFeedbacks = () => {
-  return api.get('/feedback/all', {
+  return adminApi.get('/feedback/all', {
     headers: { Accept: 'application/json', skipAuth: true },
   });
 };
+
+// 获取最近用户反馈（仅取最近2条）
+export const fetchRecentFeedbacks = () => {
+  return adminApi
+    .get('/feedback/all', {
+      headers: { Accept: 'application/json', skipAuth: true },
+    })
+    .then((res) => {
+      // 只返回前两条
+      if (res && res.data && Array.isArray(res.data.feedbacks)) {
+        return {
+          ...res,
+          data: { ...res.data, feedbacks: res.data.feedbacks.slice(0, 2) },
+        };
+      }
+      return res;
+    });
+};
+
 // 获取待审核机器人详情（通过审核记录ID）
 export const getPendingAgentDetail = (auditId) => {
   return adminApi.get(`/admin/agent-review/pending/${auditId}`);
@@ -297,7 +384,7 @@ export const startRobots = () =>
 
 // 审核机器人
 export const reviewAI = (payload) =>
-  api.post('/admin/agent-review/submit', payload, {
+  adminApi.post('/admin/agent-review/submit', payload, {
     headers: { skipAuth: false },
   });
 
@@ -343,14 +430,25 @@ export const getAdminInfo = () => {
 
 // 根据用户ID获取该用户所有反馈
 export const fetchUserFeedbacks = (userId) => {
-  return api.get(`/feedback/user/${userId}`, {
+  return adminApi.get(`/feedback/user/${userId}`, {
     headers: { Accept: 'application/json', skipAuth: true },
   });
 };
 
+// 更新用户反馈状态（如标记为已处理）
+export const updateFeedbackState = (feedbackId) => {
+  return adminApi.put('/feedback/update-state', { FeedbackId: feedbackId });
+};
+
+// 发送用户反馈
+export const sendUserFeedback = (feedbackload) =>
+  api.post('/user/feedback', feedbackload, {
+    headers: { skipAuth: false },
+  });
+
 // 根据用户id获取对应通知
 export const getUserNotifications = (userId) =>
-  api.get(`/notifications/${userId}`);
+  api.get(`/notifications/unread/${userId}`);
 
 // 根据通知id将通知标记为已读
 export const markNotificationAsRead = (notificationId) =>
@@ -399,6 +497,40 @@ export const getRecommendedRobots = (userId) =>
   });
 
 // ====================== 社区模块 API ======================
+// 点赞评论
+// POST http://localhost:5000/community/comments/{commentId}/like
+// payload: { userId }
+export const likeCommunityComment = (commentId, payload) =>
+  api.post(`/community/comments/${commentId}/like`, payload, {
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+      skipAuth: false,
+    },
+  });
+
+// 取消点赞评论
+// DELETE http://localhost:5000/community/comments/{commentId}/like
+// payload: { userId }
+export const cancelLikeCommunityComment = (commentId, payload) =>
+  api.delete(`/community/comments/${commentId}/like`, {
+    data: payload,
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+      skipAuth: false,
+    },
+  });
+
+// 获取评论点赞数量
+// GET http://localhost:5000/community/comments/{commentId}/likes/count
+export const getCommentLikeCount = (commentId) =>
+  api.get(`/community/comments/${commentId}/likes/count`, {
+    headers: {
+      Accept: 'application/json',
+      skipAuth: false,
+    },
+  });
 // 创建帖子
 export const createCommunityPost = (payload) =>
   api.post('/community/posts', payload, {
@@ -431,15 +563,39 @@ export const getCommunityUserPosts = (userId) =>
   });
 
 // 发布评论
+// 创建评论/回复评论
+// payload: { userId, commentContent, replyId? }
 export const createCommunityComment = (postId, payload) =>
   api.post(`/community/posts/${postId}/comments`, payload, {
-    headers: { skipAuth: false },
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+      skipAuth: false,
+    },
   });
 
 // 删除评论
+// 删除评论（逻辑删除）
+// payload: { userId }
 export const deleteCommunityComment = (commentId, payload) =>
   api.delete(`/community/comments/${commentId}`, {
-    data: payload, // DELETE 请求携带请求体
+    data: payload,
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+      skipAuth: false,
+    },
+  });
+
+// 举报评论
+export const reportCommunityComment = (reportload) =>
+  api.post(`/api/CommentReport/create`, reportload, {
+    headers: { skipAuth: false },
+  });
+
+// 举报帖子
+export const reportCommunityPost = (reportload) =>
+  api.post(`/api/PostReport/create`, reportload, {
     headers: { skipAuth: false },
   });
 
@@ -483,3 +639,40 @@ export const getRecommendedPosts = (count) =>
       headers: { skipAuth: true },
     }
   );
+
+// 获取某个评论的所有回复
+export const getCommentReplies = (commentId) =>
+  api.get(`/community/comments/${commentId}/replies`, {
+    headers: {
+      Accept: 'application/json',
+      skipAuth: true,
+    },
+  });
+
+// 获取被回复评论的发布者信息（@xxx）
+export const getRepliedCommentAuthor = (replyCommentId) =>
+  api.get(`/community/comments/${replyCommentId}/replied-author`, {
+    headers: {
+      Accept: 'application/json',
+      skipAuth: true,
+    },
+  });
+
+// 通过评论ID获取评论发布者的名字
+export const getCommentAuthorName = (commentId) =>
+  api.get(`/community/comments/${commentId}/author/name`, {
+    headers: {
+      Accept: 'application/json',
+      skipAuth: true,
+    },
+  });
+
+// 检查用户是否点赞了特定评论
+// 参数：commentId, userId
+// 返回：{ commentId, userId, isLiked, likeId }
+export const checkUserLikedComment = (commentId, userId) =>
+  api.get(`/community/comments/${commentId}/like/status/${userId}`, {
+    headers: {
+      Accept: 'application/json',
+    },
+  });
