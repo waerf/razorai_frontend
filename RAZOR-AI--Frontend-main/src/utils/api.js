@@ -384,7 +384,7 @@ export const startRobots = () =>
 
 // 审核机器人
 export const reviewAI = (payload) =>
-  api.post('/admin/agent-review/submit', payload, {
+  adminApi.post('/admin/agent-review/submit', payload, {
     headers: { skipAuth: false },
   });
 
