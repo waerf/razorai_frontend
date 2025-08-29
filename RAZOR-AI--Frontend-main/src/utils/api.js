@@ -8,12 +8,14 @@ import axios from 'axios';
 import MyStorage from './storage'; // 引入 Storage 工具类
 
 const api = axios.create({
-  baseURL: 'http://localhost:5253',
+  // baseURL: 'http://localhost:5253',
+  baseURL: 'http://47.99.66.142:5253',
   timeout: 5000,
 });
 
 const adminApi = axios.create({
-  baseURL: 'http://localhost:5253',
+  // baseURL: 'http://localhost:5253',
+  baseURL: 'http://47.99.66.142:5253',
   timeout: 10000,
 });
 
@@ -256,12 +258,21 @@ export const getPendingPostAudits = (params = {}) =>
   adminApi.get('/api/PostReport/pending-audits', { params });
 
 // 管理员审核接口
+// status: 1=通过, 2=拒绝
 export function reviewAdmin({ adminId, status, reviewComment = '' }) {
-  return adminApi.post('/api/Admin/review', {
-    adminId,
-    status,
-    reviewComment,
-  });
+  if (status === 1) {
+    // 通过
+    return adminApi.post(`/api/Admin/review/${adminId}/approve`, {
+      reviewComment,
+    });
+  } else if (status === 2) {
+    // 拒绝
+    return adminApi.post(`/api/Admin/review/${adminId}/reject`, {
+      reviewComment,
+    });
+  } else {
+    return Promise.reject({ code: 400, message: '未知的审核操作' });
+  }
 }
 // 获取待审核管理员列表
 export const markFeedbackAsRead = (feedbackId) => {
