@@ -75,7 +75,7 @@
                 autocomplete="off"
               />
             </el-form-item>
-            <el-form-item label="确认新密码" prop="confirmPwd">
+            <el-form-item label="确认密码" prop="confirmPwd">
               <el-input
                 v-model="pwdForm.confirmPwd"
                 type="password"
