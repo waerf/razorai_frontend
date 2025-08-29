@@ -103,9 +103,7 @@
         <!-- 未登录提示 -->
         <div v-else class="login-prompt">
           <p>请先登录后再发表评论</p>
-          <button class="login-btn" @click="$router.push('/login')">
-            立即登录
-          </button>
+          <button class="login-btn" @click="goToLoginDialog">立即登录</button>
         </div>
 
         <!-- 评论列表 -->
@@ -577,7 +575,7 @@ import {
   deleteCommunityComment,
   reportCommunityPost as apiReportCommunityPost,
   reportCommunityComment as apiReportCommunityComment,
-  getCommunityLikeCount as apiGetCommunityLikeCount,
+  //getCommunityLikeCount as apiGetCommunityLikeCount,
   getCommentReplies,
   getRepliedCommentAuthor,
   getCommentAuthorName,
@@ -591,9 +589,13 @@ import { mapState } from 'vuex';
 export default {
   props: ['id'],
   computed: {
-    ...mapState('user', ['userId', 'userName', 'isLoggedIn']),
+    ...mapState('user', ['userId', 'userName', 'token']),
     currentUserId() {
       return this.userId;
+    },
+    isLoggedIn() {
+      // 标准登录判断：token存在且userId为有效数字
+      return !!this.token && !!this.userId && !isNaN(Number(this.userId));
     },
     defaultAvatar() {
       return 'https://picsum.photos/id/1000/40/40';
@@ -701,6 +703,16 @@ export default {
   },
 
   methods: {
+    // 跳转首页并弹出登录弹窗
+    goToLoginDialog() {
+      if (this.$route.path !== '/') {
+        this.$router.push('/').then(() => {
+          this.$root.$emit && this.$root.$emit('openLoginDialog');
+        });
+      } else {
+        this.$root.$emit && this.$root.$emit('openLoginDialog');
+      }
+    },
     // 点赞/取消点赞评论或回复
     async toggleLikeComment(item) {
       if (!item || !item.id) {
@@ -710,7 +722,12 @@ export default {
       const commentId = Number(item.id);
       const userId = Number(this.currentUserId);
       if (!userId || isNaN(userId)) {
-        this.$message?.error('请先登录');
+        this.$message?.warning({
+          message: '请先登录',
+          type: 'warning',
+          iconClass: 'el-icon-warning-outline',
+          duration: 2000,
+        });
         return;
       }
       // 点赞前先用API实时检查状态，防止前端状态不同步
@@ -758,6 +775,15 @@ export default {
     },
     // 修复：回复楼层内回复按钮事件
     toggleReplyBoxInReply(replyId) {
+      if (!this.isLoggedIn) {
+        this.$message?.warning({
+          message: '请先登录',
+          type: 'warning',
+          iconClass: 'el-icon-warning-outline',
+          duration: 2000,
+        });
+        return;
+      }
       Object.keys(this.replyBoxVisible).forEach((key) => {
         this.$set(this.replyBoxVisible, key, false);
       });
@@ -1181,6 +1207,15 @@ export default {
     },
 
     toggleReplyBox(commentId) {
+      if (!this.isLoggedIn) {
+        this.$message?.warning({
+          message: '请先登录',
+          type: 'warning',
+          iconClass: 'el-icon-warning-outline',
+          duration: 2000,
+        });
+        return;
+      }
       // 只允许一个回复输入框
       Object.keys(this.replyBoxVisible).forEach((key) => {
         this.$set(this.replyBoxVisible, key, false);
