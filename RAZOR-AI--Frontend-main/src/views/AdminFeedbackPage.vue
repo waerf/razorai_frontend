@@ -120,10 +120,8 @@
                   <p class="text-sm text-gray-500">{{ feedback.createdAt }}</p>
                 </div>
                 <span
-                  class="feedback-status"
-                  :class="
-                    feedback.status === 'pending' ? 'pending' : 'resolved'
-                  "
+                  class="feedback-state"
+                  :class="{ processed: feedback.status === 'resolved' }"
                 >
                   {{ feedback.status === 'pending' ? '待处理' : '已解决' }}
                 </span>
@@ -441,5 +439,21 @@ export default {
       }
     }
   }
+}
+// 复用详情页的状态样式
+.feedback-state {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-size: 13px;
+  background: #f0f0f0;
+  color: #888;
+  margin-bottom: 8px;
+  border: 1px solid #e0e0e0;
+}
+.feedback-state.processed {
+  background: #e6f7e6;
+  color: #52c41a;
+  border: 1px solid #b7eb8f;
 }
 </style>

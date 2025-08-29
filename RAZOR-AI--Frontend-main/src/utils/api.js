@@ -9,7 +9,7 @@ const api = axios.create({
 });
 
 const adminApi = axios.create({
-  baseURL: 'http://localhost:5253',
+  baseURL: '/api',
   timeout: 10000,
 });
 
@@ -193,6 +193,11 @@ export const deductUserPoints = (
     relatedId,
   });
 
+// 管理员注册
+export const adminRegister = (payload) => {
+  return adminApi.post('/api/admin/register', payload);
+};
+
 export const adminLogin = (data) => {
   return adminApi.post('/api/admin/login', data);
 };
@@ -227,13 +232,46 @@ export const getPendingAdmins = () => {
   return adminApi.get('/api/admin/pending');
 };
 
-// 管理员审核接口
-export function reviewAdmin({ adminId, status, reviewComment = '' }) {
-  return adminApi.post('/api/Admin/review', {
-    adminId,
+// ====================== 帖子举报相关（管理员）API ======================
+
+// 管理员获取举报列表
+export const getPostReportList = (params = {}) =>
+  adminApi.get('/api/PostReport/list', { params });
+
+// 管理员获取举报统计信息
+export const getPostReportStats = () => adminApi.get('/api/PostReport/stats');
+
+// 管理员审核举报
+export const reviewPostReport = ({ reportId, status, reviewComment = '' }) =>
+  adminApi.post(`/api/PostReport/review/${reportId}`, {
     status,
     reviewComment,
   });
+
+// 管理员获取举报详情
+export const getPostReportDetail = (reportId) =>
+  adminApi.get(`/api/PostReport/${reportId}`);
+
+// 管理员获取待审核的帖子列表（AUDIT表）
+export const getPendingPostAudits = (params = {}) =>
+  adminApi.get('/api/PostReport/pending-audits', { params });
+
+// 管理员审核接口
+// status: 1=通过, 2=拒绝
+export function reviewAdmin({ adminId, status, reviewComment = '' }) {
+  if (status === 1) {
+    // 通过
+    return adminApi.post(`/api/Admin/review/${adminId}/approve`, {
+      reviewComment,
+    });
+  } else if (status === 2) {
+    // 拒绝
+    return adminApi.post(`/api/Admin/review/${adminId}/reject`, {
+      reviewComment,
+    });
+  } else {
+    return Promise.reject({ code: 400, message: '未知的审核操作' });
+  }
 }
 // 获取待审核管理员列表
 export const markFeedbackAsRead = (feedbackId) => {
@@ -242,10 +280,29 @@ export const markFeedbackAsRead = (feedbackId) => {
 
 // 获取所有用户反馈（平台全部反馈）
 export const fetchAllFeedbacks = () => {
-  return api.get('/feedback/all', {
+  return adminApi.get('/feedback/all', {
     headers: { Accept: 'application/json', skipAuth: true },
   });
 };
+
+// 获取最近用户反馈（仅取最近2条）
+export const fetchRecentFeedbacks = () => {
+  return adminApi
+    .get('/feedback/all', {
+      headers: { Accept: 'application/json', skipAuth: true },
+    })
+    .then((res) => {
+      // 只返回前两条
+      if (res && res.data && Array.isArray(res.data.feedbacks)) {
+        return {
+          ...res,
+          data: { ...res.data, feedbacks: res.data.feedbacks.slice(0, 2) },
+        };
+      }
+      return res;
+    });
+};
+
 // 获取待审核机器人详情（通过审核记录ID）
 export const getPendingAgentDetail = (auditId) => {
   return adminApi.get(`/admin/agent-review/pending/${auditId}`);
@@ -327,7 +384,7 @@ export const startRobots = () =>
 
 // 审核机器人
 export const reviewAI = (payload) =>
-  api.post('/admin/agent-review/submit', payload, {
+  adminApi.post('/admin/agent-review/submit', payload, {
     headers: { skipAuth: false },
   });
 
@@ -373,9 +430,14 @@ export const getAdminInfo = () => {
 
 // 根据用户ID获取该用户所有反馈
 export const fetchUserFeedbacks = (userId) => {
-  return api.get(`/feedback/user/${userId}`, {
+  return adminApi.get(`/feedback/user/${userId}`, {
     headers: { Accept: 'application/json', skipAuth: true },
   });
+};
+
+// 更新用户反馈状态（如标记为已处理）
+export const updateFeedbackState = (feedbackId) => {
+  return adminApi.put('/feedback/update-state', { FeedbackId: feedbackId });
 };
 
 // 发送用户反馈
