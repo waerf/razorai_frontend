@@ -78,92 +78,372 @@
             </div>
           </div>
         </section>
+      </div>
+      <!-- 评论区移到content-layout外部，紧跟帖子详情后面 -->
+      <section class="comments-section">
+        <h3 class="comments-title">评论 ({{ totalComments }})</h3>
 
-        <!-- 评论区 -->
-        <section class="comments-section">
-          <h3 class="comments-title">评论 ({{ totalComments }})</h3>
+        <!-- 评论输入框 -->
+        <div class="comment-input" v-if="isLoggedIn">
+          <textarea
+            v-model="newComment"
+            class="comment-textarea"
+            placeholder="写下你的评论..."
+            @keydown.ctrl.enter="publishComment"
+          ></textarea>
+          <button
+            class="publish-comment"
+            @click="publishComment"
+            :disabled="!newComment.trim() || isSubmittingComment"
+          >
+            {{ isSubmittingComment ? '发布中...' : '发布评论' }}
+          </button>
+        </div>
 
-          <!-- 评论输入框 -->
-          <div class="comment-input" v-if="isLoggedIn">
-            <textarea
-              v-model="newComment"
-              class="comment-textarea"
-              placeholder="写下你的评论..."
-              @keydown.ctrl.enter="publishComment"
-            ></textarea>
-            <button
-              class="publish-comment"
-              @click="publishComment"
-              :disabled="!newComment.trim() || isSubmittingComment"
-            >
-              {{ isSubmittingComment ? '发布中...' : '发布评论' }}
-            </button>
-          </div>
+        <!-- 未登录提示 -->
+        <div v-else class="login-prompt">
+          <p>请先登录后再发表评论</p>
+          <button class="login-btn" @click="$router.push('/login')">
+            立即登录
+          </button>
+        </div>
 
-          <!-- 未登录提示 -->
-          <div v-else class="login-prompt">
-            <p>请先登录后再发表评论</p>
-            <button class="login-btn" @click="$router.push('/login')">
-              立即登录
-            </button>
-          </div>
+        <!-- 评论列表 -->
+        <div v-if="isLoadingComments" class="loading-comments">
+          正在加载评论...
+        </div>
 
-          <!-- 评论列表 -->
-          <div v-if="isLoadingComments" class="loading-comments">
-            正在加载评论...
-          </div>
+        <div v-else-if="comments.length === 0" class="no-comments">
+          暂无评论，来发表第一条评论吧！
+        </div>
 
-          <div v-else-if="comments.length === 0" class="no-comments">
-            暂无评论，来发表第一条评论吧！
-          </div>
-
-          <div v-else class="comments-list">
+        <div v-else class="comments-list">
+          <div
+            v-for="comment in filteredComments"
+            :key="comment.id"
+            class="comment-item"
+            style="align-items: flex-start"
+          >
+            <img
+              :src="comment.avatar || defaultAvatar"
+              :alt="comment.author"
+              class="comment-avatar"
+              style="
+                width: 40px;
+                height: 40px;
+                object-fit: cover;
+                border-radius: 50%;
+                flex-shrink: 0;
+              "
+            />
             <div
-              v-for="comment in comments"
-              :key="comment.id"
-              class="comment-item"
+              class="comment-content"
+              style="
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+                align-items: flex-start;
+              "
             >
-              <img
-                :src="comment.avatar || defaultAvatar"
-                :alt="comment.author"
-                class="comment-avatar"
-              />
-              <div class="comment-content">
-                <div class="comment-header">
-                  <div class="comment-author">{{ comment.author }}</div>
-                  <div class="comment-time">
-                    {{ formatTime(comment.createdAt) }}
+              <div
+                style="
+                  display: flex;
+                  flex-direction: column;
+                  align-items: flex-start;
+                "
+              >
+                <span
+                  class="comment-author"
+                  style="
+                    font-weight: 600;
+                    color: #0f88eb;
+                    font-size: 15px;
+                    line-height: 1;
+                  "
+                >
+                  {{ comment.author }}
+                </span>
+                <span
+                  class="comment-time"
+                  style="
+                    color: #999;
+                    font-size: 12px;
+                    line-height: 1;
+                    margin-bottom: 2px;
+                  "
+                >
+                  {{ formatTime(comment.createdAt) }}
+                </span>
+              </div>
+              <div class="comment-text" style="margin-top: 4px">
+                {{ comment.commentContent }}
+              </div>
+              <!--
+              <div
+                style="
+                  background: #ffecec;
+                  color: #d00;
+                  font-size: 12px;
+                  padding: 4px 8px;
+                  margin: 4px 0;
+                  border-radius: 4px;
+                "
+              >
+                <strong>调试信息：</strong>
+                <pre
+                  style="
+                    white-space: pre-wrap;
+                    word-break: break-all;
+                    margin: 0;
+                  "
+                  >{{ comment }}\nAPI获取评论者名字: {{
+                    comment.debugAuthorName || comment.author
+                  }}</pre
+                >
+              </div>
+              -->
+              <div class="comment-actions">
+                <button
+                  v-if="comment.userId === currentUserId"
+                  class="delete-comment-btn"
+                  @click="confirmDeleteComment(comment)"
+                >
+                  <i class="fa fa-trash"></i> 删除
+                </button>
+                <button
+                  v-if="comment.userId !== currentUserId"
+                  class="report-comment-btn"
+                  @click="openReportCommentDialog(comment)"
+                >
+                  <i class="el-icon-warning-outline"></i> 举报
+                </button>
+                <button
+                  class="reply-comment-btn"
+                  @click="toggleReplyBox(comment.id)"
+                >
+                  回复
+                </button>
+                <button
+                  class="like-btn"
+                  @click="toggleLikeComment(comment)"
+                  style="
+                    margin-left: 8px;
+                    background: none;
+                    border: none;
+                    cursor: pointer;
+                  "
+                >
+                  <img
+                    :src="
+                      comment.likedByMe
+                        ? require('@/assets/images/community/like.png')
+                        : require('@/assets/images/community/like_empty.png')
+                    "
+                    alt="点赞"
+                    style="width: 20px; height: 20px; vertical-align: middle"
+                  />
+                  <span
+                    style="margin-left: 2px; font-size: 13px; color: #888"
+                    >{{ comment.likeCount || 0 }}</span
+                  >
+                </button>
+              </div>
+              <!-- 回复输入框 -->
+              <div v-if="replyBoxVisible[comment.id]" class="reply-input">
+                <textarea
+                  v-model="replyContent[comment.id]"
+                  class="comment-textarea"
+                  placeholder="回复内容..."
+                ></textarea>
+                <button
+                  class="publish-comment"
+                  @click="submitReply(comment)"
+                  :disabled="!replyContent[comment.id] || isSubmittingReply"
+                >
+                  {{ isSubmittingReply ? '发布中...' : '发布回复' }}
+                </button>
+              </div>
+              <!-- 回复列表（默认显示3条，超过3条可展开/收起） -->
+              <div
+                v-if="
+                  commentReplies[comment.id] &&
+                  commentReplies[comment.id].length
+                "
+                class="reply-list"
+              >
+                <div style="margin-bottom: 8px">
+                  <div
+                    v-for="reply in replyListExpanded[comment.id]
+                      ? commentReplies[comment.id]
+                      : commentReplies[comment.id].slice(0, 3)"
+                    :key="reply.id"
+                    class="reply-item"
+                    style="display: flex; align-items: flex-start"
+                  >
+                    <img
+                      :src="reply.avatar || defaultAvatar"
+                      :alt="reply.author"
+                      class="comment-avatar"
+                      style="
+                        width: 32px;
+                        height: 32px;
+                        margin-right: 8px;
+                        object-fit: cover;
+                        border-radius: 50%;
+                        flex-shrink: 0;
+                      "
+                    />
+                    <div style="flex: 1; display: flex; flex-direction: column">
+                      <div style="display: flex; align-items: flex-start">
+                        <div
+                          style="
+                            display: flex;
+                            flex-direction: column;
+                            align-items: flex-start;
+                          "
+                        >
+                          <span
+                            style="
+                              font-weight: 600;
+                              color: #0f88eb;
+                              font-size: 14px;
+                              line-height: 1;
+                            "
+                          >
+                            {{ reply.author }}
+                          </span>
+                          <span
+                            class="reply-time"
+                            style="
+                              color: #999;
+                              font-size: 12px;
+                              line-height: 1;
+                              margin-bottom: 2px;
+                            "
+                          >
+                            {{ formatTime(reply.createdAt) }}
+                          </span>
+                        </div>
+                      </div>
+                      <span class="reply-content" style="margin-top: 4px">{{
+                        reply.commentContent
+                      }}</span>
+                      <!--
+                      <div
+                        style="
+                          background: #ffecec;
+                          color: #d00;
+                          font-size: 12px;
+                          padding: 4px 8px;
+                          margin: 4px 0;
+                          border-radius: 4px;
+                        "
+                      >
+                        <strong>调试信息：</strong>
+                        <pre
+                          style="
+                            white-space: pre-wrap;
+                            word-break: break-all;
+                            margin: 0;
+                          "
+                          >{{ reply }}\nAPI获取评论者名字: {{
+                            reply.debugAuthorName || reply.author
+                          }}</pre
+                        >
+                      </div>
+                      -->
+                      <div class="comment-actions" style="margin-top: 4px">
+                        <button
+                          v-if="reply.userId === currentUserId"
+                          class="delete-comment-btn"
+                          @click="confirmDeleteComment(reply)"
+                        >
+                          <i class="fa fa-trash"></i> 删除
+                        </button>
+                        <button
+                          v-if="reply.userId !== currentUserId"
+                          class="report-comment-btn"
+                          @click="openReportCommentDialog(reply)"
+                        >
+                          <i class="el-icon-warning-outline"></i> 举报
+                        </button>
+                        <button
+                          class="reply-comment-btn"
+                          @click="toggleReplyBoxInReply(reply.id)"
+                        >
+                          回复
+                        </button>
+                        <button
+                          class="like-btn"
+                          @click="toggleLikeComment(reply)"
+                          style="
+                            margin-left: 8px;
+                            background: none;
+                            border: none;
+                            cursor: pointer;
+                          "
+                        >
+                          <img
+                            :src="
+                              reply.likedByMe
+                                ? require('@/assets/images/community/like.png')
+                                : require('@/assets/images/community/like_empty.png')
+                            "
+                            alt="点赞"
+                            style="
+                              width: 18px;
+                              height: 18px;
+                              vertical-align: middle;
+                            "
+                          />
+                          <span
+                            style="
+                              margin-left: 2px;
+                              font-size: 13px;
+                              color: #888;
+                            "
+                            >{{ reply.likeCount || 0 }}</span
+                          >
+                        </button>
+                      </div>
+                      <div v-if="replyBoxVisible[reply.id]" class="reply-input">
+                        <textarea
+                          v-model="replyContent[reply.id]"
+                          class="comment-textarea"
+                          placeholder="回复内容..."
+                        ></textarea>
+                        <button
+                          class="publish-comment"
+                          @click="submitReplyInReply(reply, comment.id)"
+                          :disabled="
+                            !replyContent[reply.id] || isSubmittingReply
+                          "
+                        >
+                          {{ isSubmittingReply ? '发布中...' : '发布回复' }}
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 </div>
-                <div class="comment-text">{{ comment.commentContent }}</div>
-                <div class="comment-actions">
-                  <button
-                    v-if="comment.userId === currentUserId"
-                    class="delete-comment-btn"
-                    @click="confirmDeleteComment(comment)"
-                  >
-                    <i class="fa fa-trash"></i> 删除
-                  </button>
-                  <button
-                    v-if="comment.userId !== currentUserId"
-                    class="report-comment-btn"
-                    @click="openReportCommentDialog(comment)"
-                  >
-                    <i class="el-icon-warning-outline"></i> 举报
-                  </button>
-                </div>
+                <button
+                  v-if="commentReplies[comment.id].length > 3"
+                  class="secondary-btn"
+                  @click="toggleReplyList(comment.id)"
+                >
+                  {{ replyListExpanded[comment.id] ? '收起' : '展开' }}
+                </button>
               </div>
             </div>
           </div>
+        </div>
 
-          <!-- 加载更多按钮 -->
-          <div v-if="hasMoreComments" class="load-more-comments">
-            <button class="secondary-btn" @click="loadMoreComments">
-              加载更多评论
-            </button>
-          </div>
-        </section>
-      </div>
+        <!-- 加载更多按钮 -->
+        <div v-if="hasMoreComments" class="load-more-comments">
+          <button class="secondary-btn" @click="loadMoreComments">
+            加载更多评论
+          </button>
+        </div>
+      </section>
     </main>
 
     <!-- 删除确认弹窗 -->
@@ -297,6 +577,14 @@ import {
   deleteCommunityComment,
   reportCommunityPost as apiReportCommunityPost,
   reportCommunityComment as apiReportCommunityComment,
+  getCommunityLikeCount as apiGetCommunityLikeCount,
+  getCommentReplies,
+  getRepliedCommentAuthor,
+  getCommentAuthorName,
+  likeCommunityComment,
+  cancelLikeCommunityComment,
+  getCommentLikeCount,
+  checkUserLikedComment,
 } from '@/utils/api'; // 你的api文件路径
 import { mapState } from 'vuex';
 
@@ -309,6 +597,10 @@ export default {
     },
     defaultAvatar() {
       return 'https://picsum.photos/id/1000/40/40';
+    },
+    filteredComments() {
+      // 只显示主评论（无replyId）
+      return this.comments.filter((c) => !c.replyId);
     },
   },
   data() {
@@ -354,6 +646,16 @@ export default {
         ],
       },
 
+      // 回复相关数据
+      replyBoxVisible: {}, // 控制每条评论的回复输入框显示
+      replyContent: {}, // 每条评论的回复内容
+      isSubmittingReply: false,
+      commentReplies: {}, // 每条评论的回复列表
+      repliesLoaded: {}, // 标记回复是否已加载
+
+      // 回复楼层展开状态
+      replyListExpanded: {}, // 每条评论的回复楼层展开状态
+
       // 评论举报相关
       reportCommentDialogVisible: false,
       reportCommentSubmitting: false,
@@ -374,6 +676,10 @@ export default {
       this.loadPostData(this.id);
       this.loadComments(this.id);
       this.loadCommentCount(this.id);
+      // 新增：自动加载每条主评论的回复
+      this.$nextTick(() => {
+        this.loadAllCommentReplies();
+      });
     } else {
       console.error('无法获取帖子ID');
       this.$router.push('/community');
@@ -395,6 +701,68 @@ export default {
   },
 
   methods: {
+    // 点赞/取消点赞评论或回复
+    async toggleLikeComment(item) {
+      if (!item || !item.id) {
+        console.error('点赞失败：item或item.id无效', item);
+        return;
+      }
+      const commentId = Number(item.id);
+      const userId = Number(this.currentUserId);
+      if (!userId || isNaN(userId)) {
+        this.$message?.error('请先登录');
+        return;
+      }
+      // 点赞前先用API实时检查状态，防止前端状态不同步
+      let isLiked = !!item.likedByMe;
+      try {
+        const likedRes = await checkUserLikedComment(commentId, userId);
+        isLiked = !!likedRes.data?.isLiked;
+        item.likedByMe = isLiked;
+      } catch (e) {
+        // 检查失败时保留本地状态
+      }
+      try {
+        if (isLiked) {
+          await this.cancelLikeCommunityComment(commentId);
+          item.likedByMe = false;
+          item.likeCount = (item.likeCount || 1) - 1;
+        } else {
+          await this.likeCommunityComment(commentId);
+          item.likedByMe = true;
+          item.likeCount = (item.likeCount || 0) + 1;
+        }
+      } catch (e) {
+        // 如果是已点赞导致的400，直接提示已点赞
+        if (e && e.code === 400 && /already/i.test(e.message)) {
+          item.likedByMe = true;
+          this.$message?.info('您已点赞过该评论');
+        } else {
+          this.$message?.error('操作失败，请稍后重试');
+        }
+        console.error('点赞API调用异常', e);
+      }
+    },
+    // 点赞API
+    async likeCommunityComment(commentId) {
+      // 直接调用import进来的API，确保userId为数字
+      return await likeCommunityComment(commentId, {
+        userId: Number(this.currentUserId),
+      });
+    },
+    // 取消点赞API
+    async cancelLikeCommunityComment(commentId) {
+      return await cancelLikeCommunityComment(commentId, {
+        userId: Number(this.currentUserId),
+      });
+    },
+    // 修复：回复楼层内回复按钮事件
+    toggleReplyBoxInReply(replyId) {
+      Object.keys(this.replyBoxVisible).forEach((key) => {
+        this.$set(this.replyBoxVisible, key, false);
+      });
+      this.$set(this.replyBoxVisible, replyId, !this.replyBoxVisible[replyId]);
+    },
     async loadPostData(postId) {
       if (!postId) {
         console.warn('loadPostData: 无效的帖子ID:', postId);
@@ -452,31 +820,130 @@ export default {
 
     // 加载评论列表
     async loadComments(postId) {
-      if (!postId) return;
-
       this.isLoadingComments = true;
       try {
-        const response = await getCommunityPostComments(postId);
-        console.log('评论列表响应:', response);
-
-        if (response.data && response.data.comments) {
-          this.comments = response.data.comments.map((comment) => ({
-            ...comment,
-            author: comment.userId ? `用户${comment.userId}` : '匿名用户',
-            avatar: this.defaultAvatar,
-          }));
-        } else {
-          this.comments = [];
+        const res = await getCommunityPostComments(postId);
+        // 兼容后端返回结构，确保comments为数组
+        let commentsArr = [];
+        if (res.data) {
+          if (Array.isArray(res.data.comments)) {
+            commentsArr = res.data.comments;
+          } else if (Array.isArray(res.data)) {
+            commentsArr = res.data;
+          } else if (Array.isArray(res.comments)) {
+            commentsArr = res.comments;
+          }
         }
-      } catch (error) {
-        console.error('加载评论失败:', error);
+        // 为每条主评论补充author、likeCount、likedByMe字段
+        const userId = Number(this.currentUserId);
+        const commentsWithLike = await Promise.all(
+          commentsArr.map(async (comment) => {
+            let author = '';
+            let likeCount = 0;
+            let likedByMe = false;
+            try {
+              const nameRes = await getCommentAuthorName(comment.id);
+              author = nameRes.data?.authorName || `用户${comment.userId}`;
+            } catch (e) {
+              author = `用户${comment.userId}`;
+            }
+            try {
+              const likeRes = await getCommentLikeCount(comment.id);
+              likeCount = likeRes.data?.likeCount || 0;
+            } catch (e) {
+              likeCount = 0;
+            }
+            try {
+              if (userId) {
+                const likedRes = await checkUserLikedComment(
+                  comment.id,
+                  userId
+                );
+                likedByMe = !!likedRes.data?.isLiked;
+              }
+            } catch (e) {
+              likedByMe = false;
+            }
+            return { ...comment, author, likeCount, likedByMe };
+          })
+        );
+        this.comments = commentsWithLike;
+        this.$forceUpdate(); // 强制刷新，确保点赞贴图立即切换
+        // 新增：加载所有主评论的回复
+        await this.loadAllCommentReplies();
+      } catch (err) {
         this.comments = [];
-        this.$message?.error('加载评论失败，请稍后重试');
+        this.$message?.error('评论加载失败');
       } finally {
         this.isLoadingComments = false;
       }
     },
-
+    async loadAllCommentReplies() {
+      if (!Array.isArray(this.comments)) return;
+      const userId = Number(this.currentUserId);
+      for (const comment of this.comments) {
+        if (!comment.replyId) {
+          try {
+            const res = await getCommentReplies(comment.id);
+            if (res.data && Array.isArray(res.data.replies)) {
+              // 每条回复都通过API获取评论者名字、点赞数、点赞状态
+              const replies = await Promise.all(
+                res.data.replies.map(async (reply) => {
+                  let repliedAuthor = null;
+                  let author = '';
+                  let likeCount = 0;
+                  let likedByMe = false;
+                  try {
+                    const nameRes = await getCommentAuthorName(reply.id);
+                    author = nameRes.data?.authorName || `用户${reply.userId}`;
+                  } catch (e) {
+                    author = `用户${reply.userId}`;
+                  }
+                  try {
+                    const likeRes = await getCommentLikeCount(reply.id);
+                    likeCount = likeRes.data?.likeCount || 0;
+                  } catch (e) {
+                    likeCount = 0;
+                  }
+                  try {
+                    if (userId) {
+                      const likedRes = await checkUserLikedComment(
+                        reply.id,
+                        userId
+                      );
+                      likedByMe = !!likedRes.data?.isLiked;
+                    }
+                  } catch (e) {
+                    likedByMe = false;
+                  }
+                  if (reply.parentId) {
+                    try {
+                      const authorRes = await getRepliedCommentAuthor(reply.id);
+                      repliedAuthor = authorRes.data?.repliedAuthor || null;
+                    } catch (e) {
+                      // 获取被回复作者失败时，repliedAuthor为null
+                    }
+                  }
+                  return {
+                    ...reply,
+                    repliedAuthor,
+                    author,
+                    likeCount,
+                    likedByMe,
+                  };
+                })
+              );
+              this.$set(this.commentReplies, comment.id, replies);
+              this.$set(this.repliesLoaded, comment.id, true);
+              this.$set(this.replyListExpanded, comment.id, false);
+              this.$forceUpdate(); // 回复加载后也强制刷新
+            }
+          } catch (e) {
+            this.$set(this.commentReplies, comment.id, []);
+          }
+        }
+      }
+    },
     // 加载评论数量
     async loadCommentCount(postId) {
       if (!postId) return;
@@ -585,6 +1052,7 @@ export default {
         }
 
         this.$message?.success('评论删除成功');
+        window.location.reload(); // 删除后刷新页面，保证评论区同步
       } catch (error) {
         console.error('删除评论失败:', error);
         this.$message?.error('删除评论失败，请稍后重试');
@@ -710,6 +1178,134 @@ export default {
           }
         }
       });
+    },
+
+    toggleReplyBox(commentId) {
+      // 只允许一个回复输入框
+      Object.keys(this.replyBoxVisible).forEach((key) => {
+        this.$set(this.replyBoxVisible, key, false);
+      });
+      this.$set(
+        this.replyBoxVisible,
+        commentId,
+        !this.replyBoxVisible[commentId]
+      );
+    },
+    async submitReply(comment) {
+      if (!this.replyContent[comment.id]) return;
+      this.isSubmittingReply = true;
+      try {
+        // 回复任何评论都应传 replyId = comment.id
+        let repliedAuthor = null;
+        let payload = {
+          userId: this.currentUserId,
+          commentContent: this.replyContent[comment.id],
+          replyId: comment.id,
+        };
+        try {
+          const authorRes = await getRepliedCommentAuthor(comment.id);
+          repliedAuthor = authorRes.data?.repliedAuthor || null;
+        } catch (e) {
+          // 获取被回复作者失败时，repliedAuthor为null
+        }
+        // 发送评论/回复
+        const res = await createCommunityComment(this.id, payload);
+        if (res.data && res.data.comment) {
+          const newReply = {
+            ...res.data.comment,
+            repliedAuthor,
+          };
+          if (!this.commentReplies[comment.id])
+            this.$set(this.commentReplies, comment.id, []);
+          this.commentReplies[comment.id].unshift(newReply);
+          this.replyContent[comment.id] = '';
+          this.$message?.success('回复发布成功');
+          this.$set(this.replyBoxVisible, comment.id, false);
+          window.location.reload(); // 发布后刷新页面
+        }
+      } catch (error) {
+        this.$message?.error(error?.message || '回复发布失败');
+      } finally {
+        this.isSubmittingReply = false;
+      }
+    },
+    async submitReplyInReply(reply, parentCommentId) {
+      if (!this.replyContent[reply.id]) return;
+      this.isSubmittingReply = true;
+      try {
+        let repliedAuthor = null;
+        let author = '';
+        let payload = {
+          userId: this.currentUserId,
+          // 内容加上@被回复人名字
+          commentContent: '',
+          // replyId始终为主评论id
+          replyId: parentCommentId,
+        };
+        try {
+          const nameRes = await getCommentAuthorName(reply.id);
+          author = nameRes.data?.authorName || `用户${reply.userId}`;
+        } catch (e) {
+          author = `用户${reply.userId}`;
+        }
+        // 被回复人名字优先用reply.author
+        let atText = reply.author ? `@${reply.author} ` : '';
+        payload.commentContent = atText + this.replyContent[reply.id];
+        // 发送回复评论
+        const res = await createCommunityComment(this.id, payload);
+        if (res.data && res.data.comment) {
+          const newReply = {
+            ...res.data.comment,
+            repliedAuthor,
+            author,
+            avatar: this.defaultAvatar,
+          };
+          if (!this.commentReplies[parentCommentId])
+            this.$set(this.commentReplies, parentCommentId, []);
+          this.commentReplies[parentCommentId].unshift(newReply);
+          this.replyContent[reply.id] = '';
+          this.$message?.success('回复发布成功');
+          this.$set(this.replyBoxVisible, reply.id, false);
+          window.location.reload(); // 发布后刷新页面
+        }
+      } catch (error) {
+        this.$message?.error(error?.message || '回复发布失败');
+      } finally {
+        this.isSubmittingReply = false;
+      }
+    },
+    async loadReplies(commentId) {
+      try {
+        const res = await getCommentReplies(commentId);
+        if (res.data && res.data.replies) {
+          // 仅对有parentId的回复评论请求@对象
+          const replies = await Promise.all(
+            res.data.replies.map(async (reply) => {
+              let repliedAuthor = null;
+              if (reply.parentId) {
+                try {
+                  const authorRes = await getRepliedCommentAuthor(reply.id);
+                  repliedAuthor = authorRes.data?.repliedAuthor || null;
+                } catch (e) {
+                  // 获取被回复作者失败时，repliedAuthor为null
+                }
+              }
+              return { ...reply, repliedAuthor };
+            })
+          );
+          this.$set(this.commentReplies, commentId, replies);
+          this.$set(this.repliesLoaded, commentId, true);
+        }
+      } catch (error) {
+        this.$message?.error('加载回复失败');
+      }
+    },
+    toggleReplyList(commentId) {
+      this.$set(
+        this.replyListExpanded,
+        commentId,
+        !this.replyListExpanded[commentId]
+      );
     },
   },
 };
@@ -1242,76 +1838,51 @@ export default {
 }
 .reply-item {
   display: flex;
-  align-items: flex-start;
-  margin-bottom: 10px;
+  align-items: center;
+  margin-bottom: 8px;
 }
-.reply-avatar {
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  margin-right: 10px;
-}
-.reply-content {
-  flex: 1;
-}
-.reply-header {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 5px;
-}
-.reply-actions {
-  margin-top: 5px;
-}
-
-/* 嵌套回复样式 */
-.nested-reply-list {
-  margin-top: 10px;
-  padding-left: 30px;
-  border-left: 2px solid #f1f3f5;
-}
-.nested-reply-item {
-  display: flex;
-  align-items: flex-start;
-  margin-bottom: 10px;
-}
-.reply-content {
-  flex: 1;
-}
-.reply-header {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 5px;
-}
-.reply-actions {
-  margin-top: 5px;
-}
-
-/* @提及样式 */
 .reply-mention {
   color: #0f88eb;
   font-weight: 500;
+  margin-right: 6px;
 }
-
-/* 删除按钮样式 */
-.delete-comment-btn {
-  background-color: rgba(255, 255, 255, 0) !important;
-  color: #dc2626 !important;
-  padding: 4px 12px;
-  border-radius: 9999px;
+.reply-content {
+  color: #333;
+  margin-right: 6px;
+}
+.reply-time {
+  color: #999;
   font-size: 12px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  border: none;
-  display: flex;
-  align-items: center;
 }
-
+.reply-comment-btn,
+.secondary-btn {
+  background: none;
+  border: none;
+  color: #0f88eb;
+  font-size: 14px;
+  padding: 0 8px;
+  cursor: pointer;
+  outline: none;
+  transition: color 0.2s;
+}
+.reply-comment-btn:hover,
+.secondary-btn:hover {
+  color: #1976d2;
+  text-decoration: underline;
+}
+.delete-comment-btn {
+  background: none;
+  border: none;
+  color: #dc2626;
+  font-size: 14px;
+  padding: 0 8px;
+  cursor: pointer;
+  outline: none;
+  transition: color 0.2s;
+}
 .delete-comment-btn:hover {
-  background-color: #dc2626 !important;
-  color: white !important;
-  transform: translateY(-1px);
-  box-shadow: 0 2px 4px rgba(239, 68, 68, 0.2);
+  color: #b91c1c;
+  text-decoration: underline;
 }
 
 /* 删除确认弹窗样式 */
