@@ -595,7 +595,7 @@ export const reportCommunityComment = (reportload) =>
 
 // 举报帖子
 export const reportCommunityPost = (reportload) =>
-  api.post(`/community/posts/${reportload.postId}/report`, reportload, {
+  api.post(`/api/PostReport/create`, reportload, {
     headers: { skipAuth: false },
   });
 
