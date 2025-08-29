@@ -4,8 +4,7 @@ import axios from 'axios';
 import MyStorage from './storage'; // 引入 Storage 工具类
 
 const api = axios.create({
-  // baseURL: 'http://localhost:5253',
-  baseURL: 'http://47.99.66.142:5253',
+  baseURL: '/api',
   timeout: 5000,
 });
 
@@ -195,7 +194,7 @@ export const deductUserPoints = (
     relatedId,
   });
 
-  // 管理员注册
+// 管理员注册
 export const adminRegister = (payload) => {
   return adminApi.post('/api/admin/register', payload);
 };
