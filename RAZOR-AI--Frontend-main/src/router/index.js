@@ -8,13 +8,13 @@ import Setting from '@/views/UserSettingPage.vue';
 import PersonalHome from '@/views/PersonalHomePage.vue';
 import Test from '@/views/TestPage.vue';
 import ChatRobot from '@/views/ChatRobotPage.vue';
-import SubscribedBots from '@/views/MyBotsPage.vue';
+import SubscribedBots from '@/views/SubscribedBotsPage.vue';
+import MyBots from '@/views/MyBotsPage.vue';
 import DeveloperCenter from '@/views/DeveloperCenterPage.vue';
 import Rgister from '@/views/RegisterPage.vue';
 import RobotDetail from '@/views/RobotDetailPage.vue';
 import Explorer from '@/views/ExplorerPage.vue';
-import CreateBots from '@/views/CreateBotsPage_information.vue';
-import CreateBotsPageFunctionality from '@/views/CreateBotsPage_functionality.vue';
+import CreateBots from '@/views/CreateBotsPage.vue';
 import HelperCenter from '@/views/HelperCenterPage.vue';
 import ConversationHistory from '@/views/ConversationHistory.vue';
 import RobotMarket from '@/views/RobotMarketPage.vue';
@@ -31,6 +31,7 @@ Vue.use(VueRouter);
 const routes = [
   {
     path: '/',
+    name: 'layout',
     component: Layout,
     children: [
       {
@@ -42,11 +43,19 @@ const routes = [
         },
       },
       {
+        path: 'MyBots',
+        name: 'MyBots',
+        component: MyBots,
+        meta: {
+          title: 'Razor-AI-我的机器人', // 我的机器人页标题
+        },
+      },
+      {
         path: 'subscribedBots',
         name: 'SubscribedBots',
         component: SubscribedBots,
         meta: {
-          title: 'Razor-AI-已订阅的机器人', // 已订阅的机器人页标题
+          title: 'Razor-AI-我订阅的机器人', // 订阅机器人页标题
         },
       },
       {
@@ -62,15 +71,7 @@ const routes = [
         name: 'CreateBots',
         component: CreateBots,
         meta: {
-          title: 'Razor-AI-基本信息', // 创建机器人页标题
-        },
-      },
-      {
-        path: '/create/features',
-        name: 'CreateBotFeatures',
-        component: CreateBotsPageFunctionality, // 创建机器人功能组件
-        meta: {
-          title: 'Razor-AI-功能配置', // 创建机器人功能页标题
+          title: 'Razor-AI-创建机器人', // 创建机器人页标题
         },
       },
       {
@@ -122,7 +123,7 @@ const routes = [
         },
       },
       {
-        path: '/chatRobot/:id',
+        path: '/chatRobot/:chatId',
         name: 'ChatRobot',
         component: ChatRobot,
         meta: {
@@ -162,7 +163,7 @@ const routes = [
         },
       },
       {
-        path: '/conversationHistory/:id',
+        path: '/conversationHistory',
         name: 'ConversationHistory',
         component: ConversationHistory,
         meta: {
@@ -233,15 +234,6 @@ const router = new VueRouter({
       },
     },
     {
-      path: '/admin/feedback',
-      name: 'AdminFeedback',
-      component: AdminFeedback,
-      meta: {
-        title: 'RazorAI-管理员审核',
-        requiresAdmin: true,
-      },
-    },
-    {
       path: '/admin/register',
       name: 'AdminRegister',
       component: () => import('@/views/AdminRegisterPage.vue'),
@@ -273,6 +265,24 @@ const router = new VueRouter({
       component: () => import('@/views/AdminRobotReviewDetail.vue'),
       meta: {
         title: 'RazorAI-机器人审核详情',
+        requiresAdmin: true,
+      },
+    },
+    {
+      path: '/admin/feedback',
+      name: 'AdminFeedback',
+      component: AdminFeedback,
+      meta: {
+        title: 'RazorAI-用户反馈',
+        requiresAdmin: true,
+      },
+    },
+    {
+      path: '/admin/feedback/:userId/:feedbackId',
+      name: 'AdminFeedbackDetail',
+      component: () => import('@/views/AdminFeedbackDetail.vue'),
+      meta: {
+        title: 'RazorAI-反馈详情',
         requiresAdmin: true,
       },
     },

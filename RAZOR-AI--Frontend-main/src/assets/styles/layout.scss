@@ -158,9 +158,8 @@
       flex-shrink: 0;
       padding: 2vh 2vw;
       width: 100%;
-      height: auto;
-      max-height: 46vh;
-      min-height: 46vh;
+      max-height: 40vh;
+      min-height: 40vh;
       background-color: color.adjust(
          vars.$primary-color,
          $lightness: 10%
@@ -309,8 +308,6 @@
       background-color: vars.$primary-color;
       box-shadow: 0 0vh 0vh rgba(0, 0, 0, 0);
       overflow-y: auto;
-      max-height: 0vh;
-      min-height: 0vh;
       &::-webkit-scrollbar {
          width: 0.0vw;
       }

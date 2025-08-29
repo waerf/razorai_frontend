@@ -1,58 +1,135 @@
 <template>
-  <div class="subscribed-page">
-    <h1 class="title">已订阅的机器人</h1>
-
-    <div class="search-container">
-      <input
-        type="text"
-        v-model="searchQuery"
-        class="search-input"
-        placeholder="搜索机器人名称..."
-      />
+  <div class="my-bots-container">
+    <!-- 页面标题 -->
+    <div class="page-header">
+      <h1 class="page-title">已订阅的机器人</h1>
+      <p class="page-description">
+        管理你订阅的所有AI机器人，查看它们的使用情况和有效期
+      </p>
     </div>
 
-    <div class="robot-list">
-      <div
-        v-for="robot in filteredRobots"
-        :key="robot.agent_id"
-        class="robot-card"
-      >
-        <!-- 条件渲染过期标签 -->
-        <div v-if="!robot.status" class="expired-tag">
-          <el-icon name="warning"></el-icon>已过期
-        </div>
-        <div class="robot-info-container">
-          <h2 class="robot-name">{{ robot.agent_name }}</h2>
-          <img
-            :src="require('@/assets/images/Agents/subsAgent.png')"
-            alt="机器人图片"
-            class="robot-image"
-          />
-        </div>
-        <div class="robot-details">
-          <p class="robot-info">开始时间: {{ robot.startime }}</p>
-          <p class="robot-info">结束时间: {{ robot.endtime }}</p>
-          <p class="robot-info">
-            <el-icon name="s-data"></el-icon>
-            剩余天数: {{ getRemainingDays(robot.endtime) }} 天
-          </p>
-        </div>
-        <button class="unsubscribe-button" @click="unsubscribe(robot.agent_id)">
-          <el-icon name="delete"></el-icon>
-          取消订阅
-        </button>
-        <button class="details-button" @click="viewDetails(robot.agent_id)">
-          <el-icon name="info"></el-icon>
-          查看详情
-        </button>
+    <!-- 主内容区 -->
+    <main class="main-content">
+      <!-- 搜索区域 -->
+      <div class="search-container mb-6">
+        <input
+          type="text"
+          v-model="searchQuery"
+          class="search-input"
+          placeholder="搜索机器人名称..."
+        />
       </div>
-    </div>
+
+      <!-- 机器人列表区域 -->
+      <div class="form-card">
+        <div class="flex items-center mb-6">
+          <h2 class="text-xl font-bold mr-auto">订阅列表</h2>
+          <span class="text-gray-500 text-sm"
+            >共 {{ filteredRobots.length }} 个机器人</span
+          >
+        </div>
+
+        <!-- 空状态显示 -->
+        <div v-if="filteredRobots.length === 0" class="empty-state">
+          <img
+            src="https://picsum.photos/id/237/100/100"
+            alt="暂无订阅"
+            class="empty-img"
+          />
+          <p class="empty-text">暂无订阅的机器人</p>
+          <button class="empty-button" @click="$router.push('/robotMarket')">
+            浏览机器人市场
+          </button>
+        </div>
+
+        <div class="bots-grid" v-else>
+          <!-- 机器人卡片 -->
+          <div
+            v-for="robot in filteredRobots"
+            :key="robot.agent_id"
+            class="bot-card card-hover"
+          >
+            <div class="p-5">
+              <!-- 条件渲染过期标签 -->
+              <div v-if="!robot.status" class="expired-tag">
+                <i class="fa fa-warning mr-1"></i>已过期
+              </div>
+
+              <div class="flex justify-between items-start mb-4">
+                <div>
+                  <h2 class="text-lg font-semibold">{{ robot.agent_name }}</h2>
+                  <p class="text-sm text-gray-500 mt-1">
+                    {{ robot.category || '未分类' }}
+                  </p>
+                </div>
+                <span class="status-active" v-if="robot.status"> 活跃 </span>
+              </div>
+
+              <div class="mb-4">
+                <p class="text-sm text-gray-600 line-clamp-2 mb-3">
+                  {{ robot.description || '该机器人暂无描述信息' }}
+                </p>
+
+                <div class="flex items-center text-sm text-gray-600 mb-2">
+                  <div class="flex items-center mr-4">
+                    <i class="fa fa-star text-yellow-400 mr-1"></i>
+                    <span>{{
+                      robot.rating ? robot.rating.toFixed(1) : '0.0'
+                    }}</span>
+                  </div>
+                  <div class="flex items-center">
+                    <i class="fa fa-user mr-1"></i>
+                    <span>{{ robot.user_count || 0 }} 用户</span>
+                  </div>
+                </div>
+              </div>
+
+              <div
+                class="flex items-center text-sm text-gray-600 mb-4 flex-wrap"
+              >
+                <div class="flex items-center mr-4 mb-2">
+                  <i class="fa fa-calendar mr-1"></i>
+                  <span>开始时间: {{ robot.startime }}</span>
+                </div>
+                <div class="flex items-center mr-4 mb-2">
+                  <i class="fa fa-calendar-check-o mr-1"></i>
+                  <span>结束时间: {{ robot.endtime }}</span>
+                </div>
+                <div class="flex items-center mb-2">
+                  <i class="fa fa-clock-o mr-1"></i>
+                  <span>剩余: {{ getRemainingDays(robot.endtime) }} 天</span>
+                </div>
+              </div>
+
+              <div class="border-t border-gray-100 pt-4 flex justify-between">
+                <a
+                  href="#"
+                  class="text-razor-blue hover:text-razor-darkBlue font-medium flex items-center transition-all hover:pl-1"
+                  @click.prevent="startConversation(robot)"
+                >
+                  <i class="fa fa-comments-o mr-1"></i>
+                  开始对话
+                </a>
+
+                <button
+                  class="unsubscribe-button text-gray-600 hover:text-gray-800 font-medium flex items-center transition-all hover:pr-1"
+                  @click="robotDetail(robot.agent_id)"
+                >
+                  <i class="fa fa-trash-o mr-1"></i>
+                  机器人详情
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
 
     <!-- 机器人详情弹窗 -->
     <robot-detail-dialog
       :visible="robotDetailVisible"
       :robotId="currentRobotId"
-      @close="robotDetailVisible = false"
+      @close="handleRobotDetailClose"
       @show-robot="viewDetails"
     />
   </div>
@@ -60,9 +137,8 @@
 
 <script>
 import { mapState, mapActions } from 'vuex';
-import user from '@/store/user';
+import { fetchUserSubscriptions as apiFetchUserSubscriptions } from '../utils/api'; // 导入API函数
 import RobotDetailDialog from './RobotDetailPage.vue';
-import { UnsubscribeAgent as apiUnSubscribeAgent } from '../utils/api';
 
 export default {
   name: 'SubscribedBotsPage',
@@ -74,209 +150,447 @@ export default {
       searchQuery: '', // 搜索关键字
       robotDetailVisible: false,
       currentRobotId: null,
+      loading: false, // 加载状态
     };
   },
   computed: {
     ...mapState('agent', {
-      haveSubscribedRobots: (state) => state.haveSubscribed,
+      // 修改：对应state中的haveSubscribed字段
+      subscribedRobots: (state) => state.haveSubscribed || [],
+      isLoading: (state) => state.loading,
     }),
     filteredRobots() {
+      // 注意：这里不能直接调用异步函数，应该使用已经存储在state中的数据
+      const robots = this.subscribedRobots;
+
       if (!this.searchQuery) {
-        return this.haveSubscribedRobots;
+        return robots;
       }
-      return this.haveSubscribedRobots.filter((robot) =>
+      return robots.filter((robot) =>
         robot.agent_name.toLowerCase().includes(this.searchQuery.toLowerCase())
       );
     },
   },
   methods: {
-    ...mapActions('agent', ['fetchUserSubscriptions']),
-    // 取消订阅机器人
-    async unsubscribe(robotId) {
-      const userId = this.$store.state.user.userId;
-      try {
-        const payload = { userId, robotId };
-        const response = await apiUnSubscribeAgent(payload);
-        if (response.status === 200) {
-          this.$message.success(`取消订阅机器人${robotId}成功！`);
-          this.getUserSubscriptions();
-        } else {
-          this.$message.error(`取消订阅机器人${robotId}失败，请稍后重试`);
-        }
-      } catch (error) {
-        console.error('取消订阅失败:', error);
-        this.$message.error(`取消订阅机器人${robotId}失败，请稍后重试`);
-      }
-    },
+    ...mapActions('agent'),
+
+    //获取用户订阅信息
     async getUserSubscriptions() {
       try {
-        const user_id = user.state.userId;
-        await this.fetchUserSubscriptions(user_id);
+        const userId = this.$store.state.user?.userId;
+        if (!userId) {
+          this.$message.error('未获取到用户信息，请重新登录');
+          return;
+        }
+
+        this.loading = true;
+
+        // 调用Vuex action而不是直接调用API
+        const result = await apiFetchUserSubscriptions(userId);
+        console.log('找到订阅机器人结果:', result);
+
+        if (result.success) {
+          const subscriptions = this.subscribedRobots;
+          console.log('成功调取订阅机器人信息');
+          if (subscriptions.length === 0) {
+            this.$message.info('您当前没有订阅任何机器人');
+          } else {
+            this.$message.success(
+              `成功获取${subscriptions.length}个订阅机器人`
+            );
+          }
+        } else {
+          this.$message.warning(`获取订阅列表失败: ${result.message}`);
+        }
       } catch (error) {
-        console.error('error in getUserSubscriptions:', error);
+        console.error('获取订阅列表失败:', error);
+        this.$message.error('获取订阅列表时发生网络错误，请重试');
+      } finally {
+        this.loading = false;
       }
     },
-    viewDetails(agentId) {
-      if (!agentId) {
-        this.$message.error('无效的机器人信息');
+
+    async startConversation(robot) {
+      const userId = this.$store.state.user?.userId;
+      if (!userId) {
+        this.$message.error('未获取到用户信息，请重新登录');
         return;
       }
-      this.currentRobotId = agentId;
+
+      const payload = {
+        name: robot.agent_name || `chat_${Date.now()}`,
+        agentId: robot.agent_id,
+        userId: userId,
+      };
+      console.log('进入会话参数:', payload);
+
+      this.$router.push({
+        path: `/chatRobot/null`,
+        query: payload,
+      });
+    },
+
+    // 计算剩余天数
+    getRemainingDays(endtime) {
+      if (!endtime) return 0;
+
+      // 解析日期字符串 (兼容 'YYYY/MM/DD' 或 'YYYY-MM-DD' 格式)
+      const parts = endtime.split(/[/-]/);
+      if (parts.length !== 3) return 0;
+
+      const endDate = new Date(parts[0], parts[1] - 1, parts[2]);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      const timeDiff = endDate - today;
+      const daysRemaining = Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
+      return daysRemaining >= 0 ? daysRemaining : 0;
+    },
+
+    // 打开机器人详情弹窗
+    robotDetail(robotId) {
+      this.currentRobotId = robotId;
       this.robotDetailVisible = true;
     },
-    getRemainingDays(endtime) {
-      const endDate = new Date(endtime);
-      const today = new Date();
-      const timeDiff = endDate - today;
-      const daysRemaining = Math.ceil(timeDiff / (1000 * 60 * 60 * 24)); // 转换为天数
-      return daysRemaining >= 0 ? daysRemaining : 0; // 如果小于0，则返回0
+
+    // 查看机器人详情（用于@show-robot事件）
+    viewDetails(robotId) {
+      this.currentRobotId = robotId;
+      this.robotDetailVisible = true;
+    },
+
+    // 关闭机器人详情弹窗并更新数据
+    async handleRobotDetailClose() {
+      this.robotDetailVisible = false;
+
+      try {
+        // 重新获取用户订阅信息，以更新可能的订阅状态变化
+        await this.getUserSubscriptions();
+
+        console.log('机器人详情弹窗关闭，订阅数据已更新');
+      } catch (error) {
+        console.error('更新订阅数据失败:', error);
+      }
     },
   },
   created() {
-    this.getUserSubscriptions(); // 获取用户订阅列表
+    this.getUserSubscriptions(); // 组件创建时获取用户订阅列表
   },
 };
 </script>
 
-<style lang="scss" scoped>
-@use '@/assets/styles/mixins.scss' as *;
-@use '@/assets/styles/variables.scss' as *;
-.subscribed-page {
-  position: relative;
-  padding: 20px;
-  background-color: $background-color;
-  color: $text-color;
-  max-width: 100%; /* 填满整个宽度 */
-  height: 100%; /* 填满整个高度 */
-  overflow: hidden; /* 隐藏溢出内容 */
-}
-
-.title {
-  font-size: 3.5em;
-  margin-bottom: 20px;
-  animation: fadeIn 3s ease;
+<style scoped>
+/* 空状态样式 */
+.empty-state {
   text-align: center;
+  padding: 50px 0;
 }
 
-.search-container {
+.empty-img {
+  width: 100px;
+  height: 100px;
+  margin: 0 auto 20px;
+  opacity: 0.5;
+  border-radius: 50%;
+}
+
+.empty-text {
+  color: #64748b;
+  font-size: 16px;
   margin-bottom: 20px;
+}
+
+.empty-button {
+  background-color: #0f88eb;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 20px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.empty-button:hover {
+  background-color: #0a6fcc;
+}
+
+/* 星级评分颜色 */
+.text-yellow-400 {
+  color: #facc15;
+}
+
+/* 卡片描述限制行数 */
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* 基础样式 */
+.my-bots-container {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 30px 20px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  color: #333;
+  background-color: #fff;
+  min-height: 100vh;
+}
+
+/* 页面标题 */
+.page-header {
+  margin-bottom: 35px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.page-title {
+  font-size: 28px;
+  font-weight: 700;
+  color: #1e293b;
+  margin-bottom: 10px;
+  letter-spacing: -0.02em;
+}
+
+.page-description {
+  color: #64748b;
+  font-size: 16px;
+  max-width: 700px;
+}
+
+/* 主内容区 */
+.main-content {
+  flex: 1;
+}
+
+/* 表单卡片样式 */
+.form-card {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow:
+    0 4px 6px -1px rgba(0, 0, 0, 0.05),
+    0 2px 4px -1px rgba(0, 0, 0, 0.03);
+  padding: 35px;
+  margin-bottom: 30px;
+  transition: box-shadow 0.3s ease;
+}
+
+.form-card:hover {
+  box-shadow:
+    0 10px 15px -3px rgba(0, 0, 0, 0.06),
+    0 4px 6px -2px rgba(0, 0, 0, 0.04);
+}
+
+/* 机器人网格布局 */
+.bots-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 28px;
+}
+
+/* 机器人卡片样式 */
+.bot-card {
+  flex: 1;
+  min-width: 300px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  overflow: hidden;
+  position: relative;
+}
+
+/* 卡片悬停效果 */
+.card-hover {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.card-hover:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 15px 30px -5px rgba(0, 0, 0, 0.1);
+  border-color: #cbd5e1;
+}
+
+/* 状态标签 */
+.status-active {
+  padding: 3px 10px;
+  background-color: #f0fff4;
+  color: #166534;
+  font-size: 12px;
+  border-radius: 12px;
+  font-weight: 500;
+  box-shadow: 0 1px 2px rgba(34, 197, 94, 0.1);
+}
+
+/* 过期标签样式 */
+.expired-tag {
+  position: absolute;
+  top: 24px;
+  right: 24px;
+  padding: 3px 10px;
+  background-color: #fff5f5;
+  color: #c53030;
+  font-size: 12px;
+  border-radius: 12px;
+  font-weight: 500;
+  box-shadow: 0 1px 2px rgba(239, 68, 68, 0.1);
+  z-index: 1;
+}
+
+/* 搜索框样式 */
+.search-container {
   text-align: center;
 }
 
 .search-input {
   width: 60%;
-  padding: 12px;
-  font-size: 1.2em;
-  border: 1px solid #ccc;
-  border-radius: 5px;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  padding: 10px 12px;
+  font-size: 15px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
-.robot-list {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 20px;
-  max-height: 80vh; /* 设置最大高度 */
-  overflow-y: auto; /* 允许垂直滚动 */
-}
-
-.robot-card {
-  margin-top: 2%;
-  background-color: lighten($background-color, 2%);
-  padding: 20px;
-  border-radius: 12px;
-  position: relative; /* 为绝对定位的标签提供参考 */
-  transition:
-    transform 0.3s ease,
-    box-shadow 0.3s ease;
-}
-
-.robot-card:hover {
-  background-color: lighten($background-color, 30%);
-  transform: translateY(-5px);
-}
-
-.robot-info-container {
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-}
-
-.robot-name {
-  font-size: 1.8em;
-  margin-bottom: 10px;
-  color: #ffdd57;
-}
-
-.robot-image {
-  width: 50px; /* 设置适中的宽度 */
-  height: 50px; /* 设置高度与名字相同 */
-  border-radius: 50%; /* 圆形图片 */
-  margin-left: 10px; /* 图片与名字之间的间距 */
-}
-
-.robot-info {
-  font-size: 1em;
-  margin-bottom: 10px;
-  color: $text-color;
-}
-
-.robot-details {
-  margin-top: 10px;
-}
-
+/* 按钮样式 */
 .unsubscribe-button {
-  padding: 10px 15px;
-  background-color: $primary-color;
+  background: none;
   border: none;
-  border-radius: 5px;
-  color: $text-color;
-  font-size: 1em;
   cursor: pointer;
-  transition: background-color 0.3s;
+  font-size: 14px;
+  padding: 0;
 }
 
-.unsubscribe-button:hover {
-  background: #138496;
-  border-color: #117a8b;
+/* 链接样式 */
+a {
+  text-decoration: none;
+  transition: all 0.2s ease;
 }
 
-.details-button {
-  padding: 10px 15px;
-  background-color: $primary-color;
-  border: none;
-  border-radius: 5px;
-  color: $text-color;
-  font-size: 1em;
-  cursor: pointer;
-  transition: background-color 0.3s;
-  margin-left: 10px;
+/* 自定义颜色 */
+.text-razor-blue {
+  color: #0f88eb;
 }
 
-.details-button:hover {
-  background: #138496;
-  border-color: #117a8b;
+.text-razor-darkBlue {
+  color: #0a6fcc;
 }
 
-.expired-tag {
-  position: absolute; /* 绝对定位 */
-  top: 10px; /* 距离卡片顶部10px */
-  right: 10px; /* 距离卡片右侧10px */
-  background-color: #ff4d4f; /* 背景颜色 */
-  color: white; /* 字体颜色 */
-  padding: 5px 10px; /* 内边距 */
-  border-radius: 5px; /* 圆角 */
-  font-size: 0.9em; /* 字体大小 */
+.text-gray-500 {
+  color: #64748b;
 }
 
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(-20px);
+.text-gray-600 {
+  color: #475569;
+}
+
+.border-gray-100 {
+  border-color: #f1f5f9;
+}
+
+/* 布局工具类 */
+.flex {
+  display: flex;
+}
+
+.flex-wrap {
+  flex-wrap: wrap;
+}
+
+.justify-between {
+  justify-content: space-between;
+}
+
+.items-center {
+  align-items: center;
+}
+
+.mb-4 {
+  margin-bottom: 16px;
+}
+
+.mb-6 {
+  margin-bottom: 24px;
+}
+
+.mr-1 {
+  margin-right: 4px;
+}
+
+.mr-2 {
+  margin-right: 8px;
+}
+
+.mr-4 {
+  margin-right: 16px;
+}
+
+.mb-2 {
+  margin-bottom: 8px;
+}
+
+.pt-4 {
+  padding-top: 16px;
+}
+
+.p-5 {
+  padding: 24px;
+}
+
+.text-lg {
+  font-size: 18px;
+}
+
+.text-xl {
+  font-size: 22px;
+}
+
+.font-bold {
+  font-weight: 700;
+}
+
+.font-semibold {
+  font-weight: 600;
+}
+
+.font-medium {
+  font-weight: 500;
+}
+
+.text-sm {
+  font-size: 14px;
+}
+
+.border-t {
+  border-top: 1px solid;
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+  .my-bots-container {
+    padding: 20px 15px;
   }
-  to {
-    opacity: 1;
-    transform: translateY(0);
+
+  .form-card {
+    padding: 25px 20px;
+  }
+
+  .bots-grid {
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .bot-card {
+    width: 100%;
+    min-width: auto;
+  }
+
+  .page-title {
+    font-size: 24px;
+  }
+
+  .search-input {
+    width: 100%;
   }
 }
 </style>

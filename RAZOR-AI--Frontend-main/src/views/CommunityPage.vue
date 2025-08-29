@@ -81,13 +81,11 @@
                 <div class="action-group">
                   <!-- 点赞仅展示 -->
                   <div class="action-display">
-                    <i class="fa fa-thumbs-o-up text-blue-500 mr-1.5"></i>
-                    <span>{{ post.likeCount }}</span>
+                    <span>{{ post.likeCount }} 个点赞</span>
                   </div>
                   <!-- 评论仅展示 -->
                   <div class="action-display">
-                    <i class="fa fa-comment-o text-green-500 mr-1.5"></i>
-                    <span>{{ post.commentCount }}</span>
+                    <span>{{ post.commentCount }} 条评论</span>
                   </div>
                 </div>
                 <div class="stats-group">
@@ -246,11 +244,13 @@ export default {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  max-width: 100%;
 }
 
 .container {
-  max-width: 100%;
-  width: 100%;
+  position: relative;
+  left: 3.5vw;
+  width: 70vw;
   margin: 0;
   padding: 0 200px; /* 两边保留点空隙 */
 }
@@ -343,6 +343,10 @@ export default {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
   padding: 24px;
   transition: all 0.3s ease;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .post-card:hover {
@@ -414,6 +418,9 @@ export default {
   color: #1a1a1a;
   margin-bottom: 12px;
   transition: color 0.2s ease;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  max-width: 100%;
 }
 
 .post-title:hover {
@@ -428,6 +435,17 @@ export default {
 
 .title-link:hover {
   color: #0f88eb;
+}
+
+.post-title-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin-bottom: 12px;
+  transition: color 0.2s ease;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  max-width: 100%;
 }
 
 .post-title-link:hover .post-title-title {
@@ -451,6 +469,9 @@ export default {
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  max-width: 100%;
 }
 
 .post-tags {

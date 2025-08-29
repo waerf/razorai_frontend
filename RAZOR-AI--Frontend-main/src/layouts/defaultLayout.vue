@@ -29,12 +29,25 @@
         {{ headername_withCommunity }}
       </h2>
       <h2 class="header-name-empty">{{ ' ' }}</h2>
-      <div class="user-info">
-        <el-icon name="user"></el-icon>
-        <span v-if="!isLoggedIn" @click="openLoginDialog">用户登录</span>
-        <span v-else @click="navigateTo('PersonalHome')"
-          >你好，{{ userName }}</span
+      <div class="header-actions">
+        <!-- 向平台反馈按钮 -->
+        <el-button
+          type="text"
+          class="feedback-btn"
+          @click="openFeedbackDialog"
+          title="向平台反馈"
         >
+          <el-icon name="box"></el-icon>
+        </el-button>
+
+        <!-- 用户信息 -->
+        <div class="user-info">
+          <el-icon name="user"></el-icon>
+          <span v-if="!isLoggedIn" @click="openLoginDialog">用户登录</span>
+          <span v-else @click="navigateTo('PersonalHome')"
+            >你好，<br />{{ userName }}</span
+          >
+        </div>
       </div>
     </el-header>
 
@@ -72,11 +85,19 @@
         </div>
         <div
           class="menu-item"
+          :class="{ active: $route.name === 'MyBots' }"
+          @click="navigateTo('MyBots')"
+        >
+          <el-icon name="s-opportunity" class="menu-item-icon"></el-icon>
+          我的机器人
+        </div>
+        <div
+          class="menu-item"
           :class="{ active: $route.name === 'SubscribedBots' }"
           @click="navigateTo('SubscribedBots')"
         >
           <el-icon name="s-opportunity" class="menu-item-icon"></el-icon>
-          我的机器人
+          我订阅的机器人
         </div>
         <div
           class="menu-item"
@@ -203,12 +224,75 @@
     >
       <LoginForm @close="loginDialogVisible = false" />
     </el-dialog>
+
+    <!-- 向平台反馈弹窗 -->
+    <div
+      v-if="feedbackDialogVisible"
+      class="feedback-overlay"
+      @click="closeFeedbackDialog"
+    >
+      <div class="feedback-dialog" @click.stop>
+        <!-- 弹窗头部 -->
+        <div class="feedback-header">
+          <!-- 左侧占位 -->
+          <div class="placeholder"></div>
+          <!-- 中间标题 -->
+          <h3 class="feedback-title">向平台反馈</h3>
+          <!-- 右侧关闭按钮 -->
+          <el-button type="text" class="close-btn" @click="closeFeedbackDialog">
+            <el-icon name="close"></el-icon>
+          </el-button>
+        </div>
+
+        <!-- 弹窗内容 -->
+        <div class="feedback-content">
+          <!-- 当前路由显示 -->
+          <div class="route-info">
+            <label>当前页面：</label>
+            <el-input
+              v-model="currentRoute"
+              size="small"
+              disabled
+              class="route-input"
+            />
+          </div>
+
+          <!-- 反馈内容输入 -->
+          <div class="feedback-input-area">
+            <label>反馈内容：</label>
+            <el-input
+              v-model="feedbackMessage"
+              type="textarea"
+              :autosize="{ minRows: 3, maxRows: 5 }"
+              placeholder="请输入您的反馈内容..."
+              class="feedback-textarea"
+            />
+          </div>
+
+          <!-- 发送按钮 -->
+          <div class="feedback-actions">
+            <el-button
+              type="primary"
+              size="small"
+              @click="submitFeedback"
+              :loading="submittingFeedback"
+            >
+              发送
+            </el-button>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script>
 import LoginForm from '@/components/LoginForm.vue'; // 引入登录表单组件
 import { mapGetters, mapState, mapActions } from 'vuex'; // 引入 mapGetters, mapActions
+import {
+  sendUserFeedback,
+  fetchAllChats as apiFetchAllChats,
+} from '@/utils/api'; // 引入反馈API和对话API
 import user from '@/store/user';
 export default {
   components: {
@@ -220,6 +304,10 @@ export default {
       isSidebarHidden: false, // 控制菜单栏是否隐藏
       navigation: 'RAZOR-AI',
       currentActiveTab: 'RAZOR-AI', // 添加当前激活标签状态
+      // 反馈相关数据
+      feedbackDialogVisible: false,
+      feedbackMessage: '',
+      submittingFeedback: false,
     };
   },
   created() {
@@ -264,6 +352,10 @@ export default {
       const fullTitle = this.$route.meta.title || '默认标题';
       return '社区-' + fullTitle.replace(/^(RazorAI-|RAZOR-AI-)/i, '');
     },
+    // 获取当前路由信息用于反馈
+    currentRoute() {
+      return this.$route.path || '首页';
+    },
   },
   watch: {
     // 监听路由变化，自动调整激活状态
@@ -281,10 +373,16 @@ export default {
     ...mapActions('chat', ['fetchChats']), // 映射 actions, 用于获取聊天列表
     async getAllChats() {
       try {
-        const response = await this.fetchChats({
-          user_id: user.state.userId,
+        const result = await apiFetchAllChats({
+          userId: user.state.userId,
         });
-        console.log('获取聊天列表成功：', response);
+        if (result.status === 200) {
+          // 确保存入Vuex的是数组
+          const chatsData = Array.isArray(result.data) ? result.data : [];
+          this.$store.commit('chat/SET_CHATS', chatsData);
+          this.$message.success(`对话记录加载成功，共${chatsData.length}条`);
+        }
+        console.log('获取聊天列表成功：', result);
       } catch (error) {
         console.error('获取聊天列表失败：', error);
       }
@@ -317,17 +415,234 @@ export default {
     openLoginDialog() {
       this.loginDialogVisible = true;
     },
+    // 打开反馈弹窗
+    openFeedbackDialog() {
+      this.feedbackDialogVisible = true;
+      this.feedbackMessage = ''; // 重置反馈内容
+    },
+    // 关闭反馈弹窗
+    closeFeedbackDialog() {
+      this.feedbackDialogVisible = false;
+      this.feedbackMessage = '';
+      this.submittingFeedback = false;
+    },
+    // 提交反馈
+    async submitFeedback() {
+      if (!this.feedbackMessage.trim()) {
+        this.$message.warning('请输入反馈内容');
+        return;
+      }
+
+      if (!this.isLoggedIn) {
+        this.$message.warning('请先登录后再提交反馈');
+        return;
+      }
+
+      this.submittingFeedback = true;
+
+      try {
+        const feedbackload = {
+          userId: this.userId,
+          message: `在"${this.currentRoute}"路由中提出以下反馈：${this.feedbackMessage}`,
+        };
+        console.log('反馈负载：', feedbackload);
+
+        const response = await sendUserFeedback(feedbackload);
+
+        if (response.status === 200) {
+          this.$message.success('反馈提交成功，感谢您的反馈！');
+          this.closeFeedbackDialog();
+        } else {
+          throw new Error('反馈提交失败');
+        }
+      } catch (error) {
+        console.error('提交反馈失败:', error);
+        if (error.code === 400) {
+          this.$message.error(error.message || '反馈提交失败，请检查输入内容');
+        } else if (error.code === 'NETWORK_ERROR') {
+          this.$message.error('网络连接失败，请检查网络连接');
+        } else {
+          this.$message.error('反馈提交失败，请稍后重试');
+        }
+      } finally {
+        this.submittingFeedback = false;
+      }
+    },
     // 跳转到聊天详情页
     navigateToChat(chatId) {
       // 如果当前页面的id和chatId相同，则不跳转
       if (this.$route.params.id === chatId) {
         return;
       }
-      this.$router.push({ name: 'ChatRobot', params: { id: chatId } });
+      this.$router.push({ name: 'ChatRobot', params: { chatId } });
     },
   },
 };
 </script>
 <style lang="scss" scoped>
 @use '@/assets/styles/layout.scss' as *;
+
+// 头部操作区域样式
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+
+  .feedback-btn {
+    color: #606266;
+    font-size: 18px;
+    padding: 8px;
+    transition: color 0.3s ease;
+
+    &:hover {
+      color: #409eff;
+    }
+  }
+
+  .user-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    span {
+      cursor: pointer;
+      color: #606266;
+      transition: color 0.3s ease;
+
+      &:hover {
+        color: #409eff;
+      }
+    }
+  }
+}
+
+// 反馈弹窗样式
+.feedback-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.feedback-dialog {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+  width: 400px;
+  max-width: 90vw;
+  max-height: 80vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+
+  .feedback-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 20px;
+    border-bottom: 1px solid #ebeef5;
+    background-color: #f5f7fa;
+
+    .placeholder {
+      width: 24px; // 与关闭按钮宽度相同，用于居中
+    }
+
+    .feedback-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: #303133;
+      margin: 0;
+    }
+
+    .close-btn {
+      color: #909399;
+      font-size: 16px;
+      padding: 4px;
+
+      &:hover {
+        color: #f56c6c;
+      }
+    }
+  }
+
+  .feedback-content {
+    padding: 20px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+
+    .route-info {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+
+      label {
+        font-size: 14px;
+        color: #606266;
+        font-weight: 500;
+      }
+
+      .route-input {
+        .el-input__inner {
+          background-color: #f5f7fa;
+          border-color: #dcdfe6;
+        }
+      }
+    }
+
+    .feedback-input-area {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      flex: 1;
+
+      label {
+        font-size: 14px;
+        color: #606266;
+        font-weight: 500;
+      }
+
+      .feedback-textarea {
+        .el-textarea__inner {
+          resize: vertical;
+          min-height: 80px;
+        }
+      }
+    }
+
+    .feedback-actions {
+      display: flex;
+      justify-content: flex-end;
+      padding-top: 10px;
+    }
+  }
+}
+
+// 响应式设计
+@media (max-width: 768px) {
+  .feedback-dialog {
+    width: 90vw;
+    margin: 0 20px;
+
+    .feedback-content {
+      padding: 15px;
+    }
+  }
+
+  .header-actions {
+    gap: 10px;
+
+    .feedback-btn {
+      font-size: 16px;
+      padding: 6px;
+    }
+  }
+}
 </style>

@@ -66,7 +66,7 @@
               <div class="post-actions">
                 <a
                   class="action-link detail-link"
-                  @click.prevent="$router.push(`/community/post`)"
+                  @click.prevent="$router.push(`/community/post/${post.id}`)"
                 >
                   <i class="fa fa-eye mr-1.5"></i>
                   帖子详情
@@ -123,8 +123,8 @@ export default {
     if (this.isLoggedIn && this.userId) {
       this.fetchMyPosts();
     } else {
+      this.$router.push('/community');
       this.$message.warning('请先登录后查看帖子');
-      this.$router.push('/login');
     }
   },
   methods: {

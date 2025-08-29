@@ -343,6 +343,7 @@
       :title="categoryDialogTitle"
       :visible.sync="categoryDialogVisible"
       width="80%"
+      top="8.5vh"
       :close-on-click-modal="false"
       :close-on-press-escape="false"
     >
@@ -638,11 +639,8 @@ export default {
         const response = await apiGetRecommendedRobots({ userId: this.userId });
 
         if (response.status === 200 && response.data) {
-          const robots = Array.isArray(response.data)
-            ? response.data
-            : response.data.data || [];
-          // 确保只返回4个推荐机器人
-          return robots.slice(0, 4);
+          const robots = response.data.agents;
+          return robots;
         } else {
           console.error('加载推荐机器人失败:', response);
           return [];
@@ -883,10 +881,37 @@ export default {
     },
 
     // 新增方法：进入与机器人的对话
-    enterChatWithRobot(robotId) {
+    async enterChatWithRobot(robotId) {
+      const userId = this.$store.state.user?.userId;
+      if (!userId) {
+        this.$message.error('未获取到用户信息，请重新登录');
+        return;
+      }
+
+      // 查找机器人信息
+      let robot = this.allRobots.find((r) => r.id === robotId);
+      if (!robot && this.categoryDialogVisible) {
+        robot = this.categoryDetailRobots.find((r) => r.id === robotId);
+      }
+      if (!robot && this.showSearchResults) {
+        robot = this.searchResults.find((r) => r.id === robotId);
+      }
+
+      if (!robot) {
+        this.$message.error('未找到机器人信息');
+        return;
+      }
+
+      const payload = {
+        name: robot.name || `chat_${Date.now()}`,
+        agentId: robot.id,
+        userId: userId,
+      };
+      console.log('进入会话参数:', payload);
+
       this.$router.push({
-        name: 'ConversationHistory',
-        params: { id: robotId },
+        path: `/chatRobot/null`,
+        query: payload,
       });
     },
     // 订阅机器人
@@ -1210,11 +1235,11 @@ export default {
   }
 
   .category-detail-container {
-    min-height: 400px;
-    height: 67.5vh;
+    height: 70vh;
   }
 
   .category-detail-grid {
+    top: 0vh;
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
     gap: 15px;
