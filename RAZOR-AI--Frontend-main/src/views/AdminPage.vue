@@ -194,7 +194,11 @@
               </div>
 
               <div class="items-list">
-                <div class="item" v-for="item in pendingPosts" :key="item.id">
+                <div
+                  class="item"
+                  v-for="item in pendingPosts.slice(0, 3)"
+                  :key="item.id"
+                >
                   <div class="item-header">
                     <p class="item-name">{{ item.name }}</p>
                     <p class="item-time">{{ item.time }}</p>
