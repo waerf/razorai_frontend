@@ -356,16 +356,20 @@ export default {
             const res = await adminLogout();
             if (res.data && res.data.success) {
               this.$message.success(res.data.message || '登出成功');
-              // 清除本地token
               if (window.localStorage) {
                 localStorage.removeItem('admin_token');
               }
-              this.$router.push('/');
             } else {
-              this.$message.error(res.data.message || '登出失败');
+              if (window.localStorage) {
+                localStorage.removeItem('admin_token');
+              }
             }
           } catch (err) {
-            this.$message.error(err.message || '登出失败，请重试');
+            if (window.localStorage) {
+              localStorage.removeItem('admin_token');
+            }
+          } finally {
+            this.$router.push('/');
           }
         })
         .catch(() => {
