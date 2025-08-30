@@ -143,7 +143,7 @@
               <div class="stat-content">
                 <div>
                   <p class="stat-label">待审核帖子</p>
-                  <p class="stat-value">5</p>
+                  <p class="stat-value">{{ pendingPostsTotal }}</p>
                 </div>
                 <div class="stat-icon">
                   <i class="el-icon-document"></i>
@@ -245,6 +245,7 @@ import {
   getAdminInfo,
   fetchRecentFeedbacks,
   fetchAllFeedbacks,
+  getPostReportList,
 } from '@/utils/api';
 
 export default {
@@ -283,10 +284,8 @@ export default {
       pendingRobotsLoading: false,
       pendingRobotsTotal: 0, // 新增总数量
       adminName: '', // 新增管理员名称
-      pendingPosts: [
-        { id: 1, name: '违规内容举报', time: '2025-07-15 14:30' },
-        { id: 2, name: '敏感词检测', time: '2025-07-15 10:45' },
-      ],
+      pendingPosts: [], // 待审核帖子列表
+      pendingPostsTotal: 0, // 待审核帖子总数
       recentFeedbacks: [],
       feedbackTotal: 0,
       async fetchRecentFeedbacks() {
@@ -368,7 +367,6 @@ export default {
         .catch(() => {
           // 用户取消
         });
-      // ...existing code...
     },
     toggleSidebar() {
       this.isSidebarCollapsed = !this.isSidebarCollapsed;
@@ -395,6 +393,41 @@ export default {
         this.$message.error(err.message || '获取待审核机器人失败');
       }
       this.pendingRobotsLoading = false;
+    },
+    async fetchPendingPosts() {
+      try {
+        // 获取待审核举报列表（status=0）
+        const res = await getPostReportList({
+          status: 0,
+          page: 1,
+          pageSize: 100,
+        });
+        if (res.data && res.data.success) {
+          this.pendingPosts = res.data.data.map((item) => {
+            let postTitle = '未知帖子';
+            if (item.postTitle) {
+              try {
+                const titleObj = JSON.parse(item.postTitle);
+                postTitle = titleObj.title || '未知帖子';
+              } catch (e) {
+                postTitle = item.postTitle;
+              }
+            }
+            return {
+              id: item.reportId || item.id,
+              name: postTitle,
+              time: item.createdAt || '',
+            };
+          });
+          this.pendingPostsTotal = res.data.data.length;
+        } else {
+          this.pendingPosts = [];
+          this.pendingPostsTotal = 0;
+        }
+      } catch (err) {
+        this.pendingPosts = [];
+        this.pendingPostsTotal = 0;
+      }
     },
     async submitPwdForm() {
       this.$refs.pwdFormRef.validate(async (valid) => {
@@ -437,6 +470,7 @@ export default {
     this.fetchAdminInfo();
     this.fetchRecentFeedbacks();
     this.fetchAllFeedbackTotal();
+    this.fetchPendingPosts();
   },
 };
 </script>

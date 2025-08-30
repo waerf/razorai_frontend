@@ -89,6 +89,14 @@
         </el-dialog>
       </header>
       <div class="content">
+        <el-button
+          type="default"
+          icon="el-icon-arrow-left"
+          style="margin-bottom: 16px"
+          @click="$router.push('/admin/posts')"
+        >
+          返回列表
+        </el-button>
         <el-card v-if="loading" class="loading-card"
           ><el-skeleton rows="6" animated
         /></el-card>
@@ -136,12 +144,6 @@
             }}</el-descriptions-item>
             <el-descriptions-item label="举报详情" :span="2">{{
               report.reportDetails
-            }}</el-descriptions-item>
-            <el-descriptions-item label="审核管理员">{{
-              report.adminName || '未审核'
-            }}</el-descriptions-item>
-            <el-descriptions-item label="审核备注">{{
-              report.reviewComment || '-'
             }}</el-descriptions-item>
             <el-descriptions-item label="创建时间">{{
               report.createdAt
