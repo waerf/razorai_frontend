@@ -99,18 +99,25 @@
         <el-card class="robot-detail-card" shadow="hover">
           <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
             <div>
-              <div class="mb-4">
-                <label class="block text-sm font-medium text-gray-500 mb-1"
-                  >机器人名称</label
+              <div class="mb-4 robot-info-item">
+                <label
+                  class="block text-sm font-bold text-gray-600 mb-1 info-label"
+                  ><i class="el-icon-robot robot-icon"></i> 机器人名称</label
                 >
-                <p class="text-lg font-medium" v-if="robot">{{ robot.name }}</p>
+                <p class="text-lg font-bold robot-name" v-if="robot">
+                  {{ robot.name }}
+                </p>
                 <p v-else class="text-lg text-gray-400">加载中...</p>
               </div>
-              <div class="mb-4">
-                <label class="block text-sm font-medium text-gray-500 mb-1"
-                  >机器人类型</label
+              <div class="mb-4 robot-info-item">
+                <label
+                  class="block text-sm font-bold text-gray-600 mb-1 info-label"
+                  ><i class="el-icon-collection-tag robot-icon"></i>
+                  机器人类型</label
                 >
-                <p class="text-lg" v-if="robot">{{ robot.type }}</p>
+                <div class="robot-type-container" v-if="robot">
+                  <span class="robot-type-badge">{{ robot.type }}</span>
+                </div>
                 <p v-else class="text-lg text-gray-400">加载中...</p>
               </div>
               <div class="mb-4">
@@ -118,9 +125,10 @@
               </div>
             </div>
             <div>
-              <div class="mb-4">
-                <label class="block text-sm font-medium text-gray-500 mb-1"
-                  >当前状态</label
+              <div class="mb-4 robot-info-item">
+                <label
+                  class="block text-sm font-bold text-gray-600 mb-1 info-label"
+                  ><i class="el-icon-info robot-icon"></i> 当前状态</label
                 >
                 <el-tag
                   v-if="robot"
@@ -131,56 +139,86 @@
                         ? 'success'
                         : 'danger'
                   "
+                  class="status-tag"
+                  size="medium"
+                  effect="dark"
                 >
-                  {{
-                    robot.status === 'pending'
-                      ? '待审核'
-                      : robot.status === 'approved'
-                        ? '已通过'
-                        : '已拒绝'
-                  }}
+                  <span class="status-content">
+                    <i
+                      :class="[
+                        robot.status === 'pending'
+                          ? 'el-icon-time'
+                          : robot.status === 'approved'
+                            ? 'el-icon-check'
+                            : 'el-icon-close',
+                      ]"
+                      class="status-icon"
+                    ></i>
+                    <span>{{
+                      robot.status === 'pending'
+                        ? '待审核'
+                        : robot.status === 'approved'
+                          ? '已通过'
+                          : '已拒绝'
+                    }}</span>
+                  </span>
                 </el-tag>
                 <span v-else class="text-gray-400">加载中...</span>
               </div>
             </div>
           </div>
 
-          <div class="mb-6">
-            <label class="block text-sm font-medium text-gray-500 mb-2"
-              >提示词</label
+          <div class="mb-6 robot-info-item">
+            <label class="block text-sm font-bold text-gray-600 mb-2 info-label"
+              ><i class="el-icon-document robot-icon"></i> 提示词</label
             >
-            <div class="bg-gray-50 p-4 rounded-lg">
-              <p class="text-gray-800" v-if="robot">{{ robot.prompt }}</p>
+            <div class="prompt-container">
+              <pre class="prompt-content" v-if="robot">{{ robot.prompt }}</pre>
               <p v-else class="text-gray-400">加载中...</p>
             </div>
           </div>
 
-          <div class="mb-6">
-            <label class="block text-sm font-medium text-gray-500 mb-2"
-              >拒绝理由</label
+          <div class="mb-6 robot-info-item">
+            <label class="block text-sm font-bold text-gray-600 mb-2 info-label"
+              ><i class="el-icon-warning robot-icon"></i> 拒绝理由</label
             >
             <el-input
               type="textarea"
               :rows="3"
               placeholder="请输入拒绝理由"
               v-model="rejectReason"
-              class="test-input"
+              class="reject-reason-input"
               maxlength="200"
               show-word-limit
             ></el-input>
           </div>
 
-          <div class="flex space-x-4">
-            <el-button type="success" @click="approveRobot">通过审核</el-button>
+          <div class="action-buttons">
+            <el-button
+              type="success"
+              icon="el-icon-check"
+              class="action-btn approve-btn"
+              @click="approveRobot"
+            >
+              通过审核
+            </el-button>
             <el-button
               type="danger"
+              icon="el-icon-close"
+              class="action-btn reject-btn"
               :disabled="!rejectReason"
               @click="rejectRobot"
-              >拒绝审核</el-button
             >
-            <el-button type="primary" @click="$router.push('/admin/review')"
-              >返回列表</el-button
+              拒绝审核
+            </el-button>
+            <el-button
+              type="primary"
+              icon="el-icon-back"
+              class="action-btn return-btn"
+              @click="$router.push('/admin/review')"
             >
+              返回列表
+            </el-button>
           </div>
         </el-card>
       </div>
@@ -667,6 +705,169 @@ export default {
       .card-hover:hover {
         transform: translateY(-5px);
         box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+      }
+
+      /* 新增的样式 - 机器人审核详情页面元素样式 */
+      .robot-info-item {
+        border-left: 4px solid #165dff;
+        padding-left: 16px;
+        position: relative;
+        transition: all 0.3s;
+      }
+
+      .info-label {
+        display: flex;
+        align-items: center;
+        color: #165dff;
+        font-size: 14px;
+        letter-spacing: 0.5px;
+        text-transform: uppercase;
+      }
+
+      .robot-icon {
+        margin-right: 6px;
+        font-size: 16px;
+      }
+
+      .robot-name {
+        font-size: 20px;
+        color: #303133;
+        font-weight: 600;
+        text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.1);
+        margin-top: 4px;
+      }
+
+      .robot-type-container {
+        margin-top: 4px;
+      }
+
+      .robot-type-badge {
+        display: inline-block;
+        background-color: #ecf5ff;
+        color: #165dff;
+        padding: 6px 12px;
+        border-radius: 16px;
+        font-weight: 600;
+        font-size: 14px;
+        border: 2px solid #d9ecff;
+      }
+
+      .status-tag {
+        padding: 8px 12px;
+        font-size: 14px;
+        font-weight: 600;
+        border-radius: 8px;
+        margin-top: 4px;
+        display: inline-flex;
+        align-items: center;
+        height: 32px;
+      }
+
+      .status-icon {
+        margin-right: 6px;
+        display: inline-flex;
+        align-items: center;
+      }
+
+      .status-content {
+        display: flex;
+        align-items: center;
+        height: 100%;
+      }
+
+      .prompt-container {
+        background-color: #f5f7fa;
+        border: 1px solid #e4e7ed;
+        border-radius: 8px;
+        padding: 16px;
+        max-height: 300px;
+        overflow-y: auto;
+        transition: all 0.3s;
+        position: relative;
+      }
+
+      .prompt-container:hover {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        border-color: #c6e2ff;
+      }
+
+      .prompt-content {
+        font-family: 'Courier New', Courier, monospace;
+        white-space: pre-wrap;
+        font-size: 14px;
+        line-height: 1.6;
+        color: #303133;
+        margin: 0;
+      }
+
+      .reject-reason-input {
+        .el-textarea__inner {
+          border: 2px solid #f56c6c;
+          border-radius: 8px;
+          transition: all 0.3s;
+          font-size: 14px;
+          background-color: #fff8f8;
+
+          &:focus {
+            border-color: #f56c6c;
+            box-shadow: 0 0 0 2px rgba(245, 108, 108, 0.2);
+          }
+        }
+      }
+
+      .action-buttons {
+        display: flex;
+        gap: 16px;
+        margin-top: 24px;
+        padding-top: 16px;
+        border-top: 1px dashed #e4e7ed;
+      }
+
+      .action-btn {
+        padding: 12px 24px;
+        font-size: 15px;
+        font-weight: 600;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        transition: all 0.3s;
+
+        &:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        &:active {
+          transform: translateY(1px);
+          box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+        }
+      }
+
+      .approve-btn {
+        background-color: #67c23a;
+        border-color: #67c23a;
+
+        &:hover,
+        &:focus {
+          background-color: #5daf34;
+          border-color: #5daf34;
+        }
+      }
+
+      .reject-btn {
+        background-color: #f56c6c;
+        border-color: #f56c6c;
+
+        &:hover,
+        &:focus {
+          background-color: #e45656;
+          border-color: #e45656;
+        }
+
+        &:disabled {
+          background-color: #fab6b6;
+          border-color: #fab6b6;
+          opacity: 0.7;
+        }
       }
     }
   }
