@@ -137,8 +137,10 @@
 
 <script>
 import { mapState, mapActions } from 'vuex';
-import { fetchUserSubscriptions as apiFetchUserSubscriptions } from '../utils/api'; // 导入API函数
+import { fetchUserSubscriptions as apiFetchUserSubscriptions } from '../utils/api';
+import { createChat as apicreateChat } from '../utils/api';
 import RobotDetailDialog from './RobotDetailPage.vue';
+//import chat from '@/store/chat';
 
 export default {
   name: 'SubscribedBotsPage',
@@ -185,7 +187,6 @@ export default {
 
         this.loading = true;
 
-        // 调用Vuex action而不是直接调用API
         const result = await apiFetchUserSubscriptions(userId);
         console.log('找到订阅机器人结果:', result);
 
@@ -224,10 +225,21 @@ export default {
       };
       console.log('进入会话参数:', payload);
 
-      this.$router.push({
-        path: `/chatRobot/null`,
-        query: payload,
-      });
+      try {
+        // 调用接口，创建会话，返回真实 chatId
+        const res = await apicreateChat(payload);
+        const chatId = res.data.chat_id;
+        console.log('创建的聊天ID:', chatId);
+
+        // 直接跳到真实的 chatId 页面
+        this.$router.push({
+          name: 'ChatRobot',
+          params: { chatId: chatId },
+        });
+      } catch (err) {
+        this.$message.error('创建会话失败');
+        console.error(err);
+      }
     },
 
     // 计算剩余天数
