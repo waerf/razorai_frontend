@@ -1,5 +1,5 @@
 <template>
-  <div class="admin-home">
+  <div class="admin-robot-review">
     <!-- 侧边导航栏 -->
     <aside class="sidebar">
       <button class="toggle-sidebar-btn" @click="toggleSidebar">
@@ -41,7 +41,7 @@
     <main class="main-content">
       <!-- 顶部导航栏 -->
       <header class="header">
-        <h1 class="title">机器人审核列表</h1>
+        <h1 class="title">机器人审核</h1>
         <div style="display: flex; align-items: center; margin-left: auto">
           <el-button
             type="warning"
@@ -100,44 +100,80 @@
         <div v-if="loading" class="loading-mask">
           <div class="spinner"></div>
         </div>
-        <!-- 机器人列表 -->
-        <el-card class="post-list-card" shadow="hover">
-          <div class="card-header">
-            <h2 class="card-title">待审核机器人</h2>
-            <span class="text-sm text-gray-500"
-              >共 {{ totalCount }} 个待审核</span
-            >
+
+        <!-- 搜索和筛选 -->
+        <el-card class="search-card" shadow="hover">
+          <div class="search-container">
+            <el-input
+              placeholder="搜索机器人名称或描述..."
+              prefix-icon="el-icon-search"
+              v-model="searchQuery"
+              class="search-input"
+            ></el-input>
           </div>
-          <div class="p-6">
-            <div class="space-y-4">
-              <div
-                v-for="(robot, index) in pendingRobots"
-                :key="index"
-                class="p-4 border border-gray-100 rounded-lg card-hover cursor-pointer"
-                @click="goToReviewPage(robot.id)"
+        </el-card>
+
+        <!-- 机器人列表 -->
+        <el-card class="robot-list-card" shadow="hover">
+          <div class="card-header">
+            <h2 class="card-title">待审核机器人列表</h2>
+            <div class="action-buttons">
+              <span class="record-count">共 {{ totalCount }} 条记录</span>
+              <el-select
+                v-model="pageSize"
+                class="page-size-select"
+                @change="handlePageSizeChange"
               >
-                <div class="flex items-center justify-between mb-2">
-                  <p class="font-medium">{{ robot.name }}</p>
-                  <p class="text-sm text-gray-500">{{ robot.createdAt }}</p>
-                </div>
-                <el-tag type="warning">待审核</el-tag>
-                <p class="text-gray-600 text-sm mt-2">
-                  {{ robot.description }}
-                </p>
-              </div>
+                <el-option :label="'10 条/页'" :value="10"></el-option>
+                <el-option :label="'20 条/页'" :value="20"></el-option>
+                <el-option :label="'50 条/页'" :value="50"></el-option>
+              </el-select>
             </div>
-            <div class="mt-6 text-center">
-              <el-button
-                v-if="hasPrevPage"
-                type="default"
-                @click="loadPrevPage"
-                style="margin-right: 12px"
-                >上一页</el-button
-              >
-              <el-button v-if="hasNextPage" type="primary" @click="loadNextPage"
-                >下一页</el-button
-              >
-            </div>
+          </div>
+
+          <el-table
+            :data="filteredRobots"
+            style="width: 100%"
+            @row-click="goToReviewPage"
+          >
+            <el-table-column label="机器人信息" min-width="220">
+              <template #default="scope">
+                <p class="robot-name">{{ scope.row.name }}</p>
+                <p class="robot-description">{{ scope.row.description }}</p>
+              </template>
+            </el-table-column>
+            <el-table-column
+              prop="creatorName"
+              label="创建者"
+              min-width="100"
+            ></el-table-column>
+            <el-table-column
+              prop="createdAt"
+              label="创建时间"
+              min-width="140"
+            ></el-table-column>
+            <el-table-column label="状态" min-width="100">
+              <template #default="scope">
+                <el-tag :type="getStatusTagType(scope.row.status)" size="small">
+                  {{ getStatusText(scope.row.status) }}
+                </el-tag>
+              </template>
+            </el-table-column>
+          </el-table>
+
+          <!-- 分页 -->
+          <div class="pagination-container">
+            <span class="pagination-info">
+              显示 {{ currentPageStart }} 到 {{ currentPageEnd }} 条，共
+              {{ totalCount }} 条
+            </span>
+            <el-pagination
+              layout="prev, pager, next"
+              :total="totalCount"
+              :page-size="pageSize"
+              :current-page="currentPage"
+              @current-change="handleCurrentChange"
+            ></el-pagination>
           </div>
         </el-card>
       </div>
@@ -159,6 +195,7 @@ export default {
       isSidebarCollapsed: false,
       showChangePwd: false,
       adminName: '',
+      searchQuery: '',
       pwdForm: {
         oldPwd: '',
         newPwd: '',
@@ -186,12 +223,36 @@ export default {
       },
       pendingRobots: [], // 当前页显示的机器人
       currentPage: 1,
-      pageSize: 3,
+      pageSize: 10,
       totalCount: 0,
       loading: false,
     };
   },
   methods: {
+    getStatusTagType(status) {
+      switch (status) {
+        case 'pending':
+          return 'warning';
+        case 'approved':
+          return 'success';
+        case 'rejected':
+          return 'danger';
+        default:
+          return 'warning';
+      }
+    },
+    getStatusText(status) {
+      switch (status) {
+        case 'pending':
+          return '待审核';
+        case 'approved':
+          return '已通过';
+        case 'rejected':
+          return '已拒绝';
+        default:
+          return '待审核';
+      }
+    },
     async fetchAdminInfo() {
       try {
         const res = await getAdminInfo();
@@ -240,13 +301,23 @@ export default {
           // 用户取消
         });
     },
-    goToReviewPage(id) {
+    goToReviewPage(row) {
       // 跳转详情页，使用路由 name+params，确保 id 正确传递
+      // row是整行数据，我们需要提取id属性
+      const id = row.id;
       this.$router.push({
         name: 'AdminRobotReviewDetail',
-        params: { id },
+        params: { id: id },
         query: { fromList: true },
       });
+    },
+    handleCurrentChange(page) {
+      this.currentPage = page;
+      this.fetchPendingRobots(page);
+    },
+    handlePageSizeChange() {
+      this.currentPage = 1;
+      this.fetchPendingRobots(1);
     },
     async fetchPendingRobots(page = 1) {
       this.loading = true;
@@ -258,6 +329,8 @@ export default {
             name: robot.name,
             createdAt: robot.createdAt,
             description: robot.description,
+            creatorName: robot.creatorName || robot.userName || '未知',
+            status: 'pending', // 默认待审核状态
           }));
           this.totalCount =
             res.data.pagination?.totalCount || this.pendingRobots.length;
@@ -268,18 +341,6 @@ export default {
         this.$message.error(err.message || '获取待审核机器人失败');
       }
       this.loading = false;
-    },
-    loadNextPage() {
-      if (this.hasNextPage && !this.loading) {
-        this.currentPage++;
-        this.fetchPendingRobots(this.currentPage);
-      }
-    },
-    loadPrevPage() {
-      if (this.hasPrevPage && !this.loading) {
-        this.currentPage--;
-        this.fetchPendingRobots(this.currentPage);
-      }
     },
     async submitPwdForm() {
       this.$refs.pwdFormRef.validate(async (valid) => {
@@ -334,6 +395,27 @@ export default {
     );
   },
   computed: {
+    filteredRobots() {
+      let filtered = this.pendingRobots;
+      if (this.searchQuery) {
+        const query = this.searchQuery.toLowerCase();
+        filtered = filtered.filter(
+          (robot) =>
+            robot.name.toLowerCase().includes(query) ||
+            (robot.description &&
+              robot.description.toLowerCase().includes(query))
+        );
+      }
+      return filtered;
+    },
+    currentPageStart() {
+      return this.totalCount === 0
+        ? 0
+        : (this.currentPage - 1) * this.pageSize + 1;
+    },
+    currentPageEnd() {
+      return Math.min(this.currentPage * this.pageSize, this.totalCount);
+    },
     hasNextPage() {
       return this.currentPage * this.pageSize < this.totalCount;
     },
@@ -345,7 +427,7 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-.admin-home {
+.admin-robot-review {
   display: flex;
   min-height: 100vh;
   background-color: #f5f5f5;
@@ -488,12 +570,76 @@ export default {
     .content {
       padding: 24px;
 
-      .card-hover {
-        transition: all 0.3s ease;
+      .search-card {
+        margin-bottom: 24px;
+
+        .search-container {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+
+          .search-input {
+            width: 400px;
+          }
+
+          .filter-container {
+            display: flex;
+            gap: 12px;
+          }
+        }
       }
-      .card-hover:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+
+      .robot-list-card {
+        .card-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 16px;
+
+          .card-title {
+            font-size: 18px;
+            font-weight: 600;
+          }
+
+          .action-buttons {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+            .record-count {
+              font-size: 14px;
+              color: #666;
+              margin: 0 8px 0 0;
+            }
+            .page-size-select {
+              width: 110px;
+            }
+          }
+        }
+
+        .robot-name {
+          font-weight: 500;
+        }
+
+        .robot-description {
+          font-size: 12px;
+          color: #999;
+          margin-top: 4px;
+        }
+
+        .pagination-container {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-top: 24px;
+          padding-top: 24px;
+          border-top: 1px solid #e6e6e6;
+
+          .pagination-info {
+            font-size: 14px;
+            color: #666;
+          }
+        }
       }
     }
   }
