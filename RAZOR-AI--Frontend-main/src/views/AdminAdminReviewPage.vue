@@ -155,6 +155,7 @@ import {
   getPendingAdmins,
   getAdminInfo,
   reviewAdmin,
+  sendExternalNotification,
 } from '@/utils/api';
 export default {
   name: 'AdminAdminReviewPage',
@@ -273,6 +274,15 @@ export default {
         const res = await reviewAdmin({ adminId, status: 1 });
         if (res.data && res.data.success) {
           this.$message.success(res.data.message || '审核通过成功');
+          // 发送外部通知
+          try {
+            await sendExternalNotification({
+              userId: adminId,
+              message: '您的管理员申请已通过审核。',
+            });
+          } catch (e) {
+            this.$message.warning('外部通知发送失败: ' + (e.message || '')); // 不影响主流程
+          }
           await this.fetchPendingAdmins();
         } else {
           this.$message.error(res.data.message || '审核失败');
@@ -286,6 +296,15 @@ export default {
         const res = await reviewAdmin({ adminId, status: 2 });
         if (res.data && res.data.success) {
           this.$message.success(res.data.message || '已拒绝该管理员');
+          // 发送外部通知
+          try {
+            await sendExternalNotification({
+              userId: adminId,
+              message: '您的管理员申请未通过审核。',
+            });
+          } catch (e) {
+            this.$message.warning('外部通知发送失败: ' + (e.message || ''));
+          }
           await this.fetchPendingAdmins();
         } else {
           this.$message.error(res.data.message || '操作失败');

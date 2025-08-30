@@ -1,3 +1,23 @@
+// ====================== 外部通知相关 API ======================
+/**
+ * 发送外部通知（单个用户）
+ * @param {Object} payload { userId: number, message: string }
+ * @returns Promise
+ */
+export const sendExternalNotification = (payload) => {
+  // payload: { userId, message }
+  return api.post('/external-notifications/create', payload);
+};
+
+/**
+ * 批量发送外部通知
+ * @param {Object} payload { userIds: number[], message: string }
+ * @returns Promise
+ */
+export const sendBulkExternalNotification = (payload) => {
+  // payload: { userIds, message }
+  return api.post('/external-notifications/create-bulk', payload);
+};
 // src/utils/api.js
 //api.js 文件用于封装 API 请求，方便在项目中进行统一管理和调用。
 import axios from 'axios';
