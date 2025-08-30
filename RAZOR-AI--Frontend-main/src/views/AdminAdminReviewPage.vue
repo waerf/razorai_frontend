@@ -1,5 +1,5 @@
 <template>
-  <div class="admin-home">
+  <div class="admin-admin-review">
     <!-- 侧边导航栏 -->
     <aside class="sidebar">
       <button class="toggle-sidebar-btn" @click="toggleSidebar">
@@ -41,7 +41,7 @@
     <main class="main-content">
       <!-- 顶部导航栏 -->
       <header class="header">
-        <h1 class="title">管理员审核列表</h1>
+        <h1 class="title">管理员审核</h1>
         <div style="display: flex; align-items: center; margin-left: auto">
           <el-button
             type="warning"
@@ -96,51 +96,88 @@
 
       <!-- 主要内容 -->
       <div class="content">
-        <!-- 管理员列表 -->
-        <el-card class="post-list-card" shadow="hover">
-          <div class="card-header">
-            <h2 class="card-title">待审核管理员</h2>
-            <span class="text-sm text-gray-500"
-              >共 {{ pendingAdmins.length }} 个待审核</span
-            >
+        <!-- 搜索和筛选 -->
+        <el-card class="search-card" shadow="hover">
+          <div class="search-container">
+            <el-input
+              placeholder="搜索管理员名称或邮箱..."
+              prefix-icon="el-icon-search"
+              v-model="searchQuery"
+              class="search-input"
+            ></el-input>
           </div>
-          <div class="p-6">
-            <div class="space-y-4">
-              <div
-                v-for="(admin, index) in pendingAdmins"
-                :key="index"
-                class="p-4 border border-gray-100 rounded-lg card-hover cursor-pointer"
+        </el-card>
+
+        <!-- 管理员列表 -->
+        <el-card class="admin-list-card" shadow="hover">
+          <div class="card-header">
+            <h2 class="card-title">待审核管理员列表</h2>
+            <div class="action-buttons">
+              <span class="record-count"
+                >共 {{ pendingAdmins.length }} 条记录</span
               >
-                <div class="flex items-center justify-between mb-2">
-                  <p class="font-medium">{{ admin.username }}</p>
-                  <p class="text-sm text-gray-500">{{ admin.registeredAt }}</p>
-                </div>
-                <el-tag type="warning">待审核</el-tag>
-                <p class="text-gray-600 text-sm mt-2">
-                  邮箱：{{ admin.email }}
-                </p>
-                <p
-                  v-if="admin.RegistrationReason"
-                  class="text-gray-600 text-sm mt-2"
-                >
-                  注册理由：{{ admin.RegistrationReason }}
-                </p>
-                <div class="mt-3 flex gap-2">
-                  <el-button
-                    type="success"
-                    size="mini"
-                    @click="approveAdmin(admin.id)"
-                    >通过</el-button
-                  >
-                  <el-button
-                    type="danger"
-                    size="mini"
-                    @click="rejectAdmin(admin.id)"
-                    >拒绝</el-button
-                  >
-                </div>
-              </div>
+              <el-select v-model="pageSize" class="page-size-select">
+                <el-option label="10 条/页" :value="10"></el-option>
+                <el-option label="20 条/页" :value="20"></el-option>
+                <el-option label="50 条/页" :value="50"></el-option>
+              </el-select>
             </div>
+          </div>
+
+          <el-table :data="filteredAdmins" style="width: 100%">
+            <el-table-column label="管理员信息" min-width="220">
+              <template #default="scope">
+                <p class="admin-name">{{ scope.row.username }}</p>
+                <p class="admin-email">{{ scope.row.email }}</p>
+              </template>
+            </el-table-column>
+            <el-table-column label="注册理由" min-width="200">
+              <template #default="scope">
+                <p>{{ scope.row.RegistrationReason || '无' }}</p>
+              </template>
+            </el-table-column>
+            <el-table-column
+              prop="registeredAt"
+              label="申请时间"
+              min-width="140"
+            ></el-table-column>
+            <el-table-column label="状态" min-width="100">
+              <template #default="scope">
+                <el-tag :type="getStatusTagType(scope.row.status)" size="small">
+                  {{ getStatusText(scope.row.status) }}
+                </el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column label="操作" min-width="160">
+              <template #default="scope">
+                <el-button
+                  type="success"
+                  size="mini"
+                  @click="approveAdmin(scope.row.id)"
+                  >通过</el-button
+                >
+                <el-button
+                  type="danger"
+                  size="mini"
+                  @click="rejectAdmin(scope.row.id)"
+                  >拒绝</el-button
+                >
+              </template>
+            </el-table-column>
+          </el-table>
+
+          <!-- 分页 -->
+          <div class="pagination-container">
+            <span class="pagination-info">
+              显示 {{ currentPageStart }} 到 {{ currentPageEnd }} 条，共
+              {{ pendingAdmins.length }} 条
+            </span>
+            <el-pagination
+              layout="prev, pager, next"
+              :total="pendingAdmins.length"
+              :page-size="pageSize"
+              @current-change="handleCurrentChange"
+            ></el-pagination>
           </div>
         </el-card>
       </div>
@@ -164,6 +201,9 @@ export default {
       isSidebarCollapsed: false,
       showChangePwd: false,
       adminName: '',
+      searchQuery: '',
+      pageSize: 10,
+      currentPage: 1,
       pwdForm: {
         oldPwd: '',
         newPwd: '',
@@ -192,11 +232,67 @@ export default {
       pendingAdmins: [],
     };
   },
-  created() {
+  computed: {
+    filteredAdmins() {
+      let filtered = this.pendingAdmins;
+      if (this.searchQuery) {
+        const query = this.searchQuery.toLowerCase();
+        filtered = filtered.filter(
+          (admin) =>
+            admin.username.toLowerCase().includes(query) ||
+            admin.email.toLowerCase().includes(query) ||
+            (admin.RegistrationReason &&
+              admin.RegistrationReason.toLowerCase().includes(query))
+        );
+      }
+      const start = (this.currentPage - 1) * this.pageSize;
+      const end = start + parseInt(this.pageSize);
+      return filtered.slice(start, end);
+    },
+    currentPageStart() {
+      return this.pendingAdmins.length === 0
+        ? 0
+        : (this.currentPage - 1) * this.pageSize + 1;
+    },
+    currentPageEnd() {
+      return Math.min(
+        this.currentPage * this.pageSize,
+        this.pendingAdmins.length
+      );
+    },
+  },
+  mounted() {
     this.fetchPendingAdmins();
     this.fetchAdminInfo();
   },
   methods: {
+    getStatusTagType(status) {
+      switch (status) {
+        case 'pending':
+          return 'warning';
+        case 'approved':
+          return 'success';
+        case 'rejected':
+          return 'danger';
+        default:
+          return 'warning';
+      }
+    },
+    getStatusText(status) {
+      switch (status) {
+        case 'pending':
+          return '待审核';
+        case 'approved':
+          return '已通过';
+        case 'rejected':
+          return '已拒绝';
+        default:
+          return '待审核';
+      }
+    },
+    handleCurrentChange(page) {
+      this.currentPage = page;
+    },
     async fetchAdminInfo() {
       try {
         const res = await getAdminInfo();
@@ -225,6 +321,7 @@ export default {
               a.register_reason ||
               a.reason ||
               '',
+            status: 'pending', // 默认状态为待审核
           }));
         } else {
           this.$message.error(res.data.message || '获取待审核管理员失败');
@@ -353,7 +450,7 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-.admin-home {
+.admin-admin-review {
   display: flex;
   min-height: 100vh;
   background-color: #f5f5f5;
@@ -496,12 +593,71 @@ export default {
     .content {
       padding: 24px;
 
-      .card-hover {
-        transition: all 0.3s ease;
+      .search-card {
+        margin-bottom: 24px;
+
+        .search-container {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+
+          .search-input {
+            width: 400px;
+          }
+        }
       }
-      .card-hover:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+
+      .admin-list-card {
+        .card-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 16px;
+
+          .card-title {
+            font-size: 18px;
+            font-weight: 600;
+          }
+
+          .action-buttons {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+            .record-count {
+              font-size: 14px;
+              color: #666;
+              margin: 0 8px 0 0;
+            }
+            .page-size-select {
+              width: 110px;
+            }
+          }
+        }
+
+        .admin-name {
+          font-weight: 500;
+        }
+
+        .admin-email {
+          font-size: 12px;
+          color: #999;
+          margin-top: 4px;
+        }
+
+        .pagination-container {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-top: 24px;
+          padding-top: 24px;
+          border-top: 1px solid #e6e6e6;
+
+          .pagination-info {
+            font-size: 14px;
+            color: #666;
+          }
+        }
       }
     }
   }
