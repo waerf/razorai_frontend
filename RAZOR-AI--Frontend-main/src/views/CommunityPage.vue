@@ -188,18 +188,25 @@ export default {
             };
           });
 
-          // 🔥 并行获取点赞数和评论数
+          //并行获取点赞数和评论数
           await Promise.all(
             this.posts.map(async (post) => {
+              // 评论数量
               try {
-                const [likeRes, commentRes] = await Promise.all([
-                  getCommunityLikeCount(post.id),
-                  getCommunityCommentCount(post.id),
-                ]);
-                post.likeCount = likeRes.data?.likeCount ?? 0;
+                const commentRes = await getCommunityCommentCount(post.id);
                 post.commentCount = commentRes.data?.commentCount ?? 0;
               } catch (e) {
-                console.error(`获取帖子 ${post.id} 的点赞/评论数失败:`, e);
+                console.error(`获取帖子 ${post.id} 的评论数失败:`, e);
+                post.commentCount = 0;
+              }
+
+              // 点赞数量
+              try {
+                const likeRes = await getCommunityLikeCount(post.id);
+                post.likeCount = likeRes.data?.likeCount ?? 0;
+              } catch (e) {
+                console.error(`获取帖子 ${post.id} 的点赞数失败:`, e);
+                post.likeCount = 0;
               }
             })
           );

@@ -718,7 +718,6 @@ export default {
     display: flex;
     justify-content: center;
     margin-bottom: 30px;
-    gap: 20px;
 
     .subscribed-robots {
       width: 80%;
