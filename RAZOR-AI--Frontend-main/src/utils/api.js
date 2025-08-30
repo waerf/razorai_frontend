@@ -305,7 +305,7 @@ export const fetchAllFeedbacks = () => {
   });
 };
 
-// 获取最近用户反馈（仅取最近2条）
+// 获取最近用户反馈（仅取最近3条）
 export const fetchRecentFeedbacks = () => {
   return adminApi
     .get('/feedback/all', {
@@ -316,7 +316,7 @@ export const fetchRecentFeedbacks = () => {
       if (res && res.data && Array.isArray(res.data.feedbacks)) {
         return {
           ...res,
-          data: { ...res.data, feedbacks: res.data.feedbacks.slice(0, 2) },
+          data: { ...res.data, feedbacks: res.data.feedbacks.slice(0, 3) },
         };
       }
       return res;
@@ -470,14 +470,8 @@ export const sendUserFeedback = (feedbackload) =>
 export const getUserNotifications = (userId) =>
   api.get(`/notifications/unread/${userId}`);
 
-// 向用户发送机器人审核结果通知
-/**
- * sendRobotReviewNotification
- * @param {Object} payload { userId: number, notificationType: 0|1, message: string }
- * @returns Promise
- */
-export const sendRobotReviewNotification = (payload) => {
-  // notificationType: 0=站内, 1=外部
+// 向用户发送审核结果通知
+export const sendReviewNotification = (payload) => {
   return api.post('/notifications/create', payload);
 };
 

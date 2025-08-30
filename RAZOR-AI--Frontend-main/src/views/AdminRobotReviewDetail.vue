@@ -195,6 +195,7 @@ import {
   adminLogout,
   getAdminInfo,
   getPendingAgentDetail,
+  sendReviewNotification,
 } from '@/utils/api';
 
 export default {
@@ -403,6 +404,14 @@ export default {
         const approveData = await approveRes.json();
         if (approveData.success) {
           this.robot.status = 'approved';
+          // 发送审核通过通知
+          await sendReviewNotification({
+            userId: creatorId,
+            title: '机器人审核通过',
+            message: `您的机器人“${this.robot.name}”已通过审核。`,
+            robotId: this.robot.id,
+            status: 'approved',
+          });
           this.$message.success(
             approveData.message || '审核已通过，AI创建成功'
           );
@@ -417,7 +426,7 @@ export default {
         this.$message.error(err.message || '审核操作失败');
       }
     },
-    rejectRobot() {
+    async rejectRobot() {
       if (!this.robot) return;
       if (!this.rejectReason) {
         this.$message.warning('请输入拒绝理由');
@@ -448,36 +457,43 @@ export default {
         Price: this.robot.price || 0,
         Remarks: this.rejectReason,
       };
-      fetch(
-        `http://47.99.66.142:5253/admin/agent-review/${this.robot.id}/reject`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Accept: 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify(payload),
-        }
-      )
-        .then((res) => res.json())
-        .then((data) => {
-          if (data.success) {
-            this.robot.status = 'rejected';
-            this.$message.error(data.message || '审核已拒绝');
-            this.rejectReason = '';
-            // 跳转回列表页并传递已审核 id
-            this.$router.push({
-              path: '/admin/review',
-              query: { removedId: this.robot.id },
-            });
-          } else {
-            this.$message.error(data.message || '审核失败');
+      try {
+        const res = await fetch(
+          `http://47.99.66.142:5253/admin/agent-review/${this.robot.id}/reject`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Accept: 'application/json',
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify(payload),
           }
-        })
-        .catch((err) => {
-          this.$message.error(err.message || '审核失败');
-        });
+        );
+        const data = await res.json();
+        if (data.success) {
+          this.robot.status = 'rejected';
+          // 发送审核拒绝通知
+          await sendReviewNotification({
+            userId: creatorId,
+            title: '机器人审核未通过',
+            message: `您的机器人“${this.robot.name}”未通过审核，原因：${this.rejectReason}`,
+            robotId: this.robot.id,
+            status: 'rejected',
+          });
+          this.$message.error(data.message || '审核已拒绝');
+          this.rejectReason = '';
+          // 跳转回列表页并传递已审核 id
+          this.$router.push({
+            path: '/admin/review',
+            query: { removedId: this.robot.id },
+          });
+        } else {
+          this.$message.error(data.message || '审核失败');
+        }
+      } catch (err) {
+        this.$message.error(err.message || '审核失败');
+      }
     },
   },
   mounted() {

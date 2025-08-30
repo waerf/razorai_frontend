@@ -156,8 +156,8 @@
             <el-form :model="reviewForm" label-width="80px" class="review-form">
               <el-form-item label="审核操作">
                 <el-radio-group v-model="reviewForm.status">
-                  <el-radio :label="1">通过</el-radio>
-                  <el-radio :label="2">拒绝</el-radio>
+                  <el-radio :label="1">有效</el-radio>
+                  <el-radio :label="2">无效</el-radio>
                 </el-radio-group>
               </el-form-item>
               <el-form-item label="审核备注">
@@ -191,7 +191,7 @@ import {
   changeAdminPassword,
   getPostReportDetail,
   reviewPostReport,
-  sendRobotReviewNotification,
+  sendReviewNotification,
 } from '@/utils/api';
 export default {
   name: 'AdminPostReviewDetail',
@@ -387,17 +387,11 @@ export default {
           reviewComment: this.reviewForm.reviewComment,
         });
         if (res.data && res.data.success) {
-          // 审核成功后，向用户发送通知
-          let notifyMsg = '';
-          if (this.reviewForm.status === 1) {
-            notifyMsg = `您提交的机器人（ID:${this.report.postId}）已通过审核。`;
-          } else if (this.reviewForm.status === 2) {
-            notifyMsg = `您提交的机器人（ID:${this.report.postId}）未通过审核。原因：${this.reviewForm.reviewComment || '无'}`;
-          }
-          if (this.report.userId) {
-            // 发送站内通知
-            sendRobotReviewNotification({
-              userId: this.report.userId,
+          // 审核通过时向举报人发送通知，内容为“您举报的帖子已被处理，感谢您的反馈”
+          if (this.reviewForm.status === 1 && this.report.reporterId) {
+            const notifyMsg = `您举报的帖子已被处理，感谢您的反馈。`;
+            sendReviewNotification({
+              userId: this.report.reporterId,
               notificationType: 0,
               message: notifyMsg,
             }).catch(() => {}); // 忽略通知失败

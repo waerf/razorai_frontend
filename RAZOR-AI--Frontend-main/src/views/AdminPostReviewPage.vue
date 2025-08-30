@@ -105,20 +105,7 @@
               v-model="searchQuery"
               class="search-input"
             ></el-input>
-            <div class="filter-container">
-              <el-select v-model="statusFilter" placeholder="全部状态">
-                <el-option label="全部状态" value="all"></el-option>
-                <el-option label="待审核" value="pending"></el-option>
-                <el-option label="已通过" value="approved"></el-option>
-                <el-option label="已拒绝" value="rejected"></el-option>
-              </el-select>
-              <el-select v-model="typeFilter" placeholder="全部类型">
-                <el-option label="全部类型" value="all"></el-option>
-                <el-option label="普通帖子" value="normal"></el-option>
-                <el-option label="举报内容" value="report"></el-option>
-                <el-option label="敏感词检测" value="sensitive"></el-option>
-              </el-select>
-            </div>
+            <!-- 已移除状态和类型筛选 -->
           </div>
         </el-card>
 
@@ -157,11 +144,7 @@
               label="提交时间"
               min-width="140"
             ></el-table-column>
-            <el-table-column
-              prop="type"
-              label="类型"
-              min-width="100"
-            ></el-table-column>
+            <!-- 已移除类型列 -->
             <el-table-column label="状态" min-width="100">
               <template #default="scope">
                 <el-tag :type="getStatusTagType(scope.row.status)" size="small">
@@ -230,8 +213,7 @@ export default {
         ],
       },
       searchQuery: '',
-      statusFilter: 'all',
-      typeFilter: 'all',
+      // 已移除状态和类型筛选相关变量
       pageSize: 10,
       currentPage: 1,
       posts: [],
@@ -292,7 +274,6 @@ export default {
   computed: {
     filteredPosts() {
       let filtered = this.posts;
-
       if (this.searchQuery) {
         const query = this.searchQuery.toLowerCase();
         filtered = filtered.filter(
@@ -301,17 +282,6 @@ export default {
             post.subtitle.toLowerCase().includes(query)
         );
       }
-
-      if (this.statusFilter !== 'all') {
-        filtered = filtered.filter((post) => post.status === this.statusFilter);
-      }
-
-      if (this.typeFilter !== 'all') {
-        filtered = filtered.filter((post) =>
-          post.type.includes(this.typeFilter)
-        );
-      }
-
       return filtered;
     },
     currentPageStart() {
