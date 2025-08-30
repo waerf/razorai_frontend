@@ -191,6 +191,7 @@ import {
   changeAdminPassword,
   getPostReportDetail,
   reviewPostReport,
+  sendRobotReviewNotification,
 } from '@/utils/api';
 export default {
   name: 'AdminPostReviewDetail',
@@ -386,6 +387,21 @@ export default {
           reviewComment: this.reviewForm.reviewComment,
         });
         if (res.data && res.data.success) {
+          // 审核成功后，向用户发送通知
+          let notifyMsg = '';
+          if (this.reviewForm.status === 1) {
+            notifyMsg = `您提交的机器人（ID:${this.report.postId}）已通过审核。`;
+          } else if (this.reviewForm.status === 2) {
+            notifyMsg = `您提交的机器人（ID:${this.report.postId}）未通过审核。原因：${this.reviewForm.reviewComment || '无'}`;
+          }
+          if (this.report.userId) {
+            // 发送站内通知
+            sendRobotReviewNotification({
+              userId: this.report.userId,
+              notificationType: 0,
+              message: notifyMsg,
+            }).catch(() => {}); // 忽略通知失败
+          }
           this.$message.success(res.data.message || '审核成功');
           this.fetchReportDetail();
         } else {

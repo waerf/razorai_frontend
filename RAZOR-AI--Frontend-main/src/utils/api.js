@@ -450,6 +450,17 @@ export const sendUserFeedback = (feedbackload) =>
 export const getUserNotifications = (userId) =>
   api.get(`/notifications/unread/${userId}`);
 
+// 向用户发送机器人审核结果通知
+/**
+ * sendRobotReviewNotification
+ * @param {Object} payload { userId: number, notificationType: 0|1, message: string }
+ * @returns Promise
+ */
+export const sendRobotReviewNotification = (payload) => {
+  // notificationType: 0=站内, 1=外部
+  return api.post('/notifications/create', payload);
+};
+
 // 根据通知id将通知标记为已读
 export const markNotificationAsRead = (notificationId) =>
   api.put(`/notifications/${notificationId}/read`, {

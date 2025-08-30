@@ -424,6 +424,30 @@ export default {
         return;
       }
       const token = MyStorage.get('admin_token');
+      // 字段映射，和通过审核时保持一致
+      let type = 1;
+      if (typeof this.robot.type === 'number') {
+        type = this.robot.type;
+      } else if (typeof this.robot.type === 'string') {
+        if (this.robot.type.includes('任务')) type = 2;
+        else if (this.robot.type.includes('分析')) type = 3;
+        else type = 1;
+      }
+      let llmId = this.robot.llmId || 1;
+      let creatorId = this.robot.creatorId;
+      if (!creatorId) {
+        creatorId = MyStorage.get('user_id') || 1;
+      }
+      const payload = {
+        Name: this.robot.name,
+        Type: type,
+        LLMId: llmId,
+        ChatPrompt: this.robot.prompt,
+        Description: this.robot.description,
+        CreatorId: parseInt(creatorId),
+        Price: this.robot.price || 0,
+        Remarks: this.rejectReason,
+      };
       fetch(
         `http://47.99.66.142:5253/admin/agent-review/${this.robot.id}/reject`,
         {
@@ -433,7 +457,7 @@ export default {
             Accept: 'application/json',
             Authorization: `Bearer ${token}`,
           },
-          body: JSON.stringify({ remarks: this.rejectReason }),
+          body: JSON.stringify(payload),
         }
       )
         .then((res) => res.json())
