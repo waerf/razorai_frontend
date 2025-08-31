@@ -376,14 +376,22 @@ export default {
         const res = await reviewAdmin({ adminId, status: 1 });
         if (res.data && res.data.success) {
           this.$message.success(res.data.message || '审核通过成功');
-          // 发送外部通知
-          try {
-            await sendExternalNotification({
-              userId: adminId,
-              message: '您的管理员申请已通过审核。',
-            });
-          } catch (e) {
-            this.$message.warning('外部通知发送失败: ' + (e.message || '')); // 不影响主流程
+
+          // 发送外部通知前，先查找对应的管理员信息
+          const admin = this.pendingAdmins.find(
+            (admin) => admin.id === adminId
+          );
+          if (admin && admin.email) {
+            // 使用管理员的邮箱作为目标地址
+            try {
+              await sendExternalNotification({
+                UserId: adminId, // 仍然保留ID用于创建通知记录
+                Message: '您的管理员申请已通过审核。',
+                Email: admin.email, // 添加额外的邮箱字段
+              });
+            } catch (e) {
+              this.$message.warning('外部通知发送失败: ' + (e.message || '')); // 不影响主流程
+            }
           }
           await this.fetchPendingAdmins();
         } else {
@@ -398,14 +406,22 @@ export default {
         const res = await reviewAdmin({ adminId, status: 2 });
         if (res.data && res.data.success) {
           this.$message.success(res.data.message || '已拒绝该管理员');
-          // 发送外部通知
-          try {
-            await sendExternalNotification({
-              userId: adminId,
-              message: '您的管理员申请未通过审核。',
-            });
-          } catch (e) {
-            this.$message.warning('外部通知发送失败: ' + (e.message || ''));
+
+          // 发送外部通知前，先查找对应的管理员信息
+          const admin = this.pendingAdmins.find(
+            (admin) => admin.id === adminId
+          );
+          if (admin && admin.email) {
+            // 使用管理员的邮箱作为目标地址
+            try {
+              await sendExternalNotification({
+                UserId: adminId, // 仍然保留ID用于创建通知记录
+                Message: '您的管理员申请未通过审核。',
+                Email: admin.email, // 添加额外的邮箱字段
+              });
+            } catch (e) {
+              this.$message.warning('外部通知发送失败: ' + (e.message || ''));
+            }
           }
           await this.fetchPendingAdmins();
         } else {

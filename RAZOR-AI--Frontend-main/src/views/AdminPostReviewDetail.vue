@@ -403,6 +403,9 @@ export default {
           }
           this.$message.success(res.data.message || '审核成功');
           this.fetchReportDetail();
+
+          // 审核提交成功后，返回列表页
+          this.$router.push('/admin/posts');
         } else {
           this.$message.error(res.data.message || '审核失败');
         }

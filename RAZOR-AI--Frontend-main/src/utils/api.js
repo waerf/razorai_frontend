@@ -1,23 +1,3 @@
-// ====================== 外部通知相关 API ======================
-/**
- * 发送外部通知（单个用户）
- * @param {Object} payload { userId: number, message: string }
- * @returns Promise
- */
-export const sendExternalNotification = (payload) => {
-  // payload: { userId, message }
-  return api.post('/external-notifications/create', payload);
-};
-
-/**
- * 批量发送外部通知
- * @param {Object} payload { userIds: number[], message: string }
- * @returns Promise
- */
-export const sendBulkExternalNotification = (payload) => {
-  // payload: { userIds, message }
-  return api.post('/external-notifications/create-bulk', payload);
-};
 // src/utils/api.js
 //api.js 文件用于封装 API 请求，方便在项目中进行统一管理和调用。
 import axios from 'axios';
@@ -29,7 +9,8 @@ const api = axios.create({
 });
 
 const adminApi = axios.create({
-  baseURL: '/api',
+  //baseURL: '/api',
+  baseURL: 'http://localhost:5253',
   timeout: 10000,
 });
 
@@ -213,6 +194,34 @@ export const deductUserPoints = (
     relatedId,
   });
 
+// ====================== 外部通知相关 API ======================
+// 发送外部通知（单个用户）
+export const sendExternalNotification = (payload) => {
+  // 确保payload使用大写首字母的字段名，符合后端模型要求
+  const formattedPayload = {
+    UserId: payload.UserId || payload.userId,
+    Message: payload.Message || payload.message,
+  };
+
+  // 如果提供了Email字段，则使用专门的接口发送到指定邮箱
+  if (payload.Email || payload.email) {
+    const email = payload.Email || payload.email;
+    return adminApi.post('/external-notifications/send-email', {
+      Email: email,
+      Message: formattedPayload.Message,
+    });
+  }
+
+  return adminApi.post('/external-notifications/create', formattedPayload);
+};
+
+//批量发送外部通知
+export const sendBulkExternalNotification = (payload) => {
+  // payload: { userIds, message }
+  return api.post('/external-notifications/create-bulk', payload);
+};
+// =============================================================
+
 // 管理员注册
 export const adminRegister = (payload) => {
   return adminApi.post('/api/admin/register', payload);
@@ -275,6 +284,27 @@ export const getPostReportDetail = (reportId) =>
 // 管理员获取待审核的帖子列表（AUDIT表）
 export const getPendingPostAudits = (params = {}) =>
   adminApi.get('/api/PostReport/pending-audits', { params });
+
+// ====================== 评论举报相关（管理员）API ======================
+
+// 管理员获取评论举报列表
+export const getCommentReportList = (params = {}) =>
+  adminApi.get('/api/CommentReport/list', { params });
+
+// 管理员审核评论举报
+export const reviewCommentReport = ({ reportId, status, reviewComment = '' }) =>
+  adminApi.post(`/api/CommentReport/review/${reportId}`, {
+    status,
+    reviewComment,
+  });
+
+// 管理员获取评论举报详情
+export const getCommentReportDetail = (reportId) =>
+  adminApi.get(`/api/CommentReport/${reportId}`);
+
+// 管理员获取待审核的评论列表（AUDIT表）
+export const getPendingCommentAudits = (params = {}) =>
+  adminApi.get('/api/CommentReport/pending-audits', { params });
 
 // 管理员审核接口
 // status: 1=通过, 2=拒绝

@@ -109,8 +109,18 @@
           </div>
         </el-card>
 
+        <!-- 列表切换标签 -->
+        <el-tabs v-model="activeTab" @tab-click="handleTabClick">
+          <el-tab-pane label="待审核帖子" name="posts"></el-tab-pane>
+          <el-tab-pane label="待审核评论" name="comments"></el-tab-pane>
+        </el-tabs>
+
         <!-- 帖子列表 -->
-        <el-card class="post-list-card" shadow="hover">
+        <el-card
+          v-if="activeTab === 'posts'"
+          class="post-list-card"
+          shadow="hover"
+        >
           <div class="card-header">
             <h2 class="card-title">待审核帖子列表</h2>
             <div class="action-buttons">
@@ -153,21 +163,84 @@
               </template>
             </el-table-column>
           </el-table>
+        </el-card>
+
+        <!-- 评论列表 -->
+        <el-card
+          v-if="activeTab === 'comments'"
+          class="post-list-card"
+          shadow="hover"
+        >
+          <div class="card-header">
+            <h2 class="card-title">待审核评论列表</h2>
+            <div class="action-buttons">
+              <span class="record-count">共 {{ comments.length }} 条记录</span>
+              <el-select v-model="commentPageSize" class="page-size-select">
+                <el-option label="10 条/页" value="10"></el-option>
+                <el-option label="20 条/页" value="20"></el-option>
+                <el-option label="50 条/页" value="50"></el-option>
+              </el-select>
+            </div>
+          </div>
+
+          <el-table
+            :data="filteredComments"
+            style="width: 100%"
+            @row-click="viewComment"
+          >
+            <el-table-column label="评论内容" min-width="220">
+              <template #default="scope">
+                <p class="post-title">{{ scope.row.commentContent }}</p>
+                <p class="post-subtitle">{{ scope.row.reportReason }}</p>
+              </template>
+            </el-table-column>
+            <el-table-column
+              prop="reporterName"
+              label="举报人"
+              min-width="100"
+            ></el-table-column>
+            <el-table-column label="举报时间" min-width="140">
+              <template #default="scope">
+                {{ formatTime(scope.row.createdAt) }}
+              </template>
+            </el-table-column>
+            <el-table-column label="状态" min-width="100">
+              <template #default="scope">
+                <el-tag :type="getStatusTagType(scope.row.status)" size="small">
+                  {{ scope.row.statusText }}
+                </el-tag>
+              </template>
+            </el-table-column>
+          </el-table>
 
           <!-- 分页 -->
           <div class="pagination-container">
             <span class="pagination-info">
-              显示 {{ currentPageStart }} 到 {{ currentPageEnd }} 条，共
-              {{ posts.length }} 条
+              显示 {{ commentCurrentPageStart }} 到
+              {{ commentCurrentPageEnd }} 条，共 {{ comments.length }} 条
             </span>
             <el-pagination
               layout="prev, pager, next"
-              :total="posts.length"
-              :page-size="pageSize"
-              @current-change="handleCurrentChange"
+              :total="comments.length"
+              :page-size="commentPageSize"
+              @current-change="handleCommentCurrentChange"
             ></el-pagination>
           </div>
         </el-card>
+
+        <!-- 帖子分页 -->
+        <div v-if="activeTab === 'posts'" class="pagination-container">
+          <span class="pagination-info">
+            显示 {{ currentPageStart }} 到 {{ currentPageEnd }} 条，共
+            {{ posts.length }} 条
+          </span>
+          <el-pagination
+            layout="prev, pager, next"
+            :total="posts.length"
+            :page-size="pageSize"
+            @current-change="handleCurrentChange"
+          ></el-pagination>
+        </div>
       </div>
     </main>
   </div>
@@ -179,6 +252,7 @@ import {
   adminLogout,
   getAdminInfo,
   getPostReportList,
+  getCommentReportList,
 } from '@/utils/api';
 export default {
   name: 'AdminPostReviewPage',
@@ -187,6 +261,7 @@ export default {
       isSidebarCollapsed: false,
       showChangePwd: false,
       adminName: '',
+      activeTab: 'posts', // 默认显示帖子tab
       pwdForm: {
         oldPwd: '',
         newPwd: '',
@@ -217,6 +292,10 @@ export default {
       pageSize: 10,
       currentPage: 1,
       posts: [],
+      // 评论相关数据
+      commentPageSize: 10,
+      commentCurrentPage: 1,
+      comments: [],
       async fetchPendingPosts() {
         try {
           const res = await getPostReportList({
@@ -254,6 +333,23 @@ export default {
           this.$message.error(err.message || '获取待审核帖子失败');
         }
       },
+
+      async fetchPendingComments() {
+        try {
+          const res = await getCommentReportList({
+            status: 0,
+            page: this.commentCurrentPage,
+            pageSize: this.commentPageSize,
+          });
+          if (res.data && res.data.success) {
+            this.comments = res.data.data || [];
+          } else {
+            this.$message.error(res.data.message || '获取待审核评论失败');
+          }
+        } catch (err) {
+          this.$message.error(err.message || '获取待审核评论失败');
+        }
+      },
       mapStatus(status) {
         switch (status) {
           case 0:
@@ -284,11 +380,32 @@ export default {
       }
       return filtered;
     },
+    filteredComments() {
+      let filtered = this.comments;
+      if (this.searchQuery) {
+        const query = this.searchQuery.toLowerCase();
+        filtered = filtered.filter(
+          (comment) =>
+            comment.commentContent.toLowerCase().includes(query) ||
+            comment.reportReason.toLowerCase().includes(query)
+        );
+      }
+      return filtered;
+    },
     currentPageStart() {
       return (this.currentPage - 1) * this.pageSize + 1;
     },
     currentPageEnd() {
       return Math.min(this.currentPage * this.pageSize, this.posts.length);
+    },
+    commentCurrentPageStart() {
+      return (this.commentCurrentPage - 1) * this.commentPageSize + 1;
+    },
+    commentCurrentPageEnd() {
+      return Math.min(
+        this.commentCurrentPage * this.commentPageSize,
+        this.comments.length
+      );
     },
   },
   methods: {
@@ -384,6 +501,24 @@ export default {
         params: { id: post.id },
       });
     },
+    viewComment(comment) {
+      // 跳转到评论举报详情页
+      this.$router.push({
+        name: 'AdminCommentReviewDetail',
+        params: { id: comment.reportId },
+      });
+    },
+    handleTabClick() {
+      // 切换标签时重置搜索
+      this.searchQuery = '';
+
+      // 根据当前标签加载相应数据
+      if (this.activeTab === 'posts') {
+        this.fetchPendingPosts();
+      } else if (this.activeTab === 'comments') {
+        this.fetchPendingComments();
+      }
+    },
     approvePost(post) {
       post.status = 'approved';
       this.$message.success('帖子已通过审核');
@@ -394,6 +529,9 @@ export default {
     },
     handleCurrentChange(page) {
       this.currentPage = page;
+    },
+    handleCommentCurrentChange(page) {
+      this.commentCurrentPage = page;
     },
     async fetchAdminInfo() {
       try {
@@ -482,6 +620,7 @@ export default {
   mounted() {
     this.fetchAdminInfo();
     this.fetchPendingPosts();
+    this.fetchPendingComments();
   },
 };
 </script>
