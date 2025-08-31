@@ -121,23 +121,6 @@
               class="stat-card"
               shadow="hover"
               style="cursor: pointer"
-              @click.native="handleStatCardClick('/admin/feedback')"
-            >
-              <div class="stat-content">
-                <div>
-                  <p class="stat-label">未处理反馈</p>
-                  <p class="stat-value">{{ feedbackTotal }}</p>
-                </div>
-                <div class="stat-icon">
-                  <i class="el-icon-chat-dot-round"></i>
-                </div>
-              </div>
-            </el-card>
-
-            <el-card
-              class="stat-card"
-              shadow="hover"
-              style="cursor: pointer"
               @click.native="handleStatCardClick('/admin/posts')"
             >
               <div class="stat-content">
@@ -147,6 +130,23 @@
                 </div>
                 <div class="stat-icon">
                   <i class="el-icon-document"></i>
+                </div>
+              </div>
+            </el-card>
+
+            <el-card
+              class="stat-card"
+              shadow="hover"
+              style="cursor: pointer"
+              @click.native="handleStatCardClick('/admin/feedback')"
+            >
+              <div class="stat-content">
+                <div>
+                  <p class="stat-label">未处理反馈</p>
+                  <p class="stat-value">{{ feedbackTotal }}</p>
+                </div>
+                <div class="stat-icon">
+                  <i class="el-icon-chat-dot-round"></i>
                 </div>
               </div>
             </el-card>
@@ -170,7 +170,7 @@
                 <div class="item" v-for="item in pendingRobots" :key="item.id">
                   <div class="item-header">
                     <p class="item-name">{{ item.name }}</p>
-                    <p class="item-time">{{ item.time }}</p>
+                    <p class="item-time">{{ formatTime(item.time) }}</p>
                   </div>
                   <el-tag
                     :type="item.status === 'pending' ? 'warning' : 'success'"
@@ -201,7 +201,7 @@
                 >
                   <div class="item-header">
                     <p class="item-name">{{ item.name }}</p>
-                    <p class="item-time">{{ item.time }}</p>
+                    <p class="item-time">{{ formatTime(item.time) }}</p>
                   </div>
                   <el-tag type="warning">待审核</el-tag>
                 </div>
@@ -209,7 +209,7 @@
             </el-card>
 
             <!-- 最新用户反馈 -->
-            <el-card class="content-card full-width" shadow="hover">
+            <el-card class="content-card" shadow="hover">
               <div class="card-header">
                 <h2 class="card-title">最新用户反馈</h2>
                 <el-link
@@ -228,7 +228,7 @@
                 >
                   <div class="feedback-header">
                     <p class="feedback-user">{{ feedback.user }}</p>
-                    <p class="feedback-time">{{ feedback.time }}</p>
+                    <p class="feedback-time">{{ formatTime(feedback.time) }}</p>
                   </div>
                   <p class="feedback-content">{{ feedback.content }}</p>
                 </div>
@@ -329,6 +329,11 @@ export default {
     };
   },
   methods: {
+    formatTime(time) {
+      if (!time) return '';
+      const d = new Date(time);
+      return d.toLocaleString();
+    },
     handleStatCardClick(path) {
       this.$router.push(path);
     },
@@ -667,14 +672,11 @@ export default {
 
       .content-grid {
         display: grid;
-        grid-template-columns: repeat(2, 1fr);
+        grid-template-columns: repeat(3, 1fr);
         gap: 16px;
 
         .content-card {
-          &.full-width {
-            grid-column: 1 / -1;
-          }
-
+          /* 移除全宽样式，使每个卡片占据一列 */
           .card-header {
             display: flex;
             justify-content: space-between;
@@ -712,12 +714,12 @@ export default {
           }
 
           .feedback-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
 
             .feedback-item {
-              padding: 12px;
+              padding: 10px;
               border: 1px solid #f0f0f0;
               border-radius: 4px;
 
