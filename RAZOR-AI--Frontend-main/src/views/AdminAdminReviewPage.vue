@@ -136,11 +136,11 @@
                 <p>{{ scope.row.RegistrationReason || '无' }}</p>
               </template>
             </el-table-column>
-            <el-table-column
-              prop="registeredAt"
-              label="申请时间"
-              min-width="140"
-            ></el-table-column>
+            <el-table-column label="申请时间" min-width="180">
+              <template #default="scope">
+                {{ formatTime(scope.row.registeredAt) }}
+              </template>
+            </el-table-column>
             <el-table-column label="状态" min-width="100">
               <template #default="scope">
                 <el-tag :type="getStatusTagType(scope.row.status)" size="small">
@@ -266,6 +266,11 @@ export default {
     this.fetchAdminInfo();
   },
   methods: {
+    formatTime(time) {
+      if (!time) return '';
+      const d = new Date(time);
+      return d.toLocaleString();
+    },
     getStatusTagType(status) {
       switch (status) {
         case 'pending':
@@ -643,6 +648,11 @@ export default {
           font-size: 12px;
           color: #999;
           margin-top: 4px;
+        }
+
+        /* 防止时间文本换行 */
+        ::v-deep .el-table__row td:nth-child(3) {
+          white-space: nowrap;
         }
 
         .pagination-container {

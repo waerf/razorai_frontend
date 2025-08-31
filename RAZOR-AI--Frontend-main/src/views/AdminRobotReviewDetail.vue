@@ -96,129 +96,102 @@
 
       <!-- 主要内容 -->
       <div class="content">
+        <el-button
+          type="default"
+          icon="el-icon-arrow-left"
+          style="margin-bottom: 16px"
+          @click="$router.push('/admin/review')"
+        >
+          返回列表
+        </el-button>
         <el-card class="robot-detail-card" shadow="hover">
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-            <div>
-              <div class="mb-4 robot-info-item">
-                <label
-                  class="block text-sm font-bold text-gray-600 mb-1 info-label"
-                  ><i class="el-icon-robot robot-icon"></i> 机器人名称</label
-                >
-                <p class="text-lg font-bold robot-name" v-if="robot">
-                  {{ robot.name }}
-                </p>
-                <p v-else class="text-lg text-gray-400">加载中...</p>
+          <div v-if="loading" class="robot-loading">
+            <div class="skeleton skeleton-title"></div>
+            <div class="skeleton skeleton-line"></div>
+            <div class="skeleton skeleton-line"></div>
+            <div class="skeleton skeleton-line"></div>
+          </div>
+          <div v-else-if="robot">
+            <div class="robot-header">
+              <div class="avatar-placeholder">
+                {{ robot.name ? robot.name.charAt(0) : 'AI' }}
               </div>
-              <div class="mb-4 robot-info-item">
-                <label
-                  class="block text-sm font-bold text-gray-600 mb-1 info-label"
-                  ><i class="el-icon-collection-tag robot-icon"></i>
-                  机器人类型</label
-                >
-                <div class="robot-type-container" v-if="robot">
+              <div class="robot-user-info">
+                <div class="robot-name">
+                  {{ robot.name || '未命名机器人' }}
+                </div>
+                <div class="robot-type">
                   <span class="robot-type-badge">{{ robot.type }}</span>
                 </div>
-                <p v-else class="text-lg text-gray-400">加载中...</p>
-              </div>
-              <div class="mb-4">
-                <!-- LLM名称部分已移除 -->
               </div>
             </div>
-            <div>
-              <div class="mb-4 robot-info-item">
-                <label
-                  class="block text-sm font-bold text-gray-600 mb-1 info-label"
-                  ><i class="el-icon-info robot-icon"></i> 当前状态</label
+
+            <div class="robot-content">
+              <span
+                class="robot-state"
+                :class="{
+                  pending: robot.status === 'pending',
+                  approved: robot.status === 'approved',
+                  rejected: robot.status === 'rejected',
+                }"
+              >
+                {{
+                  robot.status === 'pending'
+                    ? '待审核'
+                    : robot.status === 'approved'
+                      ? '已通过'
+                      : '已拒绝'
+                }}
+              </span>
+
+              <div class="section-title">
+                <i class="el-icon-document robot-icon"></i>
+                <span>提示词</span>
+              </div>
+              <div class="prompt-container">
+                <pre class="prompt-content">{{ robot.prompt }}</pre>
+              </div>
+
+              <div class="section-title">
+                <i class="el-icon-warning robot-icon"></i>
+                <span>拒绝理由</span>
+              </div>
+              <el-input
+                type="textarea"
+                :rows="3"
+                placeholder="请输入拒绝理由"
+                v-model="rejectReason"
+                class="reject-reason-input"
+                maxlength="200"
+                show-word-limit
+              ></el-input>
+
+              <div class="action-buttons">
+                <el-button
+                  type="success"
+                  icon="el-icon-check"
+                  class="action-btn approve-btn"
+                  @click="approveRobot"
                 >
-                <el-tag
-                  v-if="robot"
-                  :type="
-                    robot.status === 'pending'
-                      ? 'warning'
-                      : robot.status === 'approved'
-                        ? 'success'
-                        : 'danger'
-                  "
-                  class="status-tag"
-                  size="medium"
-                  effect="dark"
+                  通过审核
+                </el-button>
+                <el-button
+                  type="danger"
+                  icon="el-icon-close"
+                  class="action-btn reject-btn"
+                  :disabled="!rejectReason"
+                  @click="rejectRobot"
                 >
-                  <span class="status-content">
-                    <i
-                      :class="[
-                        robot.status === 'pending'
-                          ? 'el-icon-time'
-                          : robot.status === 'approved'
-                            ? 'el-icon-check'
-                            : 'el-icon-close',
-                      ]"
-                      class="status-icon"
-                    ></i>
-                    <span>{{
-                      robot.status === 'pending'
-                        ? '待审核'
-                        : robot.status === 'approved'
-                          ? '已通过'
-                          : '已拒绝'
-                    }}</span>
-                  </span>
-                </el-tag>
-                <span v-else class="text-gray-400">加载中...</span>
+                  拒绝审核
+                </el-button>
               </div>
             </div>
           </div>
-
-          <div class="mb-6 robot-info-item">
-            <label class="block text-sm font-bold text-gray-600 mb-2 info-label"
-              ><i class="el-icon-document robot-icon"></i> 提示词</label
-            >
-            <div class="prompt-container">
-              <pre class="prompt-content" v-if="robot">{{ robot.prompt }}</pre>
-              <p v-else class="text-gray-400">加载中...</p>
+          <div v-else class="robot-empty">
+            <div v-if="errorMsg" style="color: #e74c3c; margin-bottom: 12px">
+              {{ errorMsg }}
             </div>
-          </div>
-
-          <div class="mb-6 robot-info-item">
-            <label class="block text-sm font-bold text-gray-600 mb-2 info-label"
-              ><i class="el-icon-warning robot-icon"></i> 拒绝理由</label
-            >
-            <el-input
-              type="textarea"
-              :rows="3"
-              placeholder="请输入拒绝理由"
-              v-model="rejectReason"
-              class="reject-reason-input"
-              maxlength="200"
-              show-word-limit
-            ></el-input>
-          </div>
-
-          <div class="action-buttons">
-            <el-button
-              type="success"
-              icon="el-icon-check"
-              class="action-btn approve-btn"
-              @click="approveRobot"
-            >
-              通过审核
-            </el-button>
-            <el-button
-              type="danger"
-              icon="el-icon-close"
-              class="action-btn reject-btn"
-              :disabled="!rejectReason"
-              @click="rejectRobot"
-            >
-              拒绝审核
-            </el-button>
-            <el-button
-              type="primary"
-              icon="el-icon-back"
-              class="action-btn return-btn"
-              @click="$router.push('/admin/review')"
-            >
-              返回列表
-            </el-button>
+            暂无机器人详情
           </div>
         </el-card>
       </div>
@@ -271,6 +244,7 @@ export default {
       robot: null,
       rejectReason: '',
       loading: false,
+      errorMsg: '',
     };
   },
   methods: {
@@ -685,18 +659,8 @@ export default {
       padding: 24px;
 
       .robot-detail-card {
-        padding: 24px;
-      }
-
-      .test-input {
-        width: 100%;
-        border: 1px solid #e5e7eb;
-        border-radius: 8px;
-        transition: border-color 0.3s;
-
-        &:focus {
-          border-color: #165dff;
-        }
+        max-width: 800px;
+        margin: 20px auto;
       }
 
       .card-hover {
@@ -707,37 +671,35 @@ export default {
         box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
       }
 
-      /* 新增的样式 - 机器人审核详情页面元素样式 */
-      .robot-info-item {
-        border-left: 4px solid #165dff;
-        padding-left: 16px;
-        position: relative;
-        transition: all 0.3s;
-      }
-
-      .info-label {
+      .robot-header {
         display: flex;
         align-items: center;
-        color: #165dff;
-        font-size: 14px;
-        letter-spacing: 0.5px;
-        text-transform: uppercase;
+        margin-bottom: 16px;
       }
 
-      .robot-icon {
-        margin-right: 6px;
-        font-size: 16px;
+      .avatar-placeholder {
+        width: 48px;
+        height: 48px;
+        background: #165dff;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 22px;
+        color: white;
+        margin-right: 16px;
+      }
+
+      .robot-user-info {
+        margin-left: 16px;
       }
 
       .robot-name {
-        font-size: 20px;
-        color: #303133;
-        font-weight: 600;
-        text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.1);
-        margin-top: 4px;
+        font-weight: bold;
+        font-size: 18px;
       }
 
-      .robot-type-container {
+      .robot-type {
         margin-top: 4px;
       }
 
@@ -745,34 +707,52 @@ export default {
         display: inline-block;
         background-color: #ecf5ff;
         color: #165dff;
-        padding: 6px 12px;
-        border-radius: 16px;
+        padding: 3px 10px;
+        border-radius: 12px;
         font-weight: 600;
-        font-size: 14px;
-        border: 2px solid #d9ecff;
+        font-size: 13px;
       }
 
-      .status-tag {
-        padding: 8px 12px;
-        font-size: 14px;
-        font-weight: 600;
-        border-radius: 8px;
-        margin-top: 4px;
-        display: inline-flex;
-        align-items: center;
-        height: 32px;
+      .robot-content {
+        margin-top: 16px;
       }
 
-      .status-icon {
-        margin-right: 6px;
-        display: inline-flex;
-        align-items: center;
-      }
-
-      .status-content {
+      .section-title {
+        font-weight: bold;
+        margin: 16px 0 8px;
         display: flex;
         align-items: center;
-        height: 100%;
+        color: #303133;
+      }
+
+      .robot-icon {
+        margin-right: 6px;
+        font-size: 16px;
+      }
+
+      .robot-state {
+        display: inline-block;
+        padding: 2px 10px;
+        border-radius: 12px;
+        font-size: 13px;
+        background: #f0f0f0;
+        color: #888;
+        margin-bottom: 16px;
+      }
+
+      .robot-state.pending {
+        background: #fdf6ec;
+        color: #e6a23c;
+      }
+
+      .robot-state.approved {
+        background: #e6f7e6;
+        color: #52c41a;
+      }
+
+      .robot-state.rejected {
+        background: #fef0f0;
+        color: #f56c6c;
       }
 
       .prompt-container {
@@ -784,11 +764,7 @@ export default {
         overflow-y: auto;
         transition: all 0.3s;
         position: relative;
-      }
-
-      .prompt-container:hover {
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-        border-color: #c6e2ff;
+        margin-bottom: 16px;
       }
 
       .prompt-content {
@@ -801,16 +777,16 @@ export default {
       }
 
       .reject-reason-input {
+        margin-bottom: 16px;
+
         .el-textarea__inner {
-          border: 2px solid #f56c6c;
+          border: 1px solid #e4e7ed;
           border-radius: 8px;
           transition: all 0.3s;
           font-size: 14px;
-          background-color: #fff8f8;
 
           &:focus {
             border-color: #f56c6c;
-            box-shadow: 0 0 0 2px rgba(245, 108, 108, 0.2);
           }
         }
       }
@@ -824,22 +800,10 @@ export default {
       }
 
       .action-btn {
-        padding: 12px 24px;
+        padding: 10px 20px;
         font-size: 15px;
         font-weight: 600;
-        border-radius: 8px;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         transition: all 0.3s;
-
-        &:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
-        }
-
-        &:active {
-          transform: translateY(1px);
-          box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-        }
       }
 
       .approve-btn {
@@ -867,6 +831,43 @@ export default {
           background-color: #fab6b6;
           border-color: #fab6b6;
           opacity: 0.7;
+        }
+      }
+
+      .robot-loading {
+        padding: 20px 0;
+      }
+
+      .skeleton {
+        background: #f2f2f2;
+        border-radius: 4px;
+        margin-bottom: 12px;
+        animation: skeleton-loading 1.2s infinite linear alternate;
+      }
+
+      .skeleton-title {
+        width: 60%;
+        height: 24px;
+      }
+
+      .skeleton-line {
+        width: 100%;
+        height: 16px;
+      }
+
+      .robot-empty {
+        text-align: center;
+        color: #aaa;
+        padding: 40px 0;
+        font-size: 18px;
+      }
+
+      @keyframes skeleton-loading {
+        0% {
+          opacity: 1;
+        }
+        100% {
+          opacity: 0.5;
         }
       }
     }

@@ -139,11 +139,11 @@
               label="作者"
               min-width="100"
             ></el-table-column>
-            <el-table-column
-              prop="time"
-              label="提交时间"
-              min-width="140"
-            ></el-table-column>
+            <el-table-column label="提交时间" min-width="140">
+              <template #default="scope">
+                {{ formatTime(scope.row.time) }}
+              </template>
+            </el-table-column>
             <!-- 已移除类型列 -->
             <el-table-column label="状态" min-width="100">
               <template #default="scope">
@@ -292,6 +292,11 @@ export default {
     },
   },
   methods: {
+    formatTime(time) {
+      if (!time) return '';
+      const d = new Date(time);
+      return d.toLocaleString();
+    },
     getStatusTagType(status) {
       switch (status) {
         case 'pending':

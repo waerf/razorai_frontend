@@ -107,7 +107,7 @@
               getStatusText(report.status)
             }}</el-tag>
           </div>
-          <el-descriptions :column="2" border>
+          <el-descriptions :column="2" border :label-width="90">
             <el-descriptions-item label="举报ID">{{
               report.reportId
             }}</el-descriptions-item>
@@ -146,10 +146,10 @@
               report.reportDetails
             }}</el-descriptions-item>
             <el-descriptions-item label="创建时间">{{
-              report.createdAt
+              formatTime(report.createdAt)
             }}</el-descriptions-item>
             <el-descriptions-item label="更新时间">{{
-              report.updatedAt
+              formatTime(report.updatedAt)
             }}</el-descriptions-item>
           </el-descriptions>
           <div class="action-section" v-if="report.status === 0">
@@ -235,6 +235,11 @@ export default {
     };
   },
   methods: {
+    formatTime(time) {
+      if (!time) return '';
+      const d = new Date(time);
+      return d.toLocaleString();
+    },
     async fetchAdminInfo() {
       try {
         const res = await getAdminInfo();
@@ -544,6 +549,18 @@ export default {
           align-items: center;
           justify-content: space-between;
           margin-bottom: 20px;
+        }
+
+        ::v-deep .el-descriptions__cell {
+          &.is-bordered-label {
+            min-width: 90px;
+          }
+        }
+
+        ::v-deep .el-descriptions__cell {
+          &.el-descriptions-item__content {
+            white-space: nowrap;
+          }
         }
         .action-section {
           margin-top: 32px;

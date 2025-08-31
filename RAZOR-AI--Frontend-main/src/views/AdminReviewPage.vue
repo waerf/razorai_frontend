@@ -147,11 +147,11 @@
               label="创建者"
               min-width="100"
             ></el-table-column>
-            <el-table-column
-              prop="createdAt"
-              label="创建时间"
-              min-width="140"
-            ></el-table-column>
+            <el-table-column label="创建时间" min-width="140">
+              <template #default="scope">
+                {{ formatTime(scope.row.createdAt) }}
+              </template>
+            </el-table-column>
             <el-table-column label="状态" min-width="100">
               <template #default="scope">
                 <el-tag :type="getStatusTagType(scope.row.status)" size="small">
@@ -229,6 +229,11 @@ export default {
     };
   },
   methods: {
+    formatTime(time) {
+      if (!time) return '';
+      const d = new Date(time);
+      return d.toLocaleString();
+    },
     getStatusTagType(status) {
       switch (status) {
         case 'pending':
