@@ -125,8 +125,10 @@
             >
               <div class="stat-content">
                 <div>
-                  <p class="stat-label">待审核帖子</p>
-                  <p class="stat-value">{{ pendingPostsTotal }}</p>
+                  <p class="stat-label">待审核帖子和评论</p>
+                  <p class="stat-value">
+                    {{ pendingPostsTotal + pendingCommentsTotal }}
+                  </p>
                 </div>
                 <div class="stat-icon">
                   <i class="el-icon-document"></i>
@@ -167,7 +169,13 @@
               </div>
 
               <div class="items-list">
-                <div class="item" v-for="item in pendingRobots" :key="item.id">
+                <div
+                  class="item"
+                  v-for="item in pendingRobots"
+                  :key="item.id"
+                  @click="navigateToRobotDetail(item)"
+                  style="cursor: pointer"
+                >
                   <div class="item-header">
                     <p class="item-name">{{ item.name }}</p>
                     <p class="item-time">{{ formatTime(item.time) }}</p>
@@ -181,10 +189,10 @@
               </div>
             </el-card>
 
-            <!-- 待审核帖子 -->
+            <!-- 待审核帖子和评论 -->
             <el-card class="content-card" shadow="hover">
               <div class="card-header">
-                <h2 class="card-title">待审核帖子</h2>
+                <h2 class="card-title">待审核帖子和评论</h2>
                 <el-link
                   type="primary"
                   :underline="false"
@@ -196,14 +204,18 @@
               <div class="items-list">
                 <div
                   class="item"
-                  v-for="item in pendingPosts.slice(0, 3)"
+                  v-for="item in combinedPendingItems.slice(0, 3)"
                   :key="item.id"
+                  @click="navigateToDetail(item)"
+                  style="cursor: pointer"
                 >
                   <div class="item-header">
                     <p class="item-name">{{ item.name }}</p>
                     <p class="item-time">{{ formatTime(item.time) }}</p>
                   </div>
-                  <el-tag type="warning">待审核</el-tag>
+                  <el-tag type="warning">{{
+                    item.type === 'post' ? '帖子' : '评论'
+                  }}</el-tag>
                 </div>
               </div>
             </el-card>
@@ -225,6 +237,8 @@
                   class="feedback-item"
                   v-for="feedback in recentFeedbacks"
                   :key="feedback.id"
+                  @click="navigateToFeedbackDetail(feedback)"
+                  style="cursor: pointer"
                 >
                   <div class="feedback-header">
                     <p class="feedback-user">{{ feedback.user }}</p>
@@ -250,10 +264,20 @@ import {
   fetchRecentFeedbacks,
   fetchAllFeedbacks,
   getPostReportList,
+  getCommentReportList,
 } from '@/utils/api';
 
 export default {
   name: 'AdminHomePage',
+  computed: {
+    combinedPendingItems() {
+      // 合并帖子和评论，按时间排序
+      const combined = [...this.pendingPosts, ...this.pendingComments];
+      return combined.sort((a, b) => {
+        return new Date(b.time) - new Date(a.time);
+      });
+    },
+  },
   data() {
     return {
       isSidebarCollapsed: false,
@@ -290,6 +314,8 @@ export default {
       adminName: '', // 新增管理员名称
       pendingPosts: [], // 待审核帖子列表
       pendingPostsTotal: 0, // 待审核帖子总数
+      pendingComments: [], // 待审核评论列表
+      pendingCommentsTotal: 0, // 待审核评论总数
       recentFeedbacks: [],
       feedbackTotal: 0,
       async fetchRecentFeedbacks() {
@@ -299,6 +325,7 @@ export default {
           if (res && res.data && Array.isArray(res.data.feedbacks)) {
             this.recentFeedbacks = res.data.feedbacks.map((fb) => ({
               id: fb.id,
+              userId: fb.userId,
               user: fb.userName || `用户${fb.userId}`,
               time: fb.time,
               content: fb.feedback,
@@ -336,6 +363,36 @@ export default {
     },
     handleStatCardClick(path) {
       this.$router.push(path);
+    },
+    navigateToDetail(item) {
+      if (item.type === 'post') {
+        this.$router.push({
+          name: 'AdminPostReviewDetail',
+          params: { id: item.id },
+        });
+      } else {
+        this.$router.push({
+          name: 'AdminCommentReviewDetail',
+          params: { id: item.id },
+        });
+      }
+    },
+    navigateToRobotDetail(robot) {
+      this.$router.push({
+        name: 'AdminRobotReviewDetail',
+        params: { id: robot.id },
+      });
+    },
+    navigateToFeedbackDetail(feedback) {
+      if (feedback && feedback.id) {
+        this.$router.push({
+          name: 'AdminFeedbackDetail',
+          params: {
+            userId: feedback.userId || 'unknown',
+            feedbackId: feedback.id,
+          },
+        });
+      }
     },
     async fetchAdminInfo() {
       try {
@@ -392,7 +449,7 @@ export default {
         const res = await getPendingRobots({ page: 1, pageSize: 3 });
         if (res.data && res.data.success) {
           this.pendingRobots = res.data.data.map((robot) => ({
-            id: robot.id,
+            id: robot.auditId, // 使用auditId作为ID
             name: robot.name,
             time: robot.createdAt,
             status: 'pending',
@@ -430,6 +487,7 @@ export default {
               id: item.reportId || item.id,
               name: postTitle,
               time: item.createdAt || '',
+              type: 'post',
             };
           });
           this.pendingPostsTotal = res.data.data.length;
@@ -440,6 +498,38 @@ export default {
       } catch (err) {
         this.pendingPosts = [];
         this.pendingPostsTotal = 0;
+      }
+    },
+
+    async fetchPendingComments() {
+      try {
+        // 获取待审核评论举报列表（status=0）
+        const res = await getCommentReportList({
+          status: 0,
+          page: 1,
+          pageSize: 100,
+        });
+        if (res.data && res.data.success) {
+          this.pendingComments = res.data.data.map((item) => {
+            return {
+              id: item.reportId || item.id,
+              name: item.commentContent
+                ? item.commentContent.length > 30
+                  ? `${item.commentContent.substring(0, 30)}...`
+                  : item.commentContent
+                : '未知评论',
+              time: item.createdAt || '',
+              type: 'comment',
+            };
+          });
+          this.pendingCommentsTotal = res.data.data.length;
+        } else {
+          this.pendingComments = [];
+          this.pendingCommentsTotal = 0;
+        }
+      } catch (err) {
+        this.pendingComments = [];
+        this.pendingCommentsTotal = 0;
       }
     },
     async submitPwdForm() {
@@ -484,6 +574,7 @@ export default {
     this.fetchRecentFeedbacks();
     this.fetchAllFeedbackTotal();
     this.fetchPendingPosts();
+    this.fetchPendingComments();
   },
 };
 </script>
