@@ -2,9 +2,6 @@
   <div class="admin-robot-review">
     <!-- 侧边导航栏 -->
     <aside class="sidebar">
-      <button class="toggle-sidebar-btn" @click="toggleSidebar">
-        <i class="el-icon-s-fold"></i>
-      </button>
       <div class="user-info">
         <div class="avatar">{{ adminName ? adminName.charAt(0) : '管' }}</div>
         <div>
@@ -41,6 +38,9 @@
     <main class="main-content">
       <!-- 顶部导航栏 -->
       <header class="header">
+        <button class="toggle-sidebar-btn" @click="toggleSidebar">
+          <i class="el-icon-s-fold"></i>
+        </button>
         <h1 class="title">机器人审核</h1>
         <div style="display: flex; align-items: center; margin-left: auto">
           <el-button
@@ -441,23 +441,6 @@ export default {
     position: relative;
     transition: all 0.3s ease;
 
-    .toggle-sidebar-btn {
-      position: absolute;
-      top: 10px;
-      right: 10px;
-      cursor: pointer;
-      font-size: 16px;
-      background: none;
-      border: none;
-      color: #606266;
-      padding: 5px;
-
-      &:hover {
-        background-color: rgba(0, 0, 0, 0.05);
-        border-radius: 4px;
-      }
-    }
-
     &.hidden {
       width: 60px !important;
 
@@ -557,7 +540,7 @@ export default {
 
     .header {
       display: flex;
-      justify-content: space-between;
+      justify-content: flex-start;
       align-items: center;
       padding: 16px 24px;
       background-color: white;
@@ -565,6 +548,20 @@ export default {
       position: sticky;
       top: 0;
       z-index: 10;
+      .toggle-sidebar-btn {
+        cursor: pointer;
+        font-size: 18px;
+        background: none;
+        border: none;
+        color: #606266;
+        padding: 5px;
+        margin-right: 16px;
+
+        &:hover {
+          background-color: rgba(0, 0, 0, 0.05);
+          border-radius: 4px;
+        }
+      }
 
       .title {
         font-size: 20px;

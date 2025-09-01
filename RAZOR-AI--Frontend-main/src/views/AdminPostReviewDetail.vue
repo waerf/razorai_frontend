@@ -1,9 +1,6 @@
 <template>
   <div class="admin-post-review-detail">
     <aside class="sidebar">
-      <button class="toggle-sidebar-btn" @click="toggleSidebar">
-        <i class="el-icon-s-fold"></i>
-      </button>
       <div class="user-info">
         <div class="avatar">{{ adminName ? adminName.charAt(0) : '管' }}</div>
         <div>
@@ -36,6 +33,9 @@
     </aside>
     <main class="main-content">
       <header class="header">
+        <button class="toggle-sidebar-btn" @click="toggleSidebar">
+          <i class="el-icon-s-fold"></i>
+        </button>
         <h1 class="title">帖子举报详情</h1>
         <div style="display: flex; align-items: center; margin-left: auto">
           <el-button
@@ -430,6 +430,7 @@ export default {
   display: flex;
   min-height: 100vh;
   background-color: #f5f5f5;
+
   .sidebar {
     position: relative;
     transition: all 0.3s ease;
@@ -437,23 +438,9 @@ export default {
     background-color: white;
     border-right: 1px solid #e6e6e6;
     padding: 20px 0;
-    .toggle-sidebar-btn {
-      position: absolute;
-      top: 10px;
-      right: 10px;
-      cursor: pointer;
-      font-size: 16px;
-      background: none;
-      border: none;
-      color: #606266;
-      padding: 5px;
-      &:hover {
-        background-color: rgba(0, 0, 0, 0.05);
-        border-radius: 4px;
-      }
-    }
     &.hidden {
       width: 60px !important;
+
       .nav-item {
         span {
           display: none;
@@ -462,6 +449,7 @@ export default {
           margin-right: 0;
         }
       }
+
       .user-info {
         flex-direction: column;
         align-items: center;
@@ -475,11 +463,13 @@ export default {
         }
       }
     }
+
     .user-info {
       display: flex;
       align-items: center;
       padding: 0 20px 20px;
       border-bottom: 1px solid #e6e6e6;
+
       .avatar {
         width: 40px;
         height: 40px;
@@ -492,17 +482,21 @@ export default {
         margin-right: 12px;
         font-weight: bold;
       }
+
       .username {
         font-weight: 500;
         margin-bottom: 4px;
       }
+
       .role {
         font-size: 12px;
         color: #999;
       }
     }
+
     .nav-menu {
       padding: 10px 0;
+
       .nav-item {
         display: flex;
         align-items: center;
@@ -513,9 +507,11 @@ export default {
         i {
           margin-right: 10px;
         }
+
         &:hover {
           background: #f0f6ff;
         }
+
         &.active {
           background: #e6f7ff;
           color: #165dff;
@@ -526,9 +522,10 @@ export default {
   .main-content {
     flex: 1;
     overflow: auto;
+
     .header {
       display: flex;
-      justify-content: space-between;
+      justify-content: flex-start;
       align-items: center;
       padding: 16px 24px;
       background-color: white;
@@ -536,19 +533,38 @@ export default {
       position: sticky;
       top: 0;
       z-index: 10;
+
+      .toggle-sidebar-btn {
+        cursor: pointer;
+        font-size: 18px;
+        background: none;
+        border: none;
+        color: #606266;
+        padding: 5px;
+        margin-right: 16px;
+        &:hover {
+          background-color: rgba(0, 0, 0, 0.05);
+          border-radius: 4px;
+        }
+      }
+
       .title {
         font-size: 20px;
         font-weight: 600;
       }
     }
+
     .content {
       padding: 24px;
+
       .loading-card {
         min-height: 300px;
       }
+
       .detail-card {
         max-width: 800px;
         margin: 0 auto;
+
         .detail-header {
           display: flex;
           align-items: center;
@@ -567,8 +583,10 @@ export default {
             white-space: nowrap;
           }
         }
+
         .action-section {
           margin-top: 32px;
+
           .review-form {
             max-width: 400px;
           }
