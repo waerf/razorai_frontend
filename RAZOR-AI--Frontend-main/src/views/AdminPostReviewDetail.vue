@@ -1,6 +1,5 @@
 <template>
-  <div class="admin-home">
-    <!-- 侧边导航栏 -->
+  <div class="admin-post-review-detail">
     <aside class="sidebar">
       <button class="toggle-sidebar-btn" @click="toggleSidebar">
         <i class="el-icon-s-fold"></i>
@@ -25,21 +24,19 @@
           <i class="el-icon-cpu"></i>
           <span>机器人审核</span>
         </div>
-        <div class="nav-item" @click="$router.push('/admin/posts')">
+        <div class="nav-item active">
           <i class="el-icon-document"></i>
           <span>帖子审核</span>
         </div>
-        <div class="nav-item active">
+        <div class="nav-item" @click="$router.push('/admin/feedback')">
           <i class="el-icon-chat-dot-round"></i>
           <span>用户反馈</span>
         </div>
       </nav>
     </aside>
-    <!-- 主内容区 -->
     <main class="main-content">
-      <!-- 顶部导航栏 -->
       <header class="header">
-        <h1 class="title">用户反馈详情</h1>
+        <h1 class="title">帖子举报详情</h1>
         <div style="display: flex; align-items: center; margin-left: auto">
           <el-button
             type="warning"
@@ -91,53 +88,93 @@
           </span>
         </el-dialog>
       </header>
-      <!-- 主要内容 -->
       <div class="content">
-        <el-card class="feedback-detail-card" shadow="hover">
-          <div v-if="loading" class="feedback-loading">
-            <div class="skeleton skeleton-title"></div>
-            <div class="skeleton skeleton-line"></div>
-            <div class="skeleton skeleton-line"></div>
-            <div class="skeleton skeleton-line"></div>
+        <el-card v-if="loading" class="loading-card"
+          ><el-skeleton rows="6" animated
+        /></el-card>
+        <el-card v-else class="detail-card" shadow="hover">
+          <div class="detail-header">
+            <h2>举报详情</h2>
+            <el-tag :type="getStatusTagType(report.status)" size="small">{{
+              getStatusText(report.status)
+            }}</el-tag>
           </div>
-          <div v-else-if="feedbackDetail">
-            <div class="feedback-header">
-              <div class="avatar-placeholder">
-                {{
-                  feedbackDetail.userName
-                    ? feedbackDetail.userName.charAt(0)
-                    : '匿'
-                }}
-              </div>
-              <div class="feedback-user-info">
-                <div class="feedback-username">
-                  {{ feedbackDetail.userName || '匿名用户' }}
-                </div>
-                <div class="feedback-time">
-                  {{ formatTime(feedbackDetail.time) }}
-                </div>
-              </div>
-            </div>
-            <div class="feedback-content">
-              <span
-                class="feedback-state"
-                :class="{ processed: feedbackDetail.state === 1 }"
+          <el-descriptions :column="2" border>
+            <el-descriptions-item label="举报ID">{{
+              report.reportId
+            }}</el-descriptions-item>
+            <el-descriptions-item label="帖子ID">{{
+              report.postId
+            }}</el-descriptions-item>
+            <el-descriptions-item label="帖子标题">{{
+              parsedPostTitle.title || '-'
+            }}</el-descriptions-item>
+            <el-descriptions-item label="帖子作者">{{
+              parsedPostTitle.author || '-'
+            }}</el-descriptions-item>
+            <el-descriptions-item label="帖子内容" :span="2">{{
+              parsedPostTitle.content || '-'
+            }}</el-descriptions-item>
+            <el-descriptions-item label="帖子标签" :span="2">
+              <template
+                v-if="parsedPostTitle.tags && parsedPostTitle.tags.length"
               >
-                {{ feedbackDetail.state === 1 ? '已处理' : '未处理' }}
-              </span>
-              <p>{{ feedbackDetail.feedback }}</p>
-              <div v-if="feedbackDetail.state !== 1" style="margin-top: 16px">
-                <button @click="handleProcessFeedback" class="process-btn">
-                  标记为已处理
-                </button>
-              </div>
-            </div>
-          </div>
-          <div v-else class="feedback-empty">
-            <div v-if="errorMsg" style="color: #e74c3c; margin-bottom: 12px">
-              {{ errorMsg }}
-            </div>
-            暂无反馈详情
+                <el-tag
+                  v-for="tag in parsedPostTitle.tags"
+                  :key="tag"
+                  style="margin-right: 4px"
+                  >{{ tag }}</el-tag
+                >
+              </template>
+              <template v-else>-</template>
+            </el-descriptions-item>
+            <el-descriptions-item label="举报人">{{
+              report.reporterName
+            }}</el-descriptions-item>
+            <el-descriptions-item label="举报原因">{{
+              report.reportReason
+            }}</el-descriptions-item>
+            <el-descriptions-item label="举报详情" :span="2">{{
+              report.reportDetails
+            }}</el-descriptions-item>
+            <el-descriptions-item label="审核管理员">{{
+              report.adminName || '未审核'
+            }}</el-descriptions-item>
+            <el-descriptions-item label="审核备注">{{
+              report.reviewComment || '-'
+            }}</el-descriptions-item>
+            <el-descriptions-item label="创建时间">{{
+              report.createdAt
+            }}</el-descriptions-item>
+            <el-descriptions-item label="更新时间">{{
+              report.updatedAt
+            }}</el-descriptions-item>
+          </el-descriptions>
+          <div class="action-section" v-if="report.status === 0">
+            <el-form :model="reviewForm" label-width="80px" class="review-form">
+              <el-form-item label="审核操作">
+                <el-radio-group v-model="reviewForm.status">
+                  <el-radio :label="1">通过</el-radio>
+                  <el-radio :label="2">拒绝</el-radio>
+                </el-radio-group>
+              </el-form-item>
+              <el-form-item label="审核备注">
+                <el-input
+                  v-model="reviewForm.reviewComment"
+                  type="textarea"
+                  :rows="2"
+                  placeholder="请输入审核备注（可选）"
+                />
+              </el-form-item>
+              <el-form-item>
+                <el-button
+                  type="primary"
+                  @click="submitReview"
+                  :loading="reviewing"
+                  >提交审核</el-button
+                >
+              </el-form-item>
+            </el-form>
           </div>
         </el-card>
       </div>
@@ -147,35 +184,18 @@
 
 <script>
 import {
-  fetchUserFeedbacks,
-  updateFeedbackState,
-  changeAdminPassword,
-  adminLogout,
   getAdminInfo,
+  adminLogout,
+  changeAdminPassword,
+  getPostReportDetail,
+  reviewPostReport,
 } from '@/utils/api';
-
 export default {
-  name: 'AdminFeedbackDetail',
-  props: {
-    userId: {
-      type: [String, Number],
-      required: false,
-      default: null,
-    },
-    feedbackId: {
-      type: [String, Number],
-      required: false,
-      default: null,
-    },
-  },
+  name: 'AdminPostReviewDetail',
   data() {
     return {
-      feedbackDetail: null,
-      loading: true,
-      errorMsg: '',
-      isSidebarCollapsed: false,
-      showChangePwd: false,
       adminName: '',
+      showChangePwd: false,
       pwdForm: {
         oldPwd: '',
         newPwd: '',
@@ -201,20 +221,15 @@ export default {
           },
         ],
       },
+      loading: true,
+      report: {},
+      parsedPostTitle: {},
+      reviewForm: {
+        status: 1,
+        reviewComment: '',
+      },
+      reviewing: false,
     };
-  },
-  computed: {
-    resolvedUserId() {
-      // 优先用 props，否则用路由参数
-      return this.userId !== null && this.userId !== undefined
-        ? this.userId
-        : this.$route.params.userId;
-    },
-    resolvedFeedbackId() {
-      return this.feedbackId !== null && this.feedbackId !== undefined
-        ? this.feedbackId
-        : this.$route.params.feedbackId;
-    },
   },
   methods: {
     async fetchAdminInfo() {
@@ -222,11 +237,9 @@ export default {
         const res = await getAdminInfo();
         if (res.data && res.data.success) {
           this.adminName = res.data.adminInfo.adminName;
-        } else {
-          this.$message.error(res.data.message || '获取管理员信息失败');
         }
-      } catch (err) {
-        this.$message.error(err.message || '获取管理员信息失败');
+      } catch (e) {
+        // intentionally ignored
       }
     },
     toggleSidebar() {
@@ -239,26 +252,23 @@ export default {
         confirmButtonText: '确定',
         cancelButtonText: '取消',
         type: 'warning',
-      })
-        .then(async () => {
-          try {
-            const res = await adminLogout();
-            if (res.data && res.data.success) {
-              this.$message.success(res.data.message || '登出成功');
-              if (window.localStorage) {
-                localStorage.removeItem('admin_token');
-              }
-              this.$router.push('/');
-            } else {
-              this.$message.error(res.data.message || '登出失败');
+      }).then(async () => {
+        try {
+          const res = await adminLogout();
+          if (res.data && res.data.success) {
+            this.$message.success(res.data.message || '登出成功');
+            if (window.localStorage) {
+              localStorage.removeItem('admin_token');
             }
-          } catch (err) {
-            this.$message.error(err.message || '登出失败，请重试');
+            this.$router.push('/');
+          } else {
+            this.$message.error(res.data.message || '登出失败');
           }
-        })
-        .catch(() => {
-          // 用户取消
-        });
+        } catch (err) {
+          this.$message.error(err.message || '登出失败，请重试');
+        }
+      });
+      // 用户取消操作时无需处理
     },
     async submitPwdForm() {
       this.$refs.pwdFormRef.validate(async (valid) => {
@@ -295,75 +305,111 @@ export default {
       this.pwdForm.confirmPwd = '';
       if (this.$refs.pwdFormRef) this.$refs.pwdFormRef.clearValidate();
     },
-    async loadFeedbackDetail() {
-      this.loading = true;
-      const userId = this.resolvedUserId;
-      const feedbackId = this.resolvedFeedbackId;
-      if (
-        userId === undefined ||
-        userId === null ||
-        userId === '' ||
-        isNaN(Number(userId)) ||
-        feedbackId === undefined ||
-        feedbackId === null ||
-        feedbackId === '' ||
-        isNaN(Number(feedbackId))
-      ) {
-        this.errorMsg = '用户ID或反馈ID无效，无法获取反馈详情';
-        this.feedbackDetail = null;
-        this.loading = false;
-        return;
+    getStatusTagType(status) {
+      switch (status) {
+        case 0:
+        case 'pending':
+          return 'warning';
+        case 1:
+        case 'approved':
+          return 'success';
+        case 2:
+        case 'rejected':
+          return 'danger';
+        default:
+          return '';
       }
+    },
+    getStatusText(status) {
+      switch (status) {
+        case 0:
+        case 'pending':
+          return '待审核';
+        case 1:
+        case 'approved':
+          return '已通过';
+        case 2:
+        case 'rejected':
+          return '已拒绝';
+        default:
+          return '';
+      }
+    },
+    async fetchReportDetail() {
+      this.loading = true;
       try {
-        const res = await fetchUserFeedbacks(userId);
-        if (res && res.data && Array.isArray(res.data.feedbacks)) {
-          this.feedbackDetail = res.data.feedbacks.find(
-            (f) => f.id == feedbackId
-          );
+        const reportId = this.$route.params.id;
+        const res = await getPostReportDetail(reportId);
+        if (res.data && res.data.success) {
+          this.report = res.data.data;
+          // 解析帖子标题内容
+          let parsed = {};
+          try {
+            if (typeof this.report.postTitle === 'string') {
+              parsed = JSON.parse(this.report.postTitle);
+            } else if (
+              typeof this.report.postTitle === 'object' &&
+              this.report.postTitle !== null
+            ) {
+              parsed = this.report.postTitle;
+            }
+          } catch (e) {
+            parsed = { title: this.report.postTitle || '' };
+          }
+          this.parsedPostTitle = parsed || {};
+        } else {
+          this.$message.error(res.data.message || '获取举报详情失败');
         }
-      } catch (e) {
-        this.errorMsg = e.message || '获取反馈详情失败';
+      } catch (err) {
+        this.$message.error(err.message || '获取举报详情失败');
       } finally {
         this.loading = false;
       }
     },
-    async handleProcessFeedback() {
-      if (!this.feedbackDetail || this.feedbackDetail.state === 1) return;
-      try {
-        await updateFeedbackState(this.feedbackDetail.id);
-        this.$message && this.$message.success
-          ? this.$message.success('反馈已标记为已处理')
-          : alert('反馈已标记为已处理');
-        this.feedbackDetail.state = 1;
-      } catch (e) {
-        this.$message && this.$message.error
-          ? this.$message.error(e.message || '处理失败')
-          : alert(e.message || '处理失败');
+    async submitReview() {
+      if (!this.reviewForm.status) {
+        this.$message.warning('请选择审核操作');
+        return;
       }
-    },
-    formatTime(time) {
-      if (!time) return '';
-      const d = new Date(time);
-      return d.toLocaleString();
+      this.reviewing = true;
+      try {
+        const res = await reviewPostReport({
+          reportId: this.report.reportId,
+          status: this.reviewForm.status,
+          reviewComment: this.reviewForm.reviewComment,
+        });
+        if (res.data && res.data.success) {
+          this.$message.success(res.data.message || '审核成功');
+          this.fetchReportDetail();
+        } else {
+          this.$message.error(res.data.message || '审核失败');
+        }
+      } catch (err) {
+        this.$message.error(err.message || '审核失败');
+      } finally {
+        this.reviewing = false;
+      }
     },
   },
   mounted() {
     this.fetchAdminInfo();
-    this.loadFeedbackDetail();
+    this.fetchReportDetail();
   },
 };
 </script>
 
 <style lang="scss" scoped>
-.admin-home {
+.admin-post-review-detail {
   display: flex;
   min-height: 100vh;
   background-color: #f5f5f5;
-
   .sidebar {
     position: relative;
     transition: all 0.3s ease;
-
+    width: 250px;
+    background-color: white;
+    border-right: 1px solid #e6e6e6;
+    padding: 20px 0;
     .toggle-sidebar-btn {
       position: absolute;
       top: 10px;
@@ -374,53 +420,39 @@ export default {
       border: none;
       color: #606266;
       padding: 5px;
-
       &:hover {
         background-color: rgba(0, 0, 0, 0.05);
         border-radius: 4px;
       }
     }
-
     &.hidden {
       width: 60px !important;
-
       .nav-item {
         span {
           display: none;
         }
-
         i {
           margin-right: 0;
         }
       }
-
       .user-info {
         flex-direction: column;
         align-items: center;
         padding: 10px;
-
         .avatar {
-          margin-right: 0;
-          margin-bottom: 5px;
+          margin-bottom: 8px;
         }
-
         .username,
         .role {
-          display: none;
+          text-align: center;
         }
       }
     }
-    width: 250px;
-    background-color: white;
-    border-right: 1px solid #e6e6e6;
-    padding: 20px 0;
-
     .user-info {
       display: flex;
       align-items: center;
       padding: 0 20px 20px;
       border-bottom: 1px solid #e6e6e6;
-
       .avatar {
         width: 40px;
         height: 40px;
@@ -433,21 +465,17 @@ export default {
         margin-right: 12px;
         font-weight: bold;
       }
-
       .username {
         font-weight: 500;
         margin-bottom: 4px;
       }
-
       .role {
         font-size: 12px;
         color: #999;
       }
     }
-
     .nav-menu {
       padding: 10px 0;
-
       .nav-item {
         display: flex;
         align-items: center;
@@ -455,29 +483,22 @@ export default {
         margin: 4px 0;
         cursor: pointer;
         transition: all 0.3s;
-
         i {
-          margin-right: 12px;
-          font-size: 18px;
+          margin-right: 10px;
         }
-
         &:hover {
-          background-color: #f6f6f6;
+          background: #f0f6ff;
         }
-
         &.active {
-          background-color: #e8f3ff;
+          background: #e6f7ff;
           color: #165dff;
-          border-left: 3px solid #165dff;
         }
       }
     }
   }
-
   .main-content {
     flex: 1;
     overflow: auto;
-
     .header {
       display: flex;
       justify-content: space-between;
@@ -488,116 +509,33 @@ export default {
       position: sticky;
       top: 0;
       z-index: 10;
-
       .title {
         font-size: 20px;
         font-weight: 600;
       }
     }
-
     .content {
       padding: 24px;
-
-      .feedback-detail-card {
-        max-width: 600px;
-        margin: 40px auto;
+      .loading-card {
+        min-height: 300px;
       }
-
-      .card-hover {
-        transition: all 0.3s ease;
-      }
-      .card-hover:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+      .detail-card {
+        max-width: 800px;
+        margin: 0 auto;
+        .detail-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          margin-bottom: 20px;
+        }
+        .action-section {
+          margin-top: 32px;
+          .review-form {
+            max-width: 400px;
+          }
+        }
       }
     }
-  }
-}
-
-.feedback-header {
-  display: flex;
-  align-items: center;
-  margin-bottom: 16px;
-}
-.avatar-placeholder {
-  width: 48px;
-  height: 48px;
-  background: #eee;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 22px;
-  color: #888;
-  margin-right: 16px;
-}
-.feedback-user-info {
-  margin-left: 16px;
-}
-.feedback-username {
-  font-weight: bold;
-  font-size: 18px;
-}
-.feedback-time {
-  color: #888;
-  font-size: 14px;
-}
-.feedback-content {
-  margin-top: 16px;
-}
-.feedback-state {
-  display: inline-block;
-  padding: 2px 10px;
-  border-radius: 12px;
-  font-size: 13px;
-  background: #f0f0f0;
-  color: #888;
-  margin-bottom: 8px;
-}
-.feedback-state.processed {
-  background: #e6f7e6;
-  color: #52c41a;
-}
-.process-btn {
-  padding: 6px 18px;
-  background: #52c41a;
-  color: #fff;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 15px;
-  margin-top: 8px;
-  transition: background 0.2s;
-}
-.process-btn:hover {
-  background: #389e0d;
-}
-.feedback-empty {
-  text-align: center;
-  color: #aaa;
-  padding: 40px 0;
-  font-size: 18px;
-}
-.skeleton {
-  background: #f2f2f2;
-  border-radius: 4px;
-  margin-bottom: 12px;
-  animation: skeleton-loading 1.2s infinite linear alternate;
-}
-.skeleton-title {
-  width: 60%;
-  height: 24px;
-}
-.skeleton-line {
-  width: 100%;
-  height: 16px;
-}
-@keyframes skeleton-loading {
-  0% {
-    opacity: 1;
-  }
-  100% {
-    opacity: 0.5;
   }
 }
 </style>

@@ -139,12 +139,11 @@
             </div>
           </div>
 
-          <el-table :data="filteredPosts" style="width: 100%">
-            <el-table-column width="50">
-              <template #default="scope">
-                <el-checkbox v-model="scope.row.selected"></el-checkbox>
-              </template>
-            </el-table-column>
+          <el-table
+            :data="filteredPosts"
+            style="width: 100%"
+            @row-click="viewPost"
+          >
             <el-table-column label="帖子标题" width="300">
               <template #default="scope">
                 <p class="post-title">{{ scope.row.title }}</p>
@@ -173,27 +172,6 @@
                 </el-tag>
               </template>
             </el-table-column>
-            <el-table-column label="操作" width="200" align="right">
-              <template #default="scope">
-                <el-button type="text" @click="viewPost(scope.row)"
-                  >查看</el-button
-                >
-                <el-button
-                  type="text"
-                  @click="approvePost(scope.row)"
-                  :disabled="scope.row.status !== 'pending'"
-                >
-                  通过
-                </el-button>
-                <el-button
-                  type="text"
-                  @click="rejectPost(scope.row)"
-                  :disabled="scope.row.status !== 'pending'"
-                >
-                  拒绝
-                </el-button>
-              </template>
-            </el-table-column>
           </el-table>
 
           <!-- 分页 -->
@@ -216,7 +194,12 @@
 </template>
 
 <script>
-import { changeAdminPassword, adminLogout, getAdminInfo } from '@/utils/api';
+import {
+  changeAdminPassword,
+  adminLogout,
+  getAdminInfo,
+  getPostReportList,
+} from '@/utils/api';
 export default {
   name: 'AdminPostReviewPage',
   data() {
@@ -254,38 +237,59 @@ export default {
       typeFilter: 'all',
       pageSize: 10,
       currentPage: 1,
-      posts: [
-        {
-          id: 1,
-          title: '违规内容举报',
-          subtitle: '举报用户ID:123456发布不当内容',
-          author: '李四',
-          time: '2025-07-15 14:30',
-          type: '举报内容',
-          status: 'pending',
-          selected: false,
-        },
-        {
-          id: 2,
-          title: '敏感词检测',
-          subtitle: '检测到敏感词"政治"',
-          author: '王五',
-          time: '2025-07-15 10:45',
-          type: '敏感词检测',
-          status: 'pending',
-          selected: false,
-        },
-        {
-          id: 3,
-          title: '关于机器人API的使用问题',
-          subtitle: '如何调用情感分析API?',
-          author: '赵六',
-          time: '2025-07-14 18:20',
-          type: '普通帖子',
-          status: 'approved',
-          selected: false,
-        },
-      ],
+      posts: [],
+      async fetchPendingPosts() {
+        try {
+          const res = await getPostReportList({
+            status: 0,
+            page: this.currentPage,
+            pageSize: this.pageSize,
+          });
+          if (res.data && res.data.success) {
+            this.posts = (res.data.data || []).map((item) => {
+              let parsedTitle = {};
+              try {
+                parsedTitle =
+                  typeof item.postTitle === 'string'
+                    ? JSON.parse(item.postTitle)
+                    : item.postTitle || {};
+              } catch (e) {
+                parsedTitle = { title: item.postTitle || '无标题' };
+              }
+              return {
+                id: item.reportId || item.ReportId || item.id,
+                title: parsedTitle.title || '无标题',
+                subtitle: parsedTitle.content || item.reportReason || '',
+                author: parsedTitle.author || item.reporterName || '未知',
+                time: item.createdAt || item.CreatedAt || '',
+                type: '举报内容',
+                status: this.mapStatus(item.status || item.Status),
+                selected: false,
+                raw: item,
+              };
+            });
+          } else {
+            this.$message.error(res.data.message || '获取待审核帖子失败');
+          }
+        } catch (err) {
+          this.$message.error(err.message || '获取待审核帖子失败');
+        }
+      },
+      mapStatus(status) {
+        switch (status) {
+          case 0:
+          case '0':
+            return 'pending';
+          case 1:
+          case '1':
+            return 'approved';
+          case 2:
+          case '2':
+            return 'rejected';
+          default:
+            return 'pending';
+        }
+      },
     };
   },
   computed: {
@@ -402,8 +406,11 @@ export default {
       });
     },
     viewPost(post) {
-      // 查看帖子详情逻辑
-      console.log('查看帖子:', post);
+      // 跳转到举报详情页
+      this.$router.push({
+        name: 'AdminPostReviewDetail',
+        params: { id: post.id },
+      });
     },
     approvePost(post) {
       post.status = 'approved';
@@ -497,6 +504,7 @@ export default {
   },
   mounted() {
     this.fetchAdminInfo();
+    this.fetchPendingPosts();
   },
 };
 </script>

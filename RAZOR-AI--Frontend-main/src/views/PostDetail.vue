@@ -209,6 +209,13 @@
                   <i class="fa fa-trash"></i> 删除
                 </button>
                 <button
+                  v-if="comment.userId !== currentUserId"
+                  class="report-comment-btn"
+                  @click="openReportCommentDialog(comment)"
+                >
+                  <i class="el-icon-warning-outline"></i> 举报
+                </button>
+                <button
                   class="reply-comment-btn"
                   @click="toggleReplyBox(comment.id)"
                 >
@@ -350,6 +357,13 @@
                           @click="confirmDeleteComment(reply)"
                         >
                           <i class="fa fa-trash"></i> 删除
+                        </button>
+                        <button
+                          v-if="reply.userId !== currentUserId"
+                          class="report-comment-btn"
+                          @click="openReportCommentDialog(reply)"
+                        >
+                          <i class="el-icon-warning-outline"></i> 举报
                         </button>
                         <button
                           class="reply-comment-btn"
@@ -501,6 +515,54 @@
         >
       </span>
     </el-dialog>
+
+    <!-- 评论举报弹窗 -->
+    <el-dialog
+      title="举报评论"
+      :visible.sync="reportCommentDialogVisible"
+      width="500px"
+      :close-on-click-modal="false"
+      class="report-dialog"
+    >
+      <div class="report-form">
+        <div class="report-comment-info">
+          <span class="label">举报：</span>
+          <span class="comment-author-name">{{
+            reportTargetComment?.author
+          }}</span>
+          <span class="comment-content-preview">{{
+            reportTargetComment?.commentContent
+          }}</span>
+        </div>
+        <el-form
+          :model="reportCommentForm"
+          :rules="reportCommentRules"
+          ref="reportCommentForm"
+          label-width="80px"
+        >
+          <el-form-item label="举报原因" prop="reportReason">
+            <el-input
+              type="textarea"
+              v-model="reportCommentForm.reportReason"
+              placeholder="请描述举报原因..."
+              :rows="4"
+              maxlength="500"
+              show-word-limit
+            >
+            </el-input>
+          </el-form-item>
+        </el-form>
+      </div>
+      <span slot="footer" class="dialog-footer">
+        <el-button @click="reportCommentDialogVisible = false">取消</el-button>
+        <el-button
+          type="primary"
+          @click="submitCommentReport"
+          :loading="reportCommentSubmitting"
+          >提交举报</el-button
+        >
+      </span>
+    </el-dialog>
   </div>
 </template>
 
@@ -511,9 +573,11 @@ import {
   getCommunityCommentCount,
   createCommunityComment,
   deleteCommunityComment,
+  reportCommunityPost as apiReportCommunityPost,
+  reportCommunityComment as apiReportCommunityComment,
+  //getCommunityLikeCount as apiGetCommunityLikeCount,
   getCommentReplies,
   getRepliedCommentAuthor,
-  reportCommunityPost,
   getCommentAuthorName,
   likeCommunityComment,
   cancelLikeCommunityComment,
@@ -593,6 +657,20 @@ export default {
 
       // 回复楼层展开状态
       replyListExpanded: {}, // 每条评论的回复楼层展开状态
+
+      // 评论举报相关
+      reportCommentDialogVisible: false,
+      reportCommentSubmitting: false,
+      reportTargetComment: null,
+      reportCommentForm: {
+        reportReason: '',
+      },
+      reportCommentRules: {
+        reportReason: [
+          { required: true, message: '请输入举报原因', trigger: 'blur' },
+          { min: 10, message: '举报原因至少需要10个字符', trigger: 'blur' },
+        ],
+      },
     };
   },
   created() {
@@ -935,11 +1013,28 @@ export default {
         console.log('发布评论响应:', response);
 
         if (response.data && response.data.comment) {
+          // 获取新评论的完整信息
+          let author = this.userName || `用户${this.currentUserId}`;
+          let likeCount = 0;
+          let likedByMe = false;
+
+          // 获取新评论的评论者名字
+          try {
+            const nameRes = await getCommentAuthorName(
+              response.data.comment.id
+            );
+            author = nameRes.data?.authorName || author;
+          } catch (e) {
+            // 使用默认值
+          }
+
           // 添加新评论到列表顶部
           const newComment = {
             ...response.data.comment,
-            author: this.userName || `用户${this.currentUserId}`,
+            author,
             avatar: this.defaultAvatar,
+            likeCount,
+            likedByMe,
           };
           this.comments.unshift(newComment);
 
@@ -951,6 +1046,9 @@ export default {
           this.newComment = '';
 
           this.$message?.success('评论发布成功');
+
+          // 强制更新视图
+          this.$forceUpdate();
         }
       } catch (error) {
         console.error('发布评论失败:', error);
@@ -989,18 +1087,37 @@ export default {
         const response = await deleteCommunityComment(comment.id, payload);
         console.log('删除评论响应:', response);
 
-        // 从列表中移除评论
-        const index = this.comments.findIndex((c) => c.id === comment.id);
-        if (index !== -1) {
-          this.comments.splice(index, 1);
-
-          // 更新评论数量
-          this.totalComments = Math.max(0, this.totalComments - 1);
-          this.post.comments = this.totalComments;
+        // 判断是主评论还是回复
+        if (comment.replyId) {
+          // 这是一个回复，从回复列表中删除
+          if (this.commentReplies[comment.replyId]) {
+            const replyIndex = this.commentReplies[comment.replyId].findIndex(
+              (r) => r.id === comment.id
+            );
+            if (replyIndex !== -1) {
+              this.commentReplies[comment.replyId].splice(replyIndex, 1);
+            }
+          }
+        } else {
+          // 这是一个主评论，从主评论列表中删除
+          const index = this.comments.findIndex((c) => c.id === comment.id);
+          if (index !== -1) {
+            this.comments.splice(index, 1);
+            // 同时删除相关的回复
+            if (this.commentReplies[comment.id]) {
+              this.$delete(this.commentReplies, comment.id);
+            }
+          }
         }
 
+        // 更新评论数量
+        this.totalComments = Math.max(0, this.totalComments - 1);
+        this.post.comments = this.totalComments;
+
         this.$message?.success('评论删除成功');
-        window.location.reload(); // 删除后刷新页面，保证评论区同步
+
+        // 强制更新视图
+        this.$forceUpdate();
       } catch (error) {
         console.error('删除评论失败:', error);
         this.$message?.error('删除评论失败，请稍后重试');
@@ -1062,11 +1179,11 @@ export default {
               postAuthorName: this.post.authorName, // 帖子作者姓名
               reportTime: currentTime, // 举报时间
               reportReason: this.reportForm.reportContent, // 举报原因(至少10个字符)
-              reportContent: this.post.content,
+              reportContent: this.post.content, //帖子内容
             };
 
             console.log('举报提交的reportload:', reportload);
-            const response = await reportCommunityPost(reportload);
+            const response = await apiReportCommunityPost(reportload);
 
             if (response.data.success) {
               this.$message.success('举报提交成功，我们会尽快处理');
@@ -1080,6 +1197,49 @@ export default {
             this.$message.error('举报提交失败，请稍后重试');
           } finally {
             this.reportSubmitting = false;
+          }
+        }
+      });
+    },
+
+    // 打开评论举报弹窗
+    openReportCommentDialog(comment) {
+      this.reportTargetComment = comment;
+      this.reportCommentDialogVisible = true;
+      this.reportCommentForm.reportReason = '';
+    },
+
+    // 提交评论举报
+    async submitCommentReport() {
+      this.$refs.reportCommentForm.validate(async (valid) => {
+        if (valid) {
+          this.reportCommentSubmitting = true;
+          try {
+            const currentTime = new Date().toISOString();
+            const reportload = {
+              commentId: this.reportTargetComment.id,
+              reportReason: this.reportCommentForm.reportReason,
+              reportDetails: '',
+              reportContent: this.reportTargetComment.commentContent,
+              reportTime: currentTime,
+            };
+
+            console.log('评论举报提交的reportload:', reportload);
+            const response = await apiReportCommunityComment(reportload);
+
+            if (response.data.success) {
+              this.$message.success('举报提交成功，我们会尽快处理');
+              this.reportCommentDialogVisible = false;
+              this.reportCommentForm.reportReason = '';
+              this.reportTargetComment = null;
+            } else {
+              this.$message.error(response.data.message || '举报提交失败');
+            }
+          } catch (error) {
+            console.error('评论举报提交失败:', error);
+            this.$message.error('举报提交失败，请稍后重试');
+          } finally {
+            this.reportCommentSubmitting = false;
           }
         }
       });
@@ -1125,17 +1285,37 @@ export default {
         // 发送评论/回复
         const res = await createCommunityComment(this.id, payload);
         if (res.data && res.data.comment) {
+          // 获取当前用户信息和新回复的完整数据
+          let author = this.userName || `用户${this.currentUserId}`;
+          let likeCount = 0;
+          let likedByMe = false;
+
+          // 获取新回复的评论者名字
+          try {
+            const nameRes = await getCommentAuthorName(res.data.comment.id);
+            author = nameRes.data?.authorName || author;
+          } catch (e) {
+            // 使用默认值
+          }
+
           const newReply = {
             ...res.data.comment,
             repliedAuthor,
+            author,
+            avatar: this.defaultAvatar,
+            likeCount,
+            likedByMe,
           };
+
           if (!this.commentReplies[comment.id])
             this.$set(this.commentReplies, comment.id, []);
           this.commentReplies[comment.id].unshift(newReply);
           this.replyContent[comment.id] = '';
           this.$message?.success('回复发布成功');
           this.$set(this.replyBoxVisible, comment.id, false);
-          window.location.reload(); // 发布后刷新页面
+
+          // 强制更新视图以确保新回复立即显示
+          this.$forceUpdate();
         }
       } catch (error) {
         this.$message?.error(error?.message || '回复发布失败');
@@ -1148,7 +1328,7 @@ export default {
       this.isSubmittingReply = true;
       try {
         let repliedAuthor = null;
-        let author = '';
+        let author = this.userName || `用户${this.currentUserId}`;
         let payload = {
           userId: this.currentUserId,
           // 内容加上@被回复人名字
@@ -1156,31 +1336,40 @@ export default {
           // replyId始终为主评论id
           replyId: parentCommentId,
         };
-        try {
-          const nameRes = await getCommentAuthorName(reply.id);
-          author = nameRes.data?.authorName || `用户${reply.userId}`;
-        } catch (e) {
-          author = `用户${reply.userId}`;
-        }
+
         // 被回复人名字优先用reply.author
         let atText = reply.author ? `@${reply.author} ` : '';
         payload.commentContent = atText + this.replyContent[reply.id];
+
         // 发送回复评论
         const res = await createCommunityComment(this.id, payload);
         if (res.data && res.data.comment) {
+          // 获取新回复的评论者名字
+          try {
+            const nameRes = await getCommentAuthorName(res.data.comment.id);
+            author = nameRes.data?.authorName || author;
+          } catch (e) {
+            // 使用默认值
+          }
+
           const newReply = {
             ...res.data.comment,
             repliedAuthor,
             author,
             avatar: this.defaultAvatar,
+            likeCount: 0,
+            likedByMe: false,
           };
+
           if (!this.commentReplies[parentCommentId])
             this.$set(this.commentReplies, parentCommentId, []);
           this.commentReplies[parentCommentId].unshift(newReply);
           this.replyContent[reply.id] = '';
           this.$message?.success('回复发布成功');
           this.$set(this.replyBoxVisible, reply.id, false);
-          window.location.reload(); // 发布后刷新页面
+
+          // 强制更新视图以确保新回复立即显示
+          this.$forceUpdate();
         }
       } catch (error) {
         this.$message?.error(error?.message || '回复发布失败');
@@ -2000,5 +2189,63 @@ export default {
   text-align: right;
   padding-top: 20px;
   border-top: 1px solid #e9ecef;
+}
+
+/* 评论举报按钮样式 */
+.report-comment-btn {
+  color: #f56565 !important;
+  border: none !important;
+  background: none !important;
+  padding: 4px 8px !important;
+  font-size: 12px !important;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all 0.3s ease;
+}
+
+.report-comment-btn:hover {
+  background-color: #fee2e2 !important;
+  color: #dc2626 !important;
+}
+
+/* 评论操作区域样式调整 */
+.comment-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  align-items: center;
+}
+
+/* 评论举报弹窗特定样式 */
+.report-comment-info {
+  margin-bottom: 20px;
+  padding: 15px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  border-left: 4px solid #f56565;
+}
+
+.report-comment-info .label {
+  color: #666;
+  font-size: 14px;
+  margin-right: 8px;
+}
+
+.report-comment-info .comment-author-name {
+  color: #1a1a1a;
+  font-weight: 500;
+  font-size: 16px;
+  margin-right: 8px;
+}
+
+.report-comment-info .comment-content-preview {
+  color: #555;
+  font-size: 14px;
+  font-style: italic;
+  display: block;
+  margin-top: 8px;
+  word-wrap: break-word;
+  max-height: 100px;
+  overflow-y: auto;
 }
 </style>

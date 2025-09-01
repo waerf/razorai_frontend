@@ -34,20 +34,7 @@
               <span class="label">年龄:</span>
               <span class="value">{{ userInfo.age || '未设置' }}</span>
             </div>
-            <div class="info-item">
-              <span class="label">生日:</span>
-              <span class="value">{{ formatBirthday(userInfo.birthday) }}</span>
-            </div>
-            <div class="info-item">
-              <span class="label">机构:</span>
-              <span class="value">{{ userInfo.organization || '未设置' }}</span>
-            </div>
-            <div class="info-item">
-              <span class="label">个人简介:</span>
-              <span class="value profile-text">{{
-                userInfo.profile || '未设置'
-              }}</span>
-            </div>
+
             <div class="info-item">
               <span class="label">注册时间:</span>
               <span class="value">{{ formatDate(userInfo.created_at) }}</span>
@@ -101,20 +88,61 @@
       </div>
     </el-card>
 
-    <!-- 兴趣模块 -->
-    <el-card class="interest-card">
+    <!-- 订阅记录 -->
+    <el-card class="subscription-card">
       <div slot="header" class="clearfix">
-        <span class="card-title">兴趣模块</span>
-      </div>
-      <div class="interest-content">
-        <el-tag
-          v-for="module in interestModules"
-          :key="module"
-          type="info"
-          class="interest-tag"
+        <span class="card-title">我的订阅记录</span>
+        <el-button
+          style="float: right; padding: 3px 0"
+          type="text"
+          @click="refreshSubscriptions"
+          :loading="subscriptionsLoading"
         >
-          {{ module }}
-        </el-tag>
+          刷新
+        </el-button>
+      </div>
+      <div class="subscription-content" v-loading="subscriptionsLoading">
+        <div v-if="subscriptions.length === 0" class="no-subscriptions">
+          <el-empty description="暂无订阅记录" />
+        </div>
+        <div v-else>
+          <el-table :data="subscriptions" style="width: 100%" stripe border>
+            <el-table-column prop="agent_name" label="机器人名称" width="180" />
+            <el-table-column
+              prop="subscription_type"
+              label="订阅类型"
+              width="120"
+            >
+              <template slot-scope="scope">
+                <el-tag
+                  :type="
+                    scope.row.subscription_type === 1 ? 'primary' : 'success'
+                  "
+                  size="small"
+                >
+                  {{ getSubscriptionTypeText(scope.row.subscription_type) }}
+                </el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column prop="start_time" label="开始时间" width="160">
+              <template slot-scope="scope">
+                {{ formatDate(scope.row.start_time) }}
+              </template>
+            </el-table-column>
+            <el-table-column prop="end_time" label="结束时间" width="160">
+              <template slot-scope="scope">
+                {{ formatDate(scope.row.end_time) }}
+              </template>
+            </el-table-column>
+            <el-table-column prop="status" label="状态" width="100">
+              <template slot-scope="scope">
+                <el-tag :type="getStatusTagType(scope.row.status)" size="small">
+                  {{ getStatusText(scope.row.status) }}
+                </el-tag>
+              </template>
+            </el-table-column>
+          </el-table>
+        </div>
       </div>
     </el-card>
 
@@ -171,37 +199,6 @@
             :max="120"
             placeholder="请输入年龄"
             style="width: 100%"
-          />
-        </el-form-item>
-
-        <el-form-item label="生日" prop="Birthday">
-          <el-date-picker
-            v-model="editForm.Birthday"
-            type="date"
-            placeholder="请选择生日"
-            style="width: 100%"
-            format="yyyy-MM-dd"
-            value-format="yyyy-MM-dd"
-          />
-        </el-form-item>
-
-        <el-form-item label="机构" prop="Organization">
-          <el-input
-            v-model="editForm.Organization"
-            placeholder="请输入所属机构"
-            maxlength="100"
-            show-word-limit
-          />
-        </el-form-item>
-
-        <el-form-item label="个人简介" prop="Profile">
-          <el-input
-            type="textarea"
-            v-model="editForm.Profile"
-            placeholder="请输入个人简介"
-            :rows="3"
-            maxlength="500"
-            show-word-limit
           />
         </el-form-item>
 
@@ -370,15 +367,6 @@
           />
         </el-form-item>
 
-        <el-form-item label="充值说明" prop="description">
-          <el-input
-            v-model="rechargeForm.description"
-            placeholder="可选择添加充值说明"
-            maxlength="100"
-            show-word-limit
-          />
-        </el-form-item>
-
         <div class="quick-amounts">
           <span class="quick-label">快速选择：</span>
           <el-button size="mini" @click="setQuickAmount(100)">100</el-button>
@@ -419,6 +407,7 @@ import {
   getUserPoints,
   getPointsHistory,
   rechargePoints,
+  fetchUserSubscriptions,
 } from '@/utils/api';
 
 export default {
@@ -434,14 +423,16 @@ export default {
         phone: '',
         gender: null,
         age: null,
-        birthday: null,
-        organization: '',
-        profile: '',
+
         points: 0,
         created_at: null,
         updated_at: null,
       },
-      interestModules: ['编程', '旅游', '健身'],
+
+      // 订阅记录相关
+      subscriptions: [],
+      subscriptionsLoading: false,
+
       friends: ['何雯宏', '许昕格', '王加添'],
       favoriteRobots: ['R2-D2', 'C-3PO', 'Optimus Prime'],
       favoriteTools: ['VS Code', 'Sublime Text', 'WebStorm'],
@@ -455,9 +446,6 @@ export default {
         Phone: '',
         Gender: null,
         Age: null,
-        Birthday: null,
-        Organization: '',
-        Profile: '',
         Password: '', // 添加密码字段
       },
       editRules: {
@@ -470,20 +458,7 @@ export default {
             trigger: 'blur',
           },
         ],
-        Organization: [
-          {
-            max: 100,
-            message: '机构名称不能超过100个字符',
-            trigger: 'blur',
-          },
-        ],
-        Profile: [
-          {
-            max: 500,
-            message: '个人简介不能超过500个字符',
-            trigger: 'blur',
-          },
-        ],
+
         Password: [
           { required: true, message: '请输入当前密码', trigger: 'blur' },
           {
@@ -507,7 +482,6 @@ export default {
       rechargeLoading: false,
       rechargeForm: {
         points: 100,
-        description: '用户充值积分',
       },
       rechargeRules: {
         points: [
@@ -552,6 +526,7 @@ export default {
 
   async created() {
     await this.loadUserInfo();
+    await this.loadSubscriptions();
   },
 
   methods: {
@@ -645,11 +620,6 @@ export default {
       return new Date(dateString).toLocaleString('zh-CN');
     },
 
-    formatBirthday(dateString) {
-      if (!dateString) return '未设置';
-      return new Date(dateString).toLocaleDateString('zh-CN');
-    },
-
     // 积分相关方法 - 仅用于购买机器人
     // 已删除会员等级相关方法
 
@@ -698,9 +668,7 @@ export default {
         Phone: this.userInfo.phone || '',
         Gender: this.userInfo.gender,
         Age: this.userInfo.age,
-        Birthday: this.userInfo.birthday || null,
-        Organization: this.userInfo.organization || '',
-        Profile: this.userInfo.profile || '',
+
         Password: '', // 重置密码字段
       };
       this.editDialogVisible = true;
@@ -986,7 +954,6 @@ export default {
       }
       this.rechargeForm = {
         points: 100,
-        description: '用户充值积分',
       };
     },
 
@@ -1003,7 +970,7 @@ export default {
 
         const response = await rechargePoints(
           this.rechargeForm.points,
-          this.rechargeForm.description
+          '用户充值积分'
         );
 
         console.log('充值响应:', response);
@@ -1041,6 +1008,76 @@ export default {
         this.rechargeLoading = false;
       }
     },
+
+    // 订阅记录相关方法
+    async loadSubscriptions() {
+      this.subscriptionsLoading = true;
+      try {
+        const response = await this.fetchUserSubscriptions(this.userId);
+        console.log('订阅记录API响应:', response);
+
+        if (response && Array.isArray(response)) {
+          this.subscriptions = response;
+        } else if (response && response.data && Array.isArray(response.data)) {
+          this.subscriptions = response.data;
+        } else {
+          this.subscriptions = [];
+        }
+
+        console.log('加载的订阅记录:', this.subscriptions);
+      } catch (error) {
+        console.error('加载订阅记录失败:', error);
+        this.$message.error(
+          '加载订阅记录失败：' + (error.message || '网络错误')
+        );
+        this.subscriptions = [];
+      } finally {
+        this.subscriptionsLoading = false;
+      }
+    },
+
+    async fetchUserSubscriptions(userId) {
+      try {
+        const response = await fetchUserSubscriptions(userId);
+        return response.data;
+      } catch (error) {
+        console.error('获取订阅记录失败:', error);
+        throw error;
+      }
+    },
+
+    refreshSubscriptions() {
+      this.loadSubscriptions();
+    },
+
+    getSubscriptionTypeText(type) {
+      const typeMap = {
+        1: '基础订阅',
+        2: '高级订阅',
+        3: '专业订阅',
+      };
+      return typeMap[type] || '未知类型';
+    },
+
+    getStatusText(status) {
+      const statusMap = {
+        0: '已取消',
+        1: '活跃',
+        2: '已过期',
+        3: '暂停',
+      };
+      return statusMap[status] || '未知状态';
+    },
+
+    getStatusTagType(status) {
+      const tagTypeMap = {
+        0: 'danger',
+        1: 'success',
+        2: 'warning',
+        3: 'info',
+      };
+      return tagTypeMap[status] || 'info';
+    },
   },
 };
 </script>
@@ -1056,7 +1093,7 @@ export default {
 
 .profile-card,
 .points-card,
-.interest-card {
+.subscription-card {
   margin-bottom: 20px;
   border-radius: 8px;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
@@ -1211,25 +1248,28 @@ export default {
   min-width: 0; // 允许按钮缩小
 }
 
-// 兴趣模块样式
-.interest-card {
+// 订阅记录样式
+.subscription-card {
   background: #ffffff;
   border-left: 4px solid #67c23a;
 }
 
-.interest-content {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-}
+.subscription-content {
+  .no-subscriptions {
+    text-align: center;
+    padding: 40px 0;
+  }
 
-.interest-tag {
-  margin: 0;
-  border-radius: 4px;
-  padding: 6px 12px;
-  background: #ecf5ff;
-  border: 1px solid #d9ecff;
-  color: #409eff;
+  .el-table {
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  .el-table th {
+    background: #f5f7fa;
+    color: #606266;
+    font-weight: 600;
+  }
 }
 
 // 响应式设计

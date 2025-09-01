@@ -384,7 +384,7 @@ export default {
           Remarks: '', // 审核备注
         };
         const approveRes = await fetch(
-          `http://localhost:5253/admin/agent-review/${this.robot.id}/approve`,
+          `http://47.99.66.142:5253/admin/agent-review/${this.robot.id}/approve`,
           {
             method: 'POST',
             headers: {
@@ -420,7 +420,7 @@ export default {
       }
       const token = MyStorage.get('admin_token');
       fetch(
-        `http://localhost:5253/admin/agent-review/${this.robot.id}/reject`,
+        `http://47.99.66.142:5253/admin/agent-review/${this.robot.id}/reject`,
         {
           method: 'POST',
           headers: {

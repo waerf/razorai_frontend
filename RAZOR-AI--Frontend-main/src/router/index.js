@@ -25,6 +25,7 @@ import ScoreMessage from '@/views/ScoreMessage.vue';
 import AdminPage from '@/views/AdminPage.vue';
 import AdminLogin from '@/views/AdminLoginPage.vue';
 import AdminFeedback from '@/views/AdminFeedbackPage.vue';
+import Editpost from '@/views/EditPostsPage.vue';
 
 Vue.use(VueRouter);
 
@@ -184,6 +185,13 @@ const routes = [
         props: true,
       },
       {
+        path: 'community/editpost/:id',
+        name: 'EditPost',
+        component: Editpost,
+        meta: { title: '编辑帖子' },
+        props: true,
+      },
+      {
         path: 'community/news',
         name: 'CommunityNews',
         component: () => import('@/views/CommunityPage.vue'),
@@ -292,6 +300,15 @@ const router = new VueRouter({
       component: () => import('@/views/AdminPostReviewPage.vue'),
       meta: {
         title: 'RazorAI-帖子审核',
+        requiresAdmin: true,
+      },
+    },
+    {
+      path: '/admin/post-report/:id',
+      name: 'AdminPostReviewDetail',
+      component: () => import('@/views/AdminPostReviewDetail.vue'),
+      meta: {
+        title: 'RazorAI-举报详情',
         requiresAdmin: true,
       },
     },

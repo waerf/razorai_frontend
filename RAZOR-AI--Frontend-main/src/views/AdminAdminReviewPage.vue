@@ -119,6 +119,12 @@
                 <p class="text-gray-600 text-sm mt-2">
                   邮箱：{{ admin.email }}
                 </p>
+                <p
+                  v-if="admin.RegistrationReason"
+                  class="text-gray-600 text-sm mt-2"
+                >
+                  注册理由：{{ admin.RegistrationReason }}
+                </p>
                 <div class="mt-3 flex gap-2">
                   <el-button
                     type="success"
@@ -208,10 +214,16 @@ export default {
         if (res.data && res.data.success) {
           // 兼容后端返回的字段
           this.pendingAdmins = (res.data.data || []).map((a) => ({
-            id: a.adminId || a.id,
+            id: a.adminId || a.id || a.auditId,
             username: a.adminName || a.username,
             registeredAt: a.createdAt || a.registeredAt,
             email: a.email,
+            RegistrationReason:
+              a.RegistrationReason ||
+              a.registrationReason ||
+              a.register_reason ||
+              a.reason ||
+              '',
           }));
         } else {
           this.$message.error(res.data.message || '获取待审核管理员失败');
