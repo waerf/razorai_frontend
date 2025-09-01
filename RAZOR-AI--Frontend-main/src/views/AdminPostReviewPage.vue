@@ -163,6 +163,20 @@
               </template>
             </el-table-column>
           </el-table>
+
+          <!-- 帖子分页 -->
+          <div class="pagination-container">
+            <span class="pagination-info">
+              显示 {{ currentPageStart }} 到 {{ currentPageEnd }} 条，共
+              {{ posts.length }} 条
+            </span>
+            <el-pagination
+              layout="prev, pager, next"
+              :total="posts.length"
+              :page-size="pageSize"
+              @current-change="handleCurrentChange"
+            ></el-pagination>
+          </div>
         </el-card>
 
         <!-- 评论列表 -->
@@ -227,20 +241,6 @@
             ></el-pagination>
           </div>
         </el-card>
-
-        <!-- 帖子分页 -->
-        <div v-if="activeTab === 'posts'" class="pagination-container">
-          <span class="pagination-info">
-            显示 {{ currentPageStart }} 到 {{ currentPageEnd }} 条，共
-            {{ posts.length }} 条
-          </span>
-          <el-pagination
-            layout="prev, pager, next"
-            :total="posts.length"
-            :page-size="pageSize"
-            @current-change="handleCurrentChange"
-          ></el-pagination>
-        </div>
       </div>
     </main>
   </div>

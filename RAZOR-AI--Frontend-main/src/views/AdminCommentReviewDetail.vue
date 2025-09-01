@@ -158,7 +158,7 @@ import {
   getAdminInfo,
   reviewCommentReport,
   getCommentReportDetail,
-  sendReviewNotification,
+  //sendReviewNotification,
 } from '@/utils/api';
 
 export default {
@@ -220,7 +220,7 @@ export default {
 
         if (res.data && res.data.success) {
           this.$message.success('审核提交成功');
-
+          /*
           // 如果是通过举报（status=1），向举报者发送通知
           if (
             this.reviewForm.status === 1 &&
@@ -234,7 +234,7 @@ export default {
               message: notifyMsg,
             }).catch(() => {});
           }
-
+          */
           // 审核提交成功后，返回列表页
           this.$router.push('/admin/posts');
         } else {
