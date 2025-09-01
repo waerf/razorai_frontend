@@ -362,8 +362,15 @@ export const subscribeAgent = (payload) =>
     headers: { skipAuth: false },
   });
 
+// 创建机器人
 export const createAI = (payload) =>
   api.post('/agent/user/creation', payload, {
+    headers: { skipAuth: false },
+  });
+
+// 获取用户的创建所有机器人
+export const fetchUserCreatedAgents = (userId) =>
+  api.get(`/user/${userId}/agents`, {
     headers: { skipAuth: false },
   });
 
@@ -371,6 +378,17 @@ export const createAgentPending = (payload) =>
   adminApi.post('/admin/agent-review/pending', payload, {
     headers: { skipAuth: false },
   });
+
+//获取对话名称
+export const getChatTitle = (chatId) =>
+  api.post(
+    `/agent/user/chat/${chatId}/title`,
+    {}, // 请求体，如果没有数据就传空对象
+    {
+      headers: { skipAuth: false },
+      timeout: 20000, // 20秒
+    }
+  );
 
 // 启用机器人
 export const startRobots = () =>
@@ -401,7 +419,7 @@ export const sendMessage = (payload) =>
     { question: payload.content },
     {
       headers: { skipAuth: false },
-      timeout: 5000, // 设置 5 秒超时时间
+      timeout: 20000, // 设置 20 秒超时时间
     }
   );
 

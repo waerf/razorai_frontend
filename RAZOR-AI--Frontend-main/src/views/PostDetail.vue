@@ -65,9 +65,16 @@
           <!-- 帖子底部操作 -->
           <div class="post-actions">
             <div class="action-group">
-              <button class="action-btn" @click="likePost">
-                <span>{{ post.likes }}个点赞</span>
-              </button>
+              <div
+                class="interaction-item"
+                @click="toggleLikePost"
+                :class="{ liked: post.likedByMe }"
+              >
+                <i class="el-icon-thumb"></i>
+                <span>{{ post.likes || 0 }}</span>
+                <span>点赞</span>
+              </div>
+
               <button class="action-btn">
                 <span>{{ post.comments }}个评论</span>
               </button>
@@ -571,6 +578,9 @@ import {
   getCommunityPostDetail,
   getCommunityPostComments,
   getCommunityCommentCount,
+  getCommunityLikeCount,
+  likeCommunityPost,
+  cancelLikeCommunityPost,
   createCommunityComment,
   deleteCommunityComment,
   reportCommunityPost as apiReportCommunityPost,
@@ -621,6 +631,7 @@ export default {
         bookmarks: 0,
         views: 0,
         content: '',
+        likedByMe: false,
       },
 
       // 评论相关数据
@@ -678,6 +689,7 @@ export default {
       this.loadPostData(this.id);
       this.loadComments(this.id);
       this.loadCommentCount(this.id);
+      this.loadLikeCount(this.id);
       // 新增：自动加载每条主评论的回复
       this.$nextTick(() => {
         this.loadAllCommentReplies();
@@ -836,12 +848,57 @@ export default {
       }
     },
 
-    likePost() {
-      this.post.likes++;
+    async toggleLikePost() {
+      if (!this.isLoggedIn) {
+        this.$message?.warning('请先登录');
+        return;
+      }
+
+      console.log('调用点赞接口:', {
+        postId: this.id,
+        userId: Number(this.currentUserId),
+        token: this.token,
+      });
+
+      try {
+        if (this.post.likedByMe) {
+          // 取消点赞
+          await cancelLikeCommunityPost(this.id, {
+            userId: Number(this.currentUserId),
+          });
+          this.post.likes = Math.max(0, this.post.likes - 1);
+          this.post.likedByMe = false;
+        } else {
+          // 点赞
+          await likeCommunityPost(this.id, {
+            userId: Number(this.currentUserId),
+          });
+          this.post.likes = (this.post.likes || 0) + 1;
+          this.post.likedByMe = true;
+        }
+      } catch (err) {
+        console.error(
+          '帖子点赞操作失败:',
+          err.response?.data || err.message || err
+        );
+        this.$message?.error('操作失败，请稍后重试');
+      }
     },
 
-    bookmarkPost() {
-      this.post.bookmarks++;
+    // 加载点赞数量
+    async loadLikeCount(postId) {
+      if (!postId) return;
+
+      try {
+        const res = await getCommunityLikeCount(postId);
+        console.log('点赞数量响应:', res);
+
+        // 使用接口返回的 likeCount 字段
+        this.post.likes = res.data?.likeCount ?? 0;
+      } catch (err) {
+        console.error('加载点赞数失败:', err);
+        this.post.likes = 0;
+      }
     },
 
     // 加载评论列表
@@ -1550,7 +1607,9 @@ export default {
 
 .action-group {
   display: flex;
-  gap: 30px;
+  gap: 20px; /* 点赞和评论的间距 */
+  margin-top: 10px;
+  align-items: center; /* 垂直对齐 */
 }
 
 .action-btn {
@@ -1842,6 +1901,10 @@ export default {
   border: none;
 }
 
+.liked {
+  color: #0f88eb; /* Element UI 默认蓝色，你也可以换成别的 */
+}
+
 .secondary-btn:hover {
   background-color: #e9ecef;
 }
@@ -2040,10 +2103,6 @@ export default {
     font-size: 20px;
   }
 
-  .action-group {
-    gap: 20px;
-  }
-
   .action-btn,
   .share-btn {
     font-size: 14px;
@@ -2129,7 +2188,7 @@ export default {
   border: none !important;
   background: none !important;
   padding: 4px 8px !important;
-  font-size: 12px !important;
+  font-size: 14px !important;
   cursor: pointer;
   border-radius: 4px;
   transition: all 0.3s ease;

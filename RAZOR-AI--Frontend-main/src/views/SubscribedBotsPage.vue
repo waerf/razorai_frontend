@@ -111,13 +111,23 @@
                   开始对话
                 </a>
 
-                <button
-                  class="unsubscribe-button text-gray-600 hover:text-gray-800 font-medium flex items-center transition-all hover:pr-1"
-                  @click="robotDetail(robot.agent_id)"
-                >
-                  <i class="fa fa-trash-o mr-1"></i>
-                  机器人详情
-                </button>
+                <div class="flex gap-2">
+                  <button
+                    class="renew-button text-green-600 hover:text-green-800 font-medium flex items-center transition-all hover:pr-1"
+                    @click="openRenewDialog(robot)"
+                  >
+                    <i class="fa fa-refresh mr-1"></i>
+                    续订
+                  </button>
+
+                  <button
+                    class="unsubscribe-button text-gray-600 hover:text-gray-800 font-medium flex items-center transition-all hover:pr-1"
+                    @click="robotDetail(robot.agent_id)"
+                  >
+                    <i class="fa fa-info-circle mr-1"></i>
+                    详情
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -129,21 +139,41 @@
     <robot-detail-dialog
       :visible="robotDetailVisible"
       :robotId="currentRobotId"
-      @close="handleRobotDetailClose"
+      @close="robotDetailVisible = false"
       @show-robot="viewDetails"
     />
+
+    <!-- 续订确认对话框 -->
+    <el-dialog
+      title="续订确认"
+      :visible.sync="renewDialogVisible"
+      :close-on-click-modal="false"
+      :close-on-press-escape="false"
+      width="400px"
+      center
+    >
+      <subscription-selector
+        v-if="currentRenewRobot"
+        :robotId="currentRenewRobot.agent_id"
+        :price="currentRenewRobot.price || 1"
+        :onConfirm="handleRenewConfirm"
+        :onClose="closeRenewDialog"
+      />
+    </el-dialog>
   </div>
 </template>
 
 <script>
 import { mapState, mapActions } from 'vuex';
-import { fetchUserSubscriptions as apiFetchUserSubscriptions } from '../utils/api'; // 导入API函数
 import RobotDetailDialog from './RobotDetailPage.vue';
+import SubscriptionSelector from '@/components/SubscriptionSelector.vue';
+import { subscribeAgent as apiSubscribeAgent } from '../utils/api';
 
 export default {
   name: 'SubscribedBotsPage',
   components: {
     RobotDetailDialog,
+    SubscriptionSelector,
   },
   data() {
     return {
@@ -151,6 +181,8 @@ export default {
       robotDetailVisible: false,
       currentRobotId: null,
       loading: false, // 加载状态
+      renewDialogVisible: false, // 续订弹窗显示状态
+      currentRenewRobot: null, // 当前续订的机器人
     };
   },
   computed: {
@@ -172,7 +204,7 @@ export default {
     },
   },
   methods: {
-    ...mapActions('agent'),
+    ...mapActions('agent', ['fetchUserSubscriptions']),
 
     //获取用户订阅信息
     async getUserSubscriptions() {
@@ -186,8 +218,7 @@ export default {
         this.loading = true;
 
         // 调用Vuex action而不是直接调用API
-        const result = await apiFetchUserSubscriptions(userId);
-        console.log('找到订阅机器人结果:', result);
+        const result = await this.fetchUserSubscriptions(userId);
 
         if (result.success) {
           const subscriptions = this.subscribedRobots;
@@ -247,30 +278,71 @@ export default {
       return daysRemaining >= 0 ? daysRemaining : 0;
     },
 
-    // 打开机器人详情弹窗
+    // 打开续订弹窗
+    openRenewDialog(robot) {
+      this.currentRenewRobot = robot;
+      this.renewDialogVisible = true;
+    },
+
+    // 关闭续订弹窗
+    closeRenewDialog() {
+      this.renewDialogVisible = false;
+      this.currentRenewRobot = null;
+    },
+
+    // 处理续订确认
+    async handleRenewConfirm(duration, points) {
+      if (!this.currentRenewRobot) return;
+
+      try {
+        const currentTime = this.formatDateTime(new Date());
+        const payload = {
+          userId: this.$store.state.user.userId,
+          agentId: this.currentRenewRobot.agent_id,
+          startTime: currentTime,
+          duration: duration,
+          subscriptionType: 2, // 续订类型
+        };
+
+        console.log('续订请求 payload:', payload);
+        console.log('续订时长:', duration);
+        console.log('所需积分:', points);
+
+        const response = await apiSubscribeAgent(payload);
+        if (response.status === 200) {
+          // 续订成功后刷新订阅列表
+          await this.getUserSubscriptions();
+
+          this.$message.success('续订成功！');
+        }
+      } catch (error) {
+        console.error('续订失败:', error);
+        if (error.code === 400) {
+          this.$message.error(error.message);
+        } else if (error.code === 401) {
+          this.$message.error('请先登录');
+        } else {
+          this.$message.error('续订失败，请稍后重试');
+        }
+        throw error; // 重新抛出错误让SubscriptionSelector处理
+      }
+    },
+
+    // 格式化日期时间
+    formatDateTime(date) {
+      // 使用ISO 8601格式，与后端API保持一致
+      return date.toISOString();
+    },
+
+    // 机器人详情
     robotDetail(robotId) {
       this.currentRobotId = robotId;
       this.robotDetailVisible = true;
     },
 
-    // 查看机器人详情（用于@show-robot事件）
+    // 查看详情
     viewDetails(robotId) {
-      this.currentRobotId = robotId;
-      this.robotDetailVisible = true;
-    },
-
-    // 关闭机器人详情弹窗并更新数据
-    async handleRobotDetailClose() {
-      this.robotDetailVisible = false;
-
-      try {
-        // 重新获取用户订阅信息，以更新可能的订阅状态变化
-        await this.getUserSubscriptions();
-
-        console.log('机器人详情弹窗关闭，订阅数据已更新');
-      } catch (error) {
-        console.error('更新订阅数据失败:', error);
-      }
+      this.robotDetail(robotId);
     },
   },
   created() {
@@ -461,6 +533,22 @@ export default {
   padding: 0;
 }
 
+.renew-button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 0;
+}
+
+.text-green-600 {
+  color: #059669;
+}
+
+.text-green-800 {
+  color: #065f46;
+}
+
 /* 链接样式 */
 a {
   text-decoration: none;
@@ -495,6 +583,10 @@ a {
 
 .flex-wrap {
   flex-wrap: wrap;
+}
+
+.gap-2 {
+  gap: 8px;
 }
 
 .justify-between {

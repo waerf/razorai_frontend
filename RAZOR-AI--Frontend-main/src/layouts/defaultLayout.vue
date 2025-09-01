@@ -38,6 +38,7 @@
           title="向平台反馈"
         >
           <el-icon name="box"></el-icon>
+          向平台反馈
         </el-button>
 
         <!-- 用户信息 -->
@@ -154,9 +155,9 @@
             :key="chat.id"
             @click="navigateToChat(chat.id)"
           >
-            <el-icon name="chat-dot-square" class="chat-icon"></el-icon
-            >{{ chat.name }}
-            <span>{{ chat.agent_name }}</span>
+            <el-icon name="chat-dot-square" class="chat-icon"></el-icon>
+            <span v-if="!isSidebarHidden">{{ chat.name }}</span>
+            <span v-if="!isSidebarHidden">{{ chat.agent_name }}</span>
           </div>
         </div>
       </aside>
@@ -246,17 +247,6 @@
 
         <!-- 弹窗内容 -->
         <div class="feedback-content">
-          <!-- 当前路由显示 -->
-          <div class="route-info">
-            <label>当前页面：</label>
-            <el-input
-              v-model="currentRoute"
-              size="small"
-              disabled
-              class="route-input"
-            />
-          </div>
-
           <!-- 反馈内容输入 -->
           <div class="feedback-input-area">
             <label>反馈内容：</label>
@@ -490,7 +480,7 @@ export default {
 
   .feedback-btn {
     color: #606266;
-    font-size: 18px;
+    font-size: 16px; // 调整为与用户信息字体大小一致
     padding: 8px;
     transition: color 0.3s ease;
 
@@ -577,25 +567,6 @@ export default {
     display: flex;
     flex-direction: column;
     gap: 15px;
-
-    .route-info {
-      display: flex;
-      flex-direction: column;
-      gap: 5px;
-
-      label {
-        font-size: 14px;
-        color: #606266;
-        font-weight: 500;
-      }
-
-      .route-input {
-        .el-input__inner {
-          background-color: #f5f7fa;
-          border-color: #dcdfe6;
-        }
-      }
-    }
 
     .feedback-input-area {
       display: flex;

@@ -93,6 +93,14 @@
       </header>
       <!-- 主要内容 -->
       <div class="content">
+        <el-button
+          type="default"
+          icon="el-icon-arrow-left"
+          style="margin-bottom: 16px"
+          @click="$router.push('/admin/feedback')"
+        >
+          返回列表
+        </el-button>
         <el-card class="feedback-detail-card" shadow="hover">
           <div v-if="loading" class="feedback-loading">
             <div class="skeleton skeleton-title"></div>

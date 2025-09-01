@@ -44,9 +44,7 @@
           </div>
           <div class="info-item">
             <span class="info-label">会话名称:</span>
-            <span class="info-value">{{
-              currentChat?.name || '未命名会话'
-            }}</span>
+            <span class="info-value">{{ title || '未命名会话' }}</span>
           </div>
           <div class="info-item timestamp">
             <span class="info-value">{{ new Date().toLocaleString() }}</span>
@@ -92,14 +90,6 @@
                 }"
               >
                 <div class="message-content">{{ msg.content }}</div>
-                <div class="message-time">
-                  {{
-                    new Date().toLocaleTimeString([], {
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })
-                  }}
-                </div>
               </div>
               <!-- 用户消息头像 -->
               <img
@@ -143,7 +133,7 @@ import {
   saveChatHistory as apisaveChatHistory,
   sendMessage as apisendMessage,
   createChat as apicreateChat,
-  startRobots as apistartRobots,
+  getChatTitle as apigetChatTitle,
 } from '../utils/api';
 import { mapActions } from 'vuex';
 
@@ -155,9 +145,9 @@ export default {
       messages: [],
       userAvatar: require('@/assets/images/Avatar/User.png'),
       botAvatar: require('@/assets/images/Avatar/Assistant.png'),
-      currentChat: null,
+      title: '',
+      currentChat: {},
       chatId: null,
-      robotsStarted: false,
     };
   },
 
@@ -166,53 +156,79 @@ export default {
     console.log('当前对话ID:', this.chatId);
 
     if (this.chatId && this.chatId !== 'null') {
+      this.getChatTitle();
       this.getChatHistory();
     } else {
       this.createNewChat();
     }
   },
 
-  mounted() {
-    // 开启定时保存，每隔10秒保存一次
-    this.startAutoSave();
-  },
-
-  deactivated() {
-    // 组件被缓存时
-    this.switchChat();
-    console.log('组件被缓存，停止自动保存');
-  },
-
   beforeRouteLeave(to, from, next) {
-    // 停止自动保存
     this.switchChat();
-    // 清空消息，避免跳转时残留
     this.messages = [];
     console.log('离开路由，停止自动保存并清空消息');
     next();
   },
 
-  watch: {
-    '$route.params.chatId': {
-      async handler(newId, oldId) {
-        // 如果有旧会话，先切换保存它
-        if (oldId) {
-          await this.switchChat(oldId);
-        }
+  beforeRouteUpdate(to, from, next) {
+    const newId = to.params.chatId;
+    const oldId = from?.params?.chatId;
 
-        if (newId) {
-          this.chatId = newId;
-          this.messages = [];
-          await this.getChatHistory();
-          this.startAutoSave();
-        }
-      },
-      immediate: true,
-    },
+    console.log('[路由更新触发]', oldId, '=>', newId);
+
+    // 如果存在旧会话，做清理工作
+    if (oldId && oldId !== 'null') {
+      this.saveChat(oldId);
+      console.log('[保存旧会话]', oldId);
+    }
+
+    if (newId && newId !== 'null') {
+      console.log('[切换到新会话]', newId);
+
+      // 更新 chatId
+      this.chatId = newId;
+
+      // 清空消息
+      this.messages = [];
+
+      // 获取新聊天标题
+      this.getChatTitle()
+        .then(() => {
+          console.log('[获取新聊天标题成功]', newId);
+        })
+        .catch((err) => {
+          console.error('[获取新聊天标题失败]', err);
+        });
+
+      // 拉取新聊天记录
+      this.getChatHistory()
+        .then(() => {
+          console.log('[获取新聊天记录成功]', newId);
+        })
+        .catch((err) => {
+          console.error('[获取新聊天记录失败]', err);
+        });
+    } else {
+      console.warn('[无效的新 chatId]', newId);
+    }
+
+    next();
   },
 
   methods: {
     ...mapActions('chat', ['getChatByID']),
+
+    async getChatTitle() {
+      try {
+        const response = await apigetChatTitle(this.chatId);
+        console.log('获取聊天标题响应:', response);
+        if (response.status === 200) {
+          this.title = response.data.title || '无标题';
+        }
+      } catch (error) {
+        console.error('获取聊天标题失败:', error);
+      }
+    },
 
     async getChatHistory() {
       try {
@@ -224,6 +240,16 @@ export default {
         this.$nextTick(() => this.scrollToBottom());
       } catch (error) {
         console.error('获取聊天记录失败:', error);
+      }
+    },
+
+    async saveChat(chatId) {
+      if (!chatId) return;
+      try {
+        const response = await apisaveChatHistory({ chat_id: chatId });
+        console.log('保存聊天记录响应:', response);
+      } catch (error) {
+        console.error('保存聊天记录失败:', error);
       }
     },
 
@@ -250,33 +276,18 @@ export default {
       const content = this.newMessage.trim();
       if (!content) return;
 
+      // 先显示用户消息
       this.messages.push({ content, role: 'user' });
       this.newMessage = '';
 
       this.$nextTick(() => this.scrollToBottom());
 
       try {
-        if (!this.robotsStarted) {
-          try {
-            const startRes = await apistartRobots();
-            console.log('机器人启动结果:', startRes);
-            if (startRes?.status === 200) {
-              this.robotsStarted = true;
-            }
-          } catch (e) {
-            console.error('机器人启动失败:', e);
-            this.messages.push({
-              content: '对不起，机器人启动失败，请稍后再试。',
-              role: 'assistant',
-            });
-            return;
-          }
-        }
-
         const response = await apisendMessage({
           chat_id: this.chatId,
           content,
         });
+
         console.log('发送消息:', content);
         console.log('接口返回:', response);
 
@@ -314,37 +325,6 @@ export default {
       }
     },
 
-    async startAutoSave() {
-      if (!this.chatId) return;
-
-      if (this.saveInterval) {
-        console.log('已有定时器，不再重复开启:', this.saveInterval);
-        return;
-      }
-
-      // 每10秒自动保存一次
-      this.saveInterval = setInterval(async () => {
-        try {
-          const response = await apisaveChatHistory({ chat_id: this.chatId });
-          if (response.status === 200) {
-            console.log('聊天记录已自动保存', response.data);
-          }
-        } catch (error) {
-          console.error('自动保存聊天记录失败:', error);
-        }
-      }, 10000);
-
-      console.log('已开启自动保存定时器:', this.saveInterval);
-    },
-
-    stopAutoSave() {
-      if (this.saveInterval) {
-        console.log('清除定时器:', this.saveInterval);
-        clearInterval(this.saveInterval);
-        this.saveInterval = null;
-      }
-    },
-
     scrollToBottom() {
       const chatLog = this.$refs.chatlog;
       if (chatLog) {
@@ -361,12 +341,13 @@ export default {
 
       try {
         // 1. 先保存当前对话记录
-        await apisaveChatHistory({ chat_id: this.chatId });
+        this.saveChat(this.chatId);
         console.log('聊天记录已保存，开始导出TXT');
 
         // 2. 获取后端聊天记录
         const res = await apifetchChatDetailedHistory(this.chatId);
         let records = res.data || [];
+        console.log('获取的聊天记录:', records);
 
         if (records.length === 0) {
           this.$message.warning('当前没有对话记录可导出');
@@ -377,6 +358,7 @@ export default {
         records = records.slice().reverse();
 
         // 3. 生成 TXT 内容
+        console.log('currentChat:', this.currentChat);
         let txtContent = `对话记录 - ${this.currentChat?.name || '未知会话'}\n`;
         txtContent += `机器人: ${this.currentChat?.agent_name || '未知机器人'}\n`;
         txtContent += `导出时间: ${new Date().toLocaleString()}\n\n`;
@@ -415,7 +397,7 @@ export default {
 
       try {
         // 1. 保存聊天记录
-        await apisaveChatHistory({ chat_id: this.chatId });
+        this.saveChat(this.chatId);
         console.log('切换前聊天记录已保存');
 
         // 2. 关闭内存会话
@@ -424,10 +406,6 @@ export default {
         if (response.status === 200) {
           console.log('切换对话成功：', response.data);
           this.$message.success(response.data.message || '切换对话成功');
-
-          // 3. 清理定时器
-          this.stopAutoSave();
-          console.log('切换对话，停止定时保存');
         }
       } catch (error) {
         console.error('切换对话异常:', error);

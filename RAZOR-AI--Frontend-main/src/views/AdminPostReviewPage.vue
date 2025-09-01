@@ -127,9 +127,6 @@
           <div class="card-header">
             <h2 class="card-title">待审核帖子列表</h2>
             <div class="action-buttons">
-              <el-button type="text" @click="selectAll">全选</el-button>
-              <el-button type="text" @click="batchApprove">批量通过</el-button>
-              <el-button type="text" @click="batchReject">批量拒绝</el-button>
               <span class="record-count">共 {{ posts.length }} 条记录</span>
               <el-select v-model="pageSize" class="page-size-select">
                 <el-option label="10 条/页" value="10"></el-option>
@@ -144,7 +141,7 @@
             style="width: 100%"
             @row-click="viewPost"
           >
-            <el-table-column label="帖子标题" width="300">
+            <el-table-column label="帖子标题" min-width="220">
               <template #default="scope">
                 <p class="post-title">{{ scope.row.title }}</p>
                 <p class="post-subtitle">{{ scope.row.subtitle }}</p>
@@ -153,19 +150,19 @@
             <el-table-column
               prop="author"
               label="作者"
-              width="120"
+              min-width="100"
             ></el-table-column>
             <el-table-column
               prop="time"
               label="提交时间"
-              width="180"
+              min-width="140"
             ></el-table-column>
             <el-table-column
               prop="type"
               label="类型"
-              width="120"
+              min-width="100"
             ></el-table-column>
-            <el-table-column label="状态" width="120">
+            <el-table-column label="状态" min-width="100">
               <template #default="scope">
                 <el-tag :type="getStatusTagType(scope.row.status)" size="small">
                   {{ getStatusText(scope.row.status) }}
@@ -687,16 +684,15 @@ export default {
           .action-buttons {
             display: flex;
             align-items: center;
-            gap: 12px;
-
+            gap: 8px;
+            flex-wrap: wrap;
             .record-count {
               font-size: 14px;
               color: #666;
-              margin: 0 8px;
+              margin: 0 8px 0 0;
             }
-
             .page-size-select {
-              width: 120px;
+              width: 110px;
             }
           }
         }
