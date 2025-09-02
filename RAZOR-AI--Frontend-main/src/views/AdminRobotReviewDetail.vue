@@ -516,359 +516,221 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-.admin-home {
-  display: flex;
-  min-height: 100vh;
-  background-color: #f5f5f5;
+@import '@/assets/styles/admin-home.scss';
 
-  .sidebar {
-    position: relative;
+.content {
+  padding: 24px;
+
+  .robot-detail-card {
+    max-width: 800px;
+    margin: 20px auto;
+  }
+
+  .card-hover {
     transition: all 0.3s ease;
+  }
+  .card-hover:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+  }
 
-    &.hidden {
-      width: 60px !important;
+  .robot-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 16px;
+  }
 
-      .nav-item {
-        span {
-          display: none;
-        }
+  .avatar-placeholder {
+    width: 48px;
+    height: 48px;
+    background: #165dff;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    color: white;
+    margin-right: 16px;
+  }
 
-        i {
-          margin-right: 0;
-        }
-      }
+  .robot-user-info {
+    margin-left: 16px;
+  }
 
-      .user-info {
-        flex-direction: column;
-        align-items: center;
-        padding: 10px;
+  .robot-name {
+    font-weight: bold;
+    font-size: 18px;
+  }
 
-        .avatar {
-          margin-right: 0;
-          margin-bottom: 5px;
-        }
+  .robot-type {
+    margin-top: 4px;
+  }
 
-        .username,
-        .role {
-          display: none;
-        }
-      }
-    }
-    width: 250px;
-    background-color: white;
-    border-right: 1px solid #e6e6e6;
-    padding: 20px 0;
+  .robot-type-badge {
+    display: inline-block;
+    background-color: #ecf5ff;
+    color: #165dff;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-weight: 600;
+    font-size: 13px;
+  }
 
-    .user-info {
-      display: flex;
-      align-items: center;
-      padding: 0 20px 20px;
-      border-bottom: 1px solid #e6e6e6;
+  .robot-content {
+    margin-top: 16px;
+  }
 
-      .avatar {
-        width: 40px;
-        height: 40px;
-        border-radius: 50%;
-        background-color: #165dff;
-        color: white;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin-right: 12px;
-        font-weight: bold;
-      }
+  .section-title {
+    font-weight: bold;
+    margin: 16px 0 8px;
+    display: flex;
+    align-items: center;
+    color: #303133;
+  }
 
-      .username {
-        font-weight: 500;
-        margin-bottom: 4px;
-      }
+  .robot-icon {
+    margin-right: 6px;
+    font-size: 16px;
+  }
 
-      .role {
-        font-size: 12px;
-        color: #999;
-      }
-    }
+  .robot-state {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 12px;
+    font-size: 13px;
+    background: #f0f0f0;
+    color: #888;
+    margin-bottom: 16px;
+  }
 
-    .nav-menu {
-      padding: 10px 0;
+  .robot-state.pending {
+    background: #fdf6ec;
+    color: #e6a23c;
+  }
 
-      .nav-item {
-        display: flex;
-        align-items: center;
-        padding: 12px 20px;
-        margin: 4px 0;
-        cursor: pointer;
-        transition: all 0.3s;
+  .robot-state.approved {
+    background: #e6f7e6;
+    color: #52c41a;
+  }
 
-        i {
-          margin-right: 12px;
-          font-size: 18px;
-        }
+  .robot-state.rejected {
+    background: #fef0f0;
+    color: #f56c6c;
+  }
 
-        &:hover {
-          background-color: #f6f6f6;
-        }
+  .prompt-container {
+    background-color: #f5f7fa;
+    border: 1px solid #e4e7ed;
+    border-radius: 8px;
+    padding: 16px;
+    max-height: 300px;
+    overflow-y: auto;
+    transition: all 0.3s;
+    position: relative;
+    margin-bottom: 16px;
+  }
 
-        &.active {
-          background-color: #e8f3ff;
-          color: #165dff;
-          border-left: 3px solid #165dff;
-        }
+  .prompt-content {
+    font-family: 'Courier New', Courier, monospace;
+    white-space: pre-wrap;
+    font-size: 14px;
+    line-height: 1.6;
+    color: #303133;
+    margin: 0;
+  }
+
+  .reject-reason-input {
+    margin-bottom: 16px;
+
+    .el-textarea__inner {
+      border: 1px solid #e4e7ed;
+      border-radius: 8px;
+      transition: all 0.3s;
+      font-size: 14px;
+
+      &:focus {
+        border-color: #f56c6c;
       }
     }
   }
 
-  .main-content {
-    flex: 1;
-    overflow: auto;
+  .action-buttons {
+    display: flex;
+    gap: 16px;
+    margin-top: 24px;
+    padding-top: 16px;
+    border-top: 1px dashed #e4e7ed;
+  }
 
-    .header {
-      display: flex;
-      justify-content: flex-start;
-      align-items: center;
-      padding: 16px 24px;
-      background-color: white;
-      border-bottom: 1px solid #e6e6e6;
-      position: sticky;
-      top: 0;
-      z-index: 10;
+  .action-btn {
+    padding: 10px 20px;
+    font-size: 15px;
+    font-weight: 600;
+    transition: all 0.3s;
+  }
 
-      .toggle-sidebar-btn {
-        cursor: pointer;
-        font-size: 18px;
-        background: none;
-        border: none;
-        color: #606266;
-        padding: 5px;
-        margin-right: 16px;
+  .approve-btn {
+    background-color: #67c23a;
+    border-color: #67c23a;
 
-        &:hover {
-          background-color: rgba(0, 0, 0, 0.05);
-          border-radius: 4px;
-        }
-      }
+    &:hover,
+    &:focus {
+      background-color: #5daf34;
+      border-color: #5daf34;
+    }
+  }
 
-      .title {
-        font-size: 20px;
-        font-weight: 600;
-      }
+  .reject-btn {
+    background-color: #f56c6c;
+    border-color: #f56c6c;
+
+    &:hover,
+    &:focus {
+      background-color: #e45656;
+      border-color: #e45656;
     }
 
-    .content {
-      padding: 24px;
+    &:disabled {
+      background-color: #fab6b6;
+      border-color: #fab6b6;
+      opacity: 0.7;
+    }
+  }
 
-      .robot-detail-card {
-        max-width: 800px;
-        margin: 20px auto;
-      }
+  .robot-loading {
+    padding: 20px 0;
+  }
 
-      .card-hover {
-        transition: all 0.3s ease;
-      }
-      .card-hover:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
-      }
+  .skeleton {
+    background: #f2f2f2;
+    border-radius: 4px;
+    margin-bottom: 12px;
+    animation: skeleton-loading 1.2s infinite linear alternate;
+  }
 
-      .robot-header {
-        display: flex;
-        align-items: center;
-        margin-bottom: 16px;
-      }
+  .skeleton-title {
+    width: 60%;
+    height: 24px;
+  }
 
-      .avatar-placeholder {
-        width: 48px;
-        height: 48px;
-        background: #165dff;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 22px;
-        color: white;
-        margin-right: 16px;
-      }
+  .skeleton-line {
+    width: 100%;
+    height: 16px;
+  }
 
-      .robot-user-info {
-        margin-left: 16px;
-      }
+  .robot-empty {
+    text-align: center;
+    color: #aaa;
+    padding: 40px 0;
+    font-size: 18px;
+  }
 
-      .robot-name {
-        font-weight: bold;
-        font-size: 18px;
-      }
-
-      .robot-type {
-        margin-top: 4px;
-      }
-
-      .robot-type-badge {
-        display: inline-block;
-        background-color: #ecf5ff;
-        color: #165dff;
-        padding: 3px 10px;
-        border-radius: 12px;
-        font-weight: 600;
-        font-size: 13px;
-      }
-
-      .robot-content {
-        margin-top: 16px;
-      }
-
-      .section-title {
-        font-weight: bold;
-        margin: 16px 0 8px;
-        display: flex;
-        align-items: center;
-        color: #303133;
-      }
-
-      .robot-icon {
-        margin-right: 6px;
-        font-size: 16px;
-      }
-
-      .robot-state {
-        display: inline-block;
-        padding: 2px 10px;
-        border-radius: 12px;
-        font-size: 13px;
-        background: #f0f0f0;
-        color: #888;
-        margin-bottom: 16px;
-      }
-
-      .robot-state.pending {
-        background: #fdf6ec;
-        color: #e6a23c;
-      }
-
-      .robot-state.approved {
-        background: #e6f7e6;
-        color: #52c41a;
-      }
-
-      .robot-state.rejected {
-        background: #fef0f0;
-        color: #f56c6c;
-      }
-
-      .prompt-container {
-        background-color: #f5f7fa;
-        border: 1px solid #e4e7ed;
-        border-radius: 8px;
-        padding: 16px;
-        max-height: 300px;
-        overflow-y: auto;
-        transition: all 0.3s;
-        position: relative;
-        margin-bottom: 16px;
-      }
-
-      .prompt-content {
-        font-family: 'Courier New', Courier, monospace;
-        white-space: pre-wrap;
-        font-size: 14px;
-        line-height: 1.6;
-        color: #303133;
-        margin: 0;
-      }
-
-      .reject-reason-input {
-        margin-bottom: 16px;
-
-        .el-textarea__inner {
-          border: 1px solid #e4e7ed;
-          border-radius: 8px;
-          transition: all 0.3s;
-          font-size: 14px;
-
-          &:focus {
-            border-color: #f56c6c;
-          }
-        }
-      }
-
-      .action-buttons {
-        display: flex;
-        gap: 16px;
-        margin-top: 24px;
-        padding-top: 16px;
-        border-top: 1px dashed #e4e7ed;
-      }
-
-      .action-btn {
-        padding: 10px 20px;
-        font-size: 15px;
-        font-weight: 600;
-        transition: all 0.3s;
-      }
-
-      .approve-btn {
-        background-color: #67c23a;
-        border-color: #67c23a;
-
-        &:hover,
-        &:focus {
-          background-color: #5daf34;
-          border-color: #5daf34;
-        }
-      }
-
-      .reject-btn {
-        background-color: #f56c6c;
-        border-color: #f56c6c;
-
-        &:hover,
-        &:focus {
-          background-color: #e45656;
-          border-color: #e45656;
-        }
-
-        &:disabled {
-          background-color: #fab6b6;
-          border-color: #fab6b6;
-          opacity: 0.7;
-        }
-      }
-
-      .robot-loading {
-        padding: 20px 0;
-      }
-
-      .skeleton {
-        background: #f2f2f2;
-        border-radius: 4px;
-        margin-bottom: 12px;
-        animation: skeleton-loading 1.2s infinite linear alternate;
-      }
-
-      .skeleton-title {
-        width: 60%;
-        height: 24px;
-      }
-
-      .skeleton-line {
-        width: 100%;
-        height: 16px;
-      }
-
-      .robot-empty {
-        text-align: center;
-        color: #aaa;
-        padding: 40px 0;
-        font-size: 18px;
-      }
-
-      @keyframes skeleton-loading {
-        0% {
-          opacity: 1;
-        }
-        100% {
-          opacity: 0.5;
-        }
-      }
+  @keyframes skeleton-loading {
+    0% {
+      opacity: 1;
+    }
+    100% {
+      opacity: 0.5;
     }
   }
 }

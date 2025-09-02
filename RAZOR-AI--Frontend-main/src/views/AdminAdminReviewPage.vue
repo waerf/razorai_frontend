@@ -471,216 +471,50 @@ export default {
 </script>
 
 <style lang="scss" scoped>
+@import '@/assets/styles/admin-home.scss';
+
+// 复用 admin-home 的布局和 sidebar 样式，单独调整 admin-admin-review 的内容区
 .admin-admin-review {
-  display: flex;
-  min-height: 100vh;
-  background-color: #f5f5f5;
+  @extend .admin-home;
 
-  .sidebar {
-    position: relative;
-    transition: all 0.3s ease;
-
-    &.hidden {
-      width: 60px !important;
-
-      .nav-item {
-        span {
-          display: none;
-        }
-
-        i {
-          margin-right: 0;
-        }
-      }
-
-      .user-info {
-        flex-direction: column;
-        align-items: center;
-        padding: 10px;
-
-        .avatar {
-          margin-right: 0;
-          margin-bottom: 5px;
-        }
-
-        .username,
-        .role {
-          display: none;
-        }
-      }
-    }
-    width: 250px;
-    background-color: white;
-    border-right: 1px solid #e6e6e6;
-    padding: 20px 0;
-
-    .user-info {
+  .admin-list-card {
+    .card-header {
       display: flex;
+      justify-content: space-between;
       align-items: center;
-      padding: 0 20px 20px;
-      border-bottom: 1px solid #e6e6e6;
+      margin-bottom: 16px;
 
-      .avatar {
-        width: 40px;
-        height: 40px;
-        border-radius: 50%;
-        background-color: #165dff;
-        color: white;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin-right: 12px;
-        font-weight: bold;
-      }
-
-      .username {
-        font-weight: 500;
-        margin-bottom: 4px;
-      }
-
-      .role {
-        font-size: 12px;
-        color: #999;
-      }
-    }
-
-    .nav-menu {
-      padding: 10px 0;
-
-      .nav-item {
-        display: flex;
-        align-items: center;
-        padding: 12px 20px;
-        margin: 4px 0;
-        cursor: pointer;
-        transition: all 0.3s;
-
-        i {
-          margin-right: 12px;
-          font-size: 18px;
-        }
-
-        &:hover {
-          background-color: #f6f6f6;
-        }
-
-        &.active {
-          background-color: #e8f3ff;
-          color: #165dff;
-          border-left: 3px solid #165dff;
-        }
-      }
-    }
-  }
-
-  .main-content {
-    flex: 1;
-    overflow: auto;
-
-    .header {
-      display: flex;
-      justify-content: flex-start;
-      align-items: center;
-      padding: 16px 24px;
-      background-color: white;
-      border-bottom: 1px solid #e6e6e6;
-      position: sticky;
-      top: 0;
-      z-index: 10;
-      .toggle-sidebar-btn {
-        cursor: pointer;
+      .card-title {
         font-size: 18px;
-        background: none;
-        border: none;
-        color: #606266;
-        padding: 5px;
-        margin-right: 16px;
-
-        &:hover {
-          background-color: rgba(0, 0, 0, 0.05);
-          border-radius: 4px;
-        }
-      }
-
-      .title {
-        font-size: 20px;
         font-weight: 600;
       }
     }
 
-    .content {
-      padding: 24px;
+    .admin-name {
+      font-weight: 500;
+    }
 
-      .search-card {
-        margin-bottom: 24px;
+    .admin-email {
+      font-size: 12px;
+      color: #999;
+      margin-top: 4px;
+    }
 
-        .search-container {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
+    ::v-deep .el-table__row td:nth-child(3) {
+      white-space: nowrap;
+    }
 
-          .search-input {
-            width: 400px;
-          }
-        }
-      }
+    .pagination-container {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 24px;
+      padding-top: 24px;
+      border-top: 1px solid #e6e6e6;
 
-      .admin-list-card {
-        .card-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-bottom: 16px;
-
-          .card-title {
-            font-size: 18px;
-            font-weight: 600;
-          }
-
-          .action-buttons {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            flex-wrap: wrap;
-            .record-count {
-              font-size: 14px;
-              color: #666;
-              margin: 0 8px 0 0;
-            }
-            .page-size-select {
-              width: 110px;
-            }
-          }
-        }
-
-        .admin-name {
-          font-weight: 500;
-        }
-
-        .admin-email {
-          font-size: 12px;
-          color: #999;
-          margin-top: 4px;
-        }
-
-        /* 防止时间文本换行 */
-        ::v-deep .el-table__row td:nth-child(3) {
-          white-space: nowrap;
-        }
-
-        .pagination-container {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-top: 24px;
-          padding-top: 24px;
-          border-top: 1px solid #e6e6e6;
-
-          .pagination-info {
-            font-size: 14px;
-            color: #666;
-          }
-        }
+      .pagination-info {
+        font-size: 14px;
+        color: #666;
       }
     }
   }

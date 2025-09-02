@@ -426,170 +426,47 @@ export default {
 </script>
 
 <style lang="scss" scoped>
+@import '@/assets/styles/admin-home.scss';
+
 .admin-post-review-detail {
-  display: flex;
-  min-height: 100vh;
-  background-color: #f5f5f5;
+  @extend .admin-home;
 
-  .sidebar {
-    position: relative;
-    transition: all 0.3s ease;
-    width: 250px;
-    background-color: white;
-    border-right: 1px solid #e6e6e6;
-    padding: 20px 0;
-    &.hidden {
-      width: 60px !important;
+  // 内容区自定义样式
+  .content {
+    padding: 24px;
 
-      .nav-item {
-        span {
-          display: none;
-        }
-        i {
-          margin-right: 0;
-        }
-      }
-
-      .user-info {
-        flex-direction: column;
-        align-items: center;
-        padding: 10px;
-        .avatar {
-          margin-bottom: 8px;
-        }
-        .username,
-        .role {
-          text-align: center;
-        }
-      }
+    .loading-card {
+      min-height: 300px;
     }
 
-    .user-info {
-      display: flex;
-      align-items: center;
-      padding: 0 20px 20px;
-      border-bottom: 1px solid #e6e6e6;
+    .detail-card {
+      max-width: 800px;
+      margin: 0 auto;
 
-      .avatar {
-        width: 40px;
-        height: 40px;
-        border-radius: 50%;
-        background-color: #165dff;
-        color: white;
+      .detail-header {
         display: flex;
         align-items: center;
-        justify-content: center;
-        margin-right: 12px;
-        font-weight: bold;
+        justify-content: space-between;
+        margin-bottom: 20px;
       }
 
-      .username {
-        font-weight: 500;
-        margin-bottom: 4px;
-      }
-
-      .role {
-        font-size: 12px;
-        color: #999;
-      }
-    }
-
-    .nav-menu {
-      padding: 10px 0;
-
-      .nav-item {
-        display: flex;
-        align-items: center;
-        padding: 12px 20px;
-        margin: 4px 0;
-        cursor: pointer;
-        transition: all 0.3s;
-        i {
-          margin-right: 10px;
-        }
-
-        &:hover {
-          background: #f0f6ff;
-        }
-
-        &.active {
-          background: #e6f7ff;
-          color: #165dff;
-        }
-      }
-    }
-  }
-  .main-content {
-    flex: 1;
-    overflow: auto;
-
-    .header {
-      display: flex;
-      justify-content: flex-start;
-      align-items: center;
-      padding: 16px 24px;
-      background-color: white;
-      border-bottom: 1px solid #e6e6e6;
-      position: sticky;
-      top: 0;
-      z-index: 10;
-
-      .toggle-sidebar-btn {
-        cursor: pointer;
-        font-size: 18px;
-        background: none;
-        border: none;
-        color: #606266;
-        padding: 5px;
-        margin-right: 16px;
-        &:hover {
-          background-color: rgba(0, 0, 0, 0.05);
-          border-radius: 4px;
+      ::v-deep .el-descriptions__cell {
+        &.is-bordered-label {
+          min-width: 90px;
         }
       }
 
-      .title {
-        font-size: 20px;
-        font-weight: 600;
-      }
-    }
-
-    .content {
-      padding: 24px;
-
-      .loading-card {
-        min-height: 300px;
+      ::v-deep .el-descriptions__cell {
+        &.el-descriptions-item__content {
+          white-space: nowrap;
+        }
       }
 
-      .detail-card {
-        max-width: 800px;
-        margin: 0 auto;
+      .action-section {
+        margin-top: 32px;
 
-        .detail-header {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          margin-bottom: 20px;
-        }
-
-        ::v-deep .el-descriptions__cell {
-          &.is-bordered-label {
-            min-width: 90px;
-          }
-        }
-
-        ::v-deep .el-descriptions__cell {
-          &.el-descriptions-item__content {
-            white-space: nowrap;
-          }
-        }
-
-        .action-section {
-          margin-top: 32px;
-
-          .review-form {
-            max-width: 400px;
-          }
+        .review-form {
+          max-width: 400px;
         }
       }
     }

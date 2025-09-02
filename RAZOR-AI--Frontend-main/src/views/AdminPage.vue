@@ -587,18 +587,23 @@ export default {
 
   .sidebar {
     position: relative;
-    transition: all 0.3s ease;
+    transition: width 0.3s ease;
 
     &.hidden {
       width: 60px !important;
 
       .nav-item {
         span {
-          display: none;
+          opacity: 0;
+          white-space: nowrap;
+          width: 0;
+          overflow: hidden;
+          transition: opacity 0.1s ease;
         }
 
         i {
           margin-right: 0;
+          width: auto; /* 收缩状态下取消固定宽度 */
         }
       }
 
@@ -606,15 +611,32 @@ export default {
         flex-direction: column;
         align-items: center;
         padding: 10px;
+        height: 80px; /* 固定高度 */
+        box-sizing: border-box;
+        position: relative; /* 使用相对定位 */
+        transition: padding 0.3s ease; /* 只对padding应用过渡效果 */
 
         .avatar {
+          position: absolute; /* 绝对定位，固定位置 */
+          left: 10px; /* 与展开状态保持一致 */
+          top: 20px; /* 垂直居中 */
           margin-right: 0;
-          margin-bottom: 5px;
+          margin-bottom: 0;
+          width: 40px; /* 保持与展开状态相同的尺寸 */
+          height: 40px; /* 保持与展开状态相同的尺寸 */
+          min-width: 40px; /* 防止缩小 */
+          min-height: 40px; /* 防止缩小 */
         }
 
         .username,
         .role {
-          display: none;
+          opacity: 0;
+          width: 0;
+          white-space: nowrap;
+          overflow: hidden;
+          transition: opacity 0.1s ease;
+          position: absolute;
+          left: -9999px; /* 移出可视区域 */
         }
       }
     }
@@ -626,30 +648,48 @@ export default {
     .user-info {
       display: flex;
       align-items: center;
-      padding: 0 20px 20px;
+      padding: 0 10px 0 70px; /* 左侧留出空间给头像 */
       border-bottom: 1px solid #e6e6e6;
+      height: 80px; /* 固定高度 */
+      box-sizing: border-box;
+      transition: padding 0.3s ease; /* 只对padding应用过渡效果，不影响定位 */
+      position: relative; /* 相对定位，让头像可以绝对定位 */
 
       .avatar {
+        position: absolute; /* 绝对定位，固定位置 */
+        left: 10px; /* 与收缩状态保持一致 */
+        top: 20px; /* 垂直居中 */
         width: 40px;
         height: 40px;
+        min-width: 40px;
+        min-height: 40px;
         border-radius: 50%;
         background-color: #165dff;
         color: white;
         display: flex;
         align-items: center;
         justify-content: center;
-        margin-right: 12px;
         font-weight: bold;
+        transition: none; /* 移除过渡效果，固定位置 */
       }
 
       .username {
         font-weight: 500;
         margin-bottom: 4px;
+        opacity: 1;
+        transition: opacity 0.2s ease 0.2s; /* 延迟显示文字 */
+        white-space: nowrap;
+        padding-left: 0; /* 不需要额外的左侧padding，因为.user-info已经设置了 */
+        position: relative; /* 确保不影响头像的绝对定位 */
       }
 
       .role {
         font-size: 12px;
         color: #999;
+        opacity: 1;
+        transition: opacity 0.2s ease 0.2s; /* 延迟显示文字 */
+        white-space: nowrap;
+        padding-left: 0; /* 不需要额外的左侧padding */
       }
     }
 
@@ -659,14 +699,28 @@ export default {
       .nav-item {
         display: flex;
         align-items: center;
-        padding: 12px 20px;
+        height: 48px; /* 固定高度 */
+        padding: 0 20px;
         margin: 4px 0;
         cursor: pointer;
-        transition: all 0.3s;
+        transition: background-color 0.3s ease;
+        box-sizing: border-box;
+
+        span {
+          opacity: 1;
+          transition: opacity 0.2s ease 0.2s; /* 延迟显示文字 */
+          white-space: nowrap;
+          overflow: hidden;
+        }
 
         i {
           margin-right: 12px;
           font-size: 18px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 20px; /* 固定宽度 */
+          transition: margin-right 0.2s ease;
         }
 
         &:hover {

@@ -274,186 +274,49 @@ export default {
 </script>
 
 <style lang="scss" scoped>
+@import '@/assets/styles/admin-home.scss';
+
 .admin-comment-review-detail {
-  display: flex;
-  min-height: 100vh;
-  background-color: #f5f5f5;
+  @extend .admin-home;
 
-  .sidebar {
-    position: relative;
-    transition: all 0.3s ease;
+  // 内容区自定义样式
+  .report-card,
+  .comment-card,
+  .review-card,
+  .review-result-card {
+    margin-bottom: 24px;
 
-    &.hidden {
-      width: 60px !important;
-
-      .nav-item {
-        span {
-          display: none;
-        }
-
-        i {
-          margin-right: 0;
-        }
-      }
-
-      .user-info {
-        flex-direction: column;
-        align-items: center;
-        padding: 10px;
-
-        .avatar {
-          margin-right: 0;
-          margin-bottom: 5px;
-        }
-
-        .username,
-        .role {
-          display: none;
-        }
-      }
-    }
-    width: 250px;
-    background-color: white;
-    border-right: 1px solid #e6e6e6;
-    padding: 20px 0;
-
-    .user-info {
+    .report-header,
+    .card-header {
       display: flex;
+      justify-content: space-between;
       align-items: center;
-      padding: 0 20px 20px;
-      border-bottom: 1px solid #e6e6e6;
+      margin-bottom: 16px;
 
-      .avatar {
-        width: 40px;
-        height: 40px;
-        border-radius: 50%;
-        background-color: #165dff;
-        color: white;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin-right: 12px;
-        font-weight: bold;
-      }
-
-      .username {
-        font-weight: 500;
-        margin-bottom: 4px;
-      }
-
-      .role {
-        font-size: 12px;
-        color: #999;
+      h2 {
+        font-size: 18px;
+        font-weight: 600;
+        margin: 0;
       }
     }
 
-    .nav-menu {
-      padding: 10px 0;
+    .comment-content {
+      padding: 16px;
+      background-color: #f9f9f9;
+      border-radius: 4px;
+      font-size: 16px;
+      line-height: 1.6;
+      margin-bottom: 16px;
+    }
 
-      .nav-item {
-        display: flex;
-        align-items: center;
-        padding: 12px 20px;
-        margin: 4px 0;
-        cursor: pointer;
-        transition: all 0.3s;
-
-        i {
-          margin-right: 12px;
-          font-size: 18px;
-        }
-
-        &:hover {
-          background-color: #f6f6f6;
-        }
-
-        &.active {
-          background-color: #e8f3ff;
-          color: #165dff;
-          border-left: 3px solid #165dff;
-        }
-      }
+    .comment-info {
+      color: #666;
+      font-size: 14px;
     }
   }
 
-  .main-content {
-    flex: 1;
-    overflow: auto;
-
-    .header {
-      display: flex;
-      justify-content: flex-start;
-      align-items: center;
-      padding: 16px 24px;
-      background-color: white;
-      border-bottom: 1px solid #e6e6e6;
-      position: sticky;
-      top: 0;
-      z-index: 10;
-
-      .toggle-sidebar-btn {
-        cursor: pointer;
-        font-size: 18px;
-        background: none;
-        border: none;
-        color: #606266;
-        padding: 5px;
-        margin-right: 16px;
-
-        &:hover {
-          background-color: rgba(0, 0, 0, 0.05);
-          border-radius: 4px;
-        }
-      }
-
-      .title {
-        font-size: 20px;
-        font-weight: 600;
-      }
-    }
-
-    .content {
-      padding: 24px;
-
-      .report-card,
-      .comment-card,
-      .review-card,
-      .review-result-card {
-        margin-bottom: 24px;
-
-        .report-header,
-        .card-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-bottom: 16px;
-
-          h2 {
-            font-size: 18px;
-            font-weight: 600;
-            margin: 0;
-          }
-        }
-
-        .comment-content {
-          padding: 16px;
-          background-color: #f9f9f9;
-          border-radius: 4px;
-          font-size: 16px;
-          line-height: 1.6;
-          margin-bottom: 16px;
-        }
-
-        .comment-info {
-          color: #666;
-          font-size: 14px;
-        }
-      }
-    }
-
-    .loading-container {
-      padding: 24px;
-    }
+  .loading-container {
+    padding: 24px;
   }
 }
 </style>
