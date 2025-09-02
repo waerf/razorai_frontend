@@ -1,7 +1,7 @@
 <template>
   <div class="admin-post-review">
     <!-- 侧边导航栏 -->
-    <aside class="sidebar">
+    <aside class="sidebar" :class="{ hidden: isSidebarCollapsed }">
       <div class="user-info">
         <div class="avatar">{{ adminName ? adminName.charAt(0) : '管' }}</div>
         <div>
@@ -258,7 +258,8 @@ export default {
   name: 'AdminPostReviewPage',
   data() {
     return {
-      isSidebarCollapsed: false,
+      isSidebarCollapsed:
+        localStorage.getItem('admin_sidebar_collapsed') === 'true',
       showChangePwd: false,
       adminName: '',
       activeTab: 'posts', // 默认显示帖子tab
@@ -547,8 +548,7 @@ export default {
     },
     toggleSidebar() {
       this.isSidebarCollapsed = !this.isSidebarCollapsed;
-      const sidebar = document.querySelector('.sidebar');
-      sidebar.classList.toggle('hidden');
+      localStorage.setItem('admin_sidebar_collapsed', this.isSidebarCollapsed);
     },
     logout() {
       this.$confirm('确定要退出登录吗？', '提示', {

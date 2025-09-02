@@ -1,7 +1,7 @@
 <template>
   <div class="admin-admin-review">
     <!-- 侧边导航栏 -->
-    <aside class="sidebar">
+    <aside class="sidebar" :class="{ hidden: isSidebarCollapsed }">
       <div class="user-info">
         <div class="avatar">{{ adminName ? adminName.charAt(0) : '管' }}</div>
         <div>
@@ -198,7 +198,8 @@ export default {
   name: 'AdminAdminReviewPage',
   data() {
     return {
-      isSidebarCollapsed: false,
+      isSidebarCollapsed:
+        localStorage.getItem('admin_sidebar_collapsed') === 'true',
       showChangePwd: false,
       adminName: '',
       searchQuery: '',
@@ -337,8 +338,8 @@ export default {
     },
     toggleSidebar() {
       this.isSidebarCollapsed = !this.isSidebarCollapsed;
-      const sidebar = document.querySelector('.sidebar');
-      sidebar.classList.toggle('hidden');
+      localStorage.setItem('admin_sidebar_collapsed', this.isSidebarCollapsed);
+      // 不再需要手动切换class，由上面的:class绑定自动处理
     },
     logout() {
       this.$confirm('确定要退出登录吗？', '提示', {

@@ -1,7 +1,7 @@
 <template>
   <div class="admin-home">
     <!-- 侧边导航栏 -->
-    <aside class="sidebar">
+    <aside class="sidebar" :class="{ hidden: isSidebarCollapsed }">
       <div class="user-info">
         <div class="avatar">{{ adminName.charAt(0) }}</div>
         <div>
@@ -280,7 +280,8 @@ export default {
   },
   data() {
     return {
-      isSidebarCollapsed: false,
+      isSidebarCollapsed:
+        localStorage.getItem('admin_sidebar_collapsed') === 'true',
       activeTab: 'review',
       showChangePwd: false,
       pwdForm: {
@@ -440,8 +441,8 @@ export default {
     },
     toggleSidebar() {
       this.isSidebarCollapsed = !this.isSidebarCollapsed;
-      const sidebar = document.querySelector('.sidebar');
-      sidebar.classList.toggle('hidden');
+      localStorage.setItem('admin_sidebar_collapsed', this.isSidebarCollapsed);
+      // 不再需要手动切换class，由上面的:class绑定自动处理
     },
     async fetchPendingRobots() {
       this.pendingRobotsLoading = true;

@@ -1,7 +1,7 @@
 <template>
   <div class="admin-home">
     <!-- 侧边导航栏 -->
-    <aside class="sidebar">
+    <aside class="sidebar" :class="{ hidden: isSidebarCollapsed }">
       <div class="user-info">
         <div class="avatar">{{ adminName ? adminName.charAt(0) : '管' }}</div>
         <div>
@@ -213,7 +213,8 @@ export default {
   name: 'AdminRobotReviewDetail',
   data() {
     return {
-      isSidebarCollapsed: false,
+      isSidebarCollapsed:
+        localStorage.getItem('admin_sidebar_collapsed') === 'true',
       showChangePwd: false,
       adminName: '',
       pwdForm: {
@@ -263,8 +264,8 @@ export default {
     },
     toggleSidebar() {
       this.isSidebarCollapsed = !this.isSidebarCollapsed;
-      const sidebar = document.querySelector('.sidebar');
-      sidebar.classList.toggle('hidden');
+      localStorage.setItem('admin_sidebar_collapsed', this.isSidebarCollapsed);
+      // 不再需要手动操作DOM，:class绑定会自动处理
     },
     logout() {
       this.$confirm('确定要退出登录吗？', '提示', {
