@@ -80,10 +80,18 @@
               <a
                 href="#"
                 class="text-gray-600 hover:text-gray-800 font-medium flex items-center transition-all hover:pr-1"
-                @click.prevent="$router.push('/bot-detail')"
+                @click.prevent="$router.push(`/BotsEditversion/${bot.id}`)"
               >
                 <i class="fa fa-cog mr-1"></i>
-                编辑设置
+                编辑当前版本
+              </a>
+              <a
+                href="#"
+                class="text-gray-600 hover:text-gray-800 font-medium flex items-center transition-all hover:pr-1"
+                @click.prevent="$router.push(`/BotsHistoryVersions/${bot.id}`)"
+              >
+                <i class="fa fa-cog mr-1"></i>
+                查看历史版本
               </a>
             </div>
           </div>
@@ -120,7 +128,6 @@ export default {
   },
 
   computed: {
-    // 只展示活跃状态（auditStatus = 1）
     activeBots() {
       return this.bots
         .filter((bot) => bot.auditStatus === 1)
