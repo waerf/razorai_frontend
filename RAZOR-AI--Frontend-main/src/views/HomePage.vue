@@ -57,19 +57,63 @@
 
       <!-- 右侧：通知区域 -->
       <div class="notification-area">
-        <h3 class="notification-title">系统通知</h3>
+        <div class="notification-header">
+          <!-- 左侧占位按钮（不可点击，用于居中） -->
+          <el-button
+            size="mini"
+            class="placeholder-btn"
+            disabled
+            style="visibility: hidden"
+          >
+            <i class="el-icon-refresh"></i>
+          </el-button>
+
+          <!-- 中间标题 -->
+          <h3 class="notification-title">系统通知 ({{ notificationCount }})</h3>
+
+          <!-- 右侧刷新按钮 -->
+          <el-button
+            size="mini"
+            @click="refreshNotifications"
+            class="refresh-btn"
+            title="刷新通知"
+          >
+            <i class="el-icon-refresh"></i>
+          </el-button>
+        </div>
+
         <div class="notification-list">
           <div
             v-for="(notification, index) in notifications"
-            :key="index"
+            :key="notification.id"
             class="notification-item"
-            :class="{ clicked: notification.clicked }"
-            @click="handleNotificationClick(index)"
+            :class="{
+              clicked: notification.clicked,
+              unread: notification.status === 0,
+            }"
           >
-            <div class="notification-content">
+            <div
+              class="notification-content"
+              @click="handleNotificationClick(index)"
+            >
               <div class="notification-text">{{ notification.message }}</div>
               <div class="notification-time">{{ notification.time }}</div>
             </div>
+            <div class="notification-actions">
+              <el-button
+                type="text"
+                size="mini"
+                icon="el-icon-delete"
+                @click.stop="deleteNotification(index)"
+                class="delete-btn"
+                title="删除通知"
+              ></el-button>
+            </div>
+          </div>
+
+          <!-- 当没有通知时显示的提示 -->
+          <div v-if="notifications.length === 0" class="no-notifications">
+            暂无通知
           </div>
         </div>
       </div>
@@ -126,30 +170,20 @@ import { sendMessage as apisendMessage } from '../utils/api'; // 发送消息
 import { createChat as apicreateChat } from '../utils/api'; // 创建对话
 import { closeChat as apicloseChat } from '../utils/api'; // 关闭对话
 import { deleteChat as apideleteChat } from '../utils/api'; // 删除对话
+import {
+  getUserNotifications,
+  markNotificationAsRead,
+  deleteNotificationById,
+} from '../utils/api'; // 通知相关API
 export default {
   data() {
     return {
       selectedRobot: null, // 当前选中的机器人
       userInput: '', // 用户输入内容
       loading: false, // 加载状态
-      notifications: [
-        {
-          message: '您的AI助手机器人已成功更新至最新版本',
-          time: '2小时前',
-          clicked: false,
-        },
-        {
-          message: '新的对话分析机器人已上线，快来体验吧！',
-          time: '1天前',
-          clicked: false,
-        },
-        {
-          message: '您订阅的编程助手机器人今日回答了50个问题',
-          time: '2天前',
-          clicked: false,
-        },
-      ],
-      accentColor: '#0F88EB', // 默认accent色，可根据实际变量替换
+      notifications: [], // 通知列表，从API获取
+      notificationCount: 0, // 通知总数
+      accentColor: '#3f51b5', // 默认accent色，可根据实际变量替换
     };
   },
   computed: {
@@ -161,8 +195,24 @@ export default {
       return this.haveSubscribed.filter((robot) => robot.status);
     },
   },
+  watch: {
+    // 监听路由变化，每次跳转时刷新通知
+    $route: {
+      handler(to, from) {
+        // 只有在路由真正发生变化且用户已登录时才刷新
+        if (to.path !== from?.path && this.isLoggedIn && this.userId) {
+          this.refreshNotifications();
+        }
+      },
+      immediate: false,
+    },
+  },
   created() {
     this.getUserSubscriptions(); // 获取用户订阅列表
+    // 只有在用户登录时才获取通知
+    if (this.isLoggedIn && this.userId) {
+      this.loadUserNotifications(); // 获取用户通知列表
+    }
   },
   methods: {
     ...mapActions('agent', ['fetchUserSubscriptions']),
@@ -387,12 +437,140 @@ export default {
       }
     },
 
-    handleNotificationClick(index) {
-      this.notifications[index].clicked = !this.notifications[index].clicked;
-      this.$message.info(
-        `通知已${this.notifications[index].clicked ? '标记为已读' : '标记为未读'}`
-      );
+    // === 通知相关方法开始 ===
+    // 加载用户通知
+    async loadUserNotifications() {
+      try {
+        if (!this.userId) {
+          console.warn('用户未登录，无法获取通知');
+          return;
+        }
+
+        const response = await getUserNotifications(this.userId);
+        console.log('获取通知响应:', response);
+
+        if (response.status === 200 && response.data) {
+          // 使用 response.data.notifications 获取通知数组
+          const notifications = response.data.notifications || [];
+          this.notificationCount = response.data.count || 0;
+
+          // 处理通知数据，添加clicked状态和格式化时间
+          this.notifications = notifications.map((notification) => ({
+            id: notification.id,
+            message: notification.message,
+            time: this.formatNotificationTime(notification.createdAt),
+            status: notification.status, // 0: 未读, 1: 已读
+            type: notification.type,
+            clicked: notification.status === 1, // 已读状态映射为clicked
+            createdAt: notification.createdAt,
+          }));
+
+          console.log('成功加载通知:', this.notifications);
+        } else {
+          console.error('获取通知失败:', response);
+          this.$message.error('获取通知失败，请稍后重试');
+        }
+      } catch (error) {
+        console.error('加载通知时出错:', error);
+        // 不显示错误消息，避免影响用户体验
+      }
     },
+
+    // 格式化通知时间
+    formatNotificationTime(createdAt) {
+      const now = new Date();
+      const notificationTime = new Date(createdAt);
+      const diffMs = now - notificationTime;
+      const diffMinutes = Math.floor(diffMs / (1000 * 60));
+      const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+      const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+      if (diffMinutes < 60) {
+        return `${diffMinutes}分钟前`;
+      } else if (diffHours < 24) {
+        return `${diffHours}小时前`;
+      } else {
+        return `${diffDays}天前`;
+      }
+    },
+
+    // 处理通知点击事件
+    async handleNotificationClick(index) {
+      const notification = this.notifications[index];
+
+      try {
+        // 如果通知未读，标记为已读
+        if (notification.status === 0) {
+          const response = await markNotificationAsRead(notification.id);
+          console.log('标记通知已读响应:', response);
+
+          if (response.status === 200) {
+            // 更新本地状态
+            this.notifications[index].status = 1;
+            this.notifications[index].clicked = true;
+
+            // 重新加载通知列表以更新计数
+            await this.loadUserNotifications();
+
+            this.$message.success('通知已标记为已读');
+          } else {
+            console.error('标记通知已读失败:', response);
+            this.$message.error('标记已读失败，请稍后重试');
+            return;
+          }
+        } else {
+          // 如果已读，只是切换本地显示状态
+          this.notifications[index].clicked =
+            !this.notifications[index].clicked;
+        }
+      } catch (error) {
+        console.error('处理通知点击时出错:', error);
+        this.$message.error('操作失败，请稍后重试');
+      }
+    },
+
+    // 删除通知
+    async deleteNotification(index) {
+      const notification = this.notifications[index];
+
+      try {
+        const response = await deleteNotificationById({
+          id: notification.id,
+          userId: this.userId,
+        });
+
+        console.log('删除通知响应:', response);
+
+        if (response.status === 200) {
+          // 重新加载通知列表以获取最新数据和计数
+          await this.loadUserNotifications();
+          this.$message.success('通知已删除');
+        } else {
+          console.error('删除通知失败:', response);
+          this.$message.error('删除失败，请稍后重试');
+        }
+      } catch (error) {
+        console.error('删除通知时出错:', error);
+        this.$message.error('删除失败，请稍后重试');
+      }
+    },
+
+    // 刷新通知列表（在路由变化时调用）
+    async refreshNotifications() {
+      if (this.isLoggedIn && this.userId) {
+        try {
+          this.$message.info('正在刷新通知...');
+          await this.loadUserNotifications();
+          this.$message.success('通知已刷新');
+        } catch (error) {
+          console.error('刷新通知失败:', error);
+          this.$message.error('刷新通知失败，请稍后重试');
+        }
+      } else {
+        this.$message.warning('请先登录');
+      }
+    },
+    // === 通知相关方法结束 ===
 
     handleRobotSelect(tab) {
       this.selectedRobot = tab.name; // 当前选择机器人（agent_id的字符串形式）
@@ -507,13 +685,67 @@ export default {
       background-color: #f8f9fa;
       border-radius: 8px;
       border: 1px solid #e9ecef;
+      max-height: 20vh;
+      overflow-y: scroll;
 
-      .notification-title {
-        font-size: 1.1rem;
-        font-weight: 600;
+      // 自定义滚动条样式
+      &::-webkit-scrollbar {
+        width: 10px;
+      }
+
+      &::-webkit-scrollbar-track {
+        background: white;
+        border-radius: 5px;
+        box-shadow: inset 0 0 1px rgba(0, 0, 0, 0.1);
+      }
+
+      &::-webkit-scrollbar-thumb {
+        background: #ccc;
+        border-radius: 5px;
+        border: 2px solid white;
+      }
+
+      &::-webkit-scrollbar-thumb:hover {
+        background: #aaa;
+      }
+
+      // 确保滚动条在各浏览器中都显示
+      scrollbar-width: thin;
+      scrollbar-color: #ccc white;
+
+      .notification-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
         margin-bottom: 15px;
-        color: $text-color;
-        text-align: center;
+
+        .notification-title {
+          font-size: 1.1rem;
+          font-weight: 600;
+          color: $text-color;
+          text-align: center;
+          margin: 0;
+          flex: 1;
+        }
+
+        .refresh-btn {
+          font-size: 0.8rem;
+          padding: 5px 8px;
+          color: #666;
+          border: 1px solid #ddd;
+          background: white;
+
+          &:hover {
+            color: $accent-color;
+            border-color: $accent-color;
+          }
+        }
+
+        .placeholder-btn {
+          font-size: 0.8rem;
+          padding: 5px 8px;
+          pointer-events: none;
+        }
       }
 
       .notification-list {
@@ -525,16 +757,24 @@ export default {
           border: 1px solid #e9ecef;
           cursor: pointer;
           transition: all 0.3s ease;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+
+          &.unread {
+            border-left: 3px solid #f56c6c;
+            background-color: #ffebee;
+            color: #d32f2f;
+          }
 
           &:hover {
-            text-decoration: line-through;
             background-color: #f0f0f0;
           }
 
           &.clicked {
-            background-color: #ffebee;
-            color: #d32f2f;
-            border-color: #d32f2f;
+            background-color: white;
+            color: #333;
+            border-color: #e9ecef;
           }
 
           &:last-child {
@@ -542,6 +782,9 @@ export default {
           }
 
           .notification-content {
+            flex: 1;
+            cursor: pointer;
+
             .notification-text {
               font-size: 0.9rem;
               line-height: 1.4;
@@ -555,6 +798,26 @@ export default {
               text-align: right;
             }
           }
+
+          .notification-actions {
+            margin-left: 8px;
+
+            .delete-btn {
+              color: #999;
+              padding: 4px;
+
+              &:hover {
+                color: #f56c6c;
+              }
+            }
+          }
+        }
+
+        .no-notifications {
+          text-align: center;
+          color: #999;
+          font-size: 0.9rem;
+          padding: 20px;
         }
       }
     }
