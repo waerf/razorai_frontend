@@ -1,10 +1,7 @@
 <template>
   <div class="admin-post-review">
     <!-- 侧边导航栏 -->
-    <aside class="sidebar">
-      <button class="toggle-sidebar-btn" @click="toggleSidebar">
-        <i class="el-icon-s-fold"></i>
-      </button>
+    <aside class="sidebar" :class="{ hidden: isSidebarCollapsed }">
       <div class="user-info">
         <div class="avatar">{{ adminName ? adminName.charAt(0) : '管' }}</div>
         <div>
@@ -41,6 +38,9 @@
     <main class="main-content">
       <!-- 顶部导航栏 -->
       <header class="header">
+        <button class="toggle-sidebar-btn" @click="toggleSidebar">
+          <i class="el-icon-s-fold"></i>
+        </button>
         <h1 class="title">帖子审核</h1>
         <div style="display: flex; align-items: center; margin-left: auto">
           <el-button
@@ -77,7 +77,7 @@
                 autocomplete="off"
               />
             </el-form-item>
-            <el-form-item label="确认新密码" prop="confirmPwd">
+            <el-form-item label="确认密码" prop="confirmPwd">
               <el-input
                 v-model="pwdForm.confirmPwd"
                 type="password"
@@ -105,25 +105,22 @@
               v-model="searchQuery"
               class="search-input"
             ></el-input>
-            <div class="filter-container">
-              <el-select v-model="statusFilter" placeholder="全部状态">
-                <el-option label="全部状态" value="all"></el-option>
-                <el-option label="待审核" value="pending"></el-option>
-                <el-option label="已通过" value="approved"></el-option>
-                <el-option label="已拒绝" value="rejected"></el-option>
-              </el-select>
-              <el-select v-model="typeFilter" placeholder="全部类型">
-                <el-option label="全部类型" value="all"></el-option>
-                <el-option label="普通帖子" value="normal"></el-option>
-                <el-option label="举报内容" value="report"></el-option>
-                <el-option label="敏感词检测" value="sensitive"></el-option>
-              </el-select>
-            </div>
+            <!-- 已移除状态和类型筛选 -->
           </div>
         </el-card>
 
+        <!-- 列表切换标签 -->
+        <el-tabs v-model="activeTab" @tab-click="handleTabClick">
+          <el-tab-pane label="待审核帖子" name="posts"></el-tab-pane>
+          <el-tab-pane label="待审核评论" name="comments"></el-tab-pane>
+        </el-tabs>
+
         <!-- 帖子列表 -->
-        <el-card class="post-list-card" shadow="hover">
+        <el-card
+          v-if="activeTab === 'posts'"
+          class="post-list-card"
+          shadow="hover"
+        >
           <div class="card-header">
             <h2 class="card-title">待审核帖子列表</h2>
             <div class="action-buttons">
@@ -152,16 +149,12 @@
               label="作者"
               min-width="100"
             ></el-table-column>
-            <el-table-column
-              prop="time"
-              label="提交时间"
-              min-width="140"
-            ></el-table-column>
-            <el-table-column
-              prop="type"
-              label="类型"
-              min-width="100"
-            ></el-table-column>
+            <el-table-column label="提交时间" min-width="140">
+              <template #default="scope">
+                {{ formatTime(scope.row.time) }}
+              </template>
+            </el-table-column>
+            <!-- 已移除类型列 -->
             <el-table-column label="状态" min-width="100">
               <template #default="scope">
                 <el-tag :type="getStatusTagType(scope.row.status)" size="small">
@@ -171,7 +164,7 @@
             </el-table-column>
           </el-table>
 
-          <!-- 分页 -->
+          <!-- 帖子分页 -->
           <div class="pagination-container">
             <span class="pagination-info">
               显示 {{ currentPageStart }} 到 {{ currentPageEnd }} 条，共
@@ -182,6 +175,69 @@
               :total="posts.length"
               :page-size="pageSize"
               @current-change="handleCurrentChange"
+            ></el-pagination>
+          </div>
+        </el-card>
+
+        <!-- 评论列表 -->
+        <el-card
+          v-if="activeTab === 'comments'"
+          class="post-list-card"
+          shadow="hover"
+        >
+          <div class="card-header">
+            <h2 class="card-title">待审核评论列表</h2>
+            <div class="action-buttons">
+              <span class="record-count">共 {{ comments.length }} 条记录</span>
+              <el-select v-model="commentPageSize" class="page-size-select">
+                <el-option label="10 条/页" value="10"></el-option>
+                <el-option label="20 条/页" value="20"></el-option>
+                <el-option label="50 条/页" value="50"></el-option>
+              </el-select>
+            </div>
+          </div>
+
+          <el-table
+            :data="filteredComments"
+            style="width: 100%"
+            @row-click="viewComment"
+          >
+            <el-table-column label="评论内容" min-width="220">
+              <template #default="scope">
+                <p class="post-title">{{ scope.row.commentContent }}</p>
+                <p class="post-subtitle">{{ scope.row.reportReason }}</p>
+              </template>
+            </el-table-column>
+            <el-table-column
+              prop="reporterName"
+              label="举报人"
+              min-width="100"
+            ></el-table-column>
+            <el-table-column label="举报时间" min-width="140">
+              <template #default="scope">
+                {{ formatTime(scope.row.createdAt) }}
+              </template>
+            </el-table-column>
+            <el-table-column label="状态" min-width="100">
+              <template #default="scope">
+                <el-tag :type="getStatusTagType(scope.row.status)" size="small">
+                  {{ scope.row.statusText }}
+                </el-tag>
+              </template>
+            </el-table-column>
+          </el-table>
+
+          <!-- 分页 -->
+          <div class="pagination-container">
+            <span class="pagination-info">
+              显示 {{ commentCurrentPageStart }} 到
+              {{ commentCurrentPageEnd }} 条，共 {{ comments.length }} 条
+            </span>
+            <el-pagination
+              layout="prev, pager, next"
+              :total="comments.length"
+              :page-size="commentPageSize"
+              @current-change="handleCommentCurrentChange"
             ></el-pagination>
           </div>
         </el-card>
@@ -196,14 +252,17 @@ import {
   adminLogout,
   getAdminInfo,
   getPostReportList,
+  getCommentReportList,
 } from '@/utils/api';
 export default {
   name: 'AdminPostReviewPage',
   data() {
     return {
-      isSidebarCollapsed: false,
+      isSidebarCollapsed:
+        localStorage.getItem('admin_sidebar_collapsed') === 'true',
       showChangePwd: false,
       adminName: '',
+      activeTab: 'posts', // 默认显示帖子tab
       pwdForm: {
         oldPwd: '',
         newPwd: '',
@@ -230,11 +289,14 @@ export default {
         ],
       },
       searchQuery: '',
-      statusFilter: 'all',
-      typeFilter: 'all',
+      // 已移除状态和类型筛选相关变量
       pageSize: 10,
       currentPage: 1,
       posts: [],
+      // 评论相关数据
+      commentPageSize: 10,
+      commentCurrentPage: 1,
+      comments: [],
       async fetchPendingPosts() {
         try {
           const res = await getPostReportList({
@@ -272,6 +334,23 @@ export default {
           this.$message.error(err.message || '获取待审核帖子失败');
         }
       },
+
+      async fetchPendingComments() {
+        try {
+          const res = await getCommentReportList({
+            status: 0,
+            page: this.commentCurrentPage,
+            pageSize: this.commentPageSize,
+          });
+          if (res.data && res.data.success) {
+            this.comments = res.data.data || [];
+          } else {
+            this.$message.error(res.data.message || '获取待审核评论失败');
+          }
+        } catch (err) {
+          this.$message.error(err.message || '获取待审核评论失败');
+        }
+      },
       mapStatus(status) {
         switch (status) {
           case 0:
@@ -292,7 +371,6 @@ export default {
   computed: {
     filteredPosts() {
       let filtered = this.posts;
-
       if (this.searchQuery) {
         const query = this.searchQuery.toLowerCase();
         filtered = filtered.filter(
@@ -301,17 +379,18 @@ export default {
             post.subtitle.toLowerCase().includes(query)
         );
       }
-
-      if (this.statusFilter !== 'all') {
-        filtered = filtered.filter((post) => post.status === this.statusFilter);
-      }
-
-      if (this.typeFilter !== 'all') {
-        filtered = filtered.filter((post) =>
-          post.type.includes(this.typeFilter)
+      return filtered;
+    },
+    filteredComments() {
+      let filtered = this.comments;
+      if (this.searchQuery) {
+        const query = this.searchQuery.toLowerCase();
+        filtered = filtered.filter(
+          (comment) =>
+            comment.commentContent.toLowerCase().includes(query) ||
+            comment.reportReason.toLowerCase().includes(query)
         );
       }
-
       return filtered;
     },
     currentPageStart() {
@@ -320,8 +399,22 @@ export default {
     currentPageEnd() {
       return Math.min(this.currentPage * this.pageSize, this.posts.length);
     },
+    commentCurrentPageStart() {
+      return (this.commentCurrentPage - 1) * this.commentPageSize + 1;
+    },
+    commentCurrentPageEnd() {
+      return Math.min(
+        this.commentCurrentPage * this.commentPageSize,
+        this.comments.length
+      );
+    },
   },
   methods: {
+    formatTime(time) {
+      if (!time) return '';
+      const d = new Date(time);
+      return d.toLocaleString();
+    },
     getStatusTagType(status) {
       switch (status) {
         case 'pending':
@@ -409,6 +502,24 @@ export default {
         params: { id: post.id },
       });
     },
+    viewComment(comment) {
+      // 跳转到评论举报详情页
+      this.$router.push({
+        name: 'AdminCommentReviewDetail',
+        params: { id: comment.reportId },
+      });
+    },
+    handleTabClick() {
+      // 切换标签时重置搜索
+      this.searchQuery = '';
+
+      // 根据当前标签加载相应数据
+      if (this.activeTab === 'posts') {
+        this.fetchPendingPosts();
+      } else if (this.activeTab === 'comments') {
+        this.fetchPendingComments();
+      }
+    },
     approvePost(post) {
       post.status = 'approved';
       this.$message.success('帖子已通过审核');
@@ -419,6 +530,9 @@ export default {
     },
     handleCurrentChange(page) {
       this.currentPage = page;
+    },
+    handleCommentCurrentChange(page) {
+      this.commentCurrentPage = page;
     },
     async fetchAdminInfo() {
       try {
@@ -434,8 +548,7 @@ export default {
     },
     toggleSidebar() {
       this.isSidebarCollapsed = !this.isSidebarCollapsed;
-      const sidebar = document.querySelector('.sidebar');
-      sidebar.classList.toggle('hidden');
+      localStorage.setItem('admin_sidebar_collapsed', this.isSidebarCollapsed);
     },
     logout() {
       this.$confirm('确定要退出登录吗？', '提示', {
@@ -451,12 +564,17 @@ export default {
               if (window.localStorage) {
                 localStorage.removeItem('admin_token');
               }
-              this.$router.push('/');
             } else {
-              this.$message.error(res.data.message || '登出失败');
+              if (window.localStorage) {
+                localStorage.removeItem('admin_token');
+              }
             }
           } catch (err) {
-            this.$message.error(err.message || '登出失败，请重试');
+            if (window.localStorage) {
+              localStorage.removeItem('admin_token');
+            }
+          } finally {
+            this.$router.push('/');
           }
         })
         .catch(() => {
@@ -502,224 +620,86 @@ export default {
   mounted() {
     this.fetchAdminInfo();
     this.fetchPendingPosts();
+    this.fetchPendingComments();
   },
 };
 </script>
 
 <style lang="scss" scoped>
+@import '@/assets/styles/admin-home.scss';
+
 .admin-post-review {
-  display: flex;
-  min-height: 100vh;
-  background-color: #f5f5f5;
+  @extend .admin-home;
 
-  .sidebar {
-    position: relative;
-    transition: all 0.3s ease;
+  // 内容区自定义样式
+  .search-card {
+    margin-bottom: 24px;
 
-    .toggle-sidebar-btn {
-      position: absolute;
-      top: 10px;
-      right: 10px;
-      cursor: pointer;
-      font-size: 16px;
-      background: none;
-      border: none;
-      color: #606266;
-      padding: 5px;
-
-      &:hover {
-        background-color: rgba(0, 0, 0, 0.05);
-        border-radius: 4px;
-      }
-    }
-
-    &.hidden {
-      width: 60px !important;
-
-      .nav-item {
-        span {
-          display: none;
-        }
-
-        i {
-          margin-right: 0;
-        }
-      }
-
-      .user-info {
-        flex-direction: column;
-        align-items: center;
-        padding: 10px;
-
-        .avatar {
-          margin-right: 0;
-          margin-bottom: 5px;
-        }
-
-        .username,
-        .role {
-          display: none;
-        }
-      }
-    }
-    width: 250px;
-    background-color: white;
-    border-right: 1px solid #e6e6e6;
-    padding: 20px 0;
-
-    .user-info {
+    .search-container {
       display: flex;
       align-items: center;
-      padding: 0 20px 20px;
-      border-bottom: 1px solid #e6e6e6;
+      justify-content: space-between;
 
-      .avatar {
-        width: 40px;
-        height: 40px;
-        border-radius: 50%;
-        background-color: #165dff;
-        color: white;
+      .search-input {
+        width: 400px;
+      }
+
+      .filter-container {
         display: flex;
-        align-items: center;
-        justify-content: center;
-        margin-right: 12px;
-        font-weight: bold;
-      }
-
-      .username {
-        font-weight: 500;
-        margin-bottom: 4px;
-      }
-
-      .role {
-        font-size: 12px;
-        color: #999;
-      }
-    }
-
-    .nav-menu {
-      padding: 10px 0;
-
-      .nav-item {
-        display: flex;
-        align-items: center;
-        padding: 12px 20px;
-        margin: 4px 0;
-        cursor: pointer;
-        transition: all 0.3s;
-
-        i {
-          margin-right: 12px;
-          font-size: 18px;
-        }
-
-        &:hover {
-          background-color: #f6f6f6;
-        }
-
-        &.active {
-          background-color: #e8f3ff;
-          color: #165dff;
-          border-left: 3px solid #165dff;
-        }
+        gap: 12px;
       }
     }
   }
 
-  .main-content {
-    flex: 1;
-    overflow: auto;
-
-    .header {
+  .post-list-card {
+    .card-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 16px 24px;
-      background-color: white;
-      border-bottom: 1px solid #e6e6e6;
-      position: sticky;
-      top: 0;
-      z-index: 10;
+      margin-bottom: 16px;
 
-      .title {
-        font-size: 20px;
+      .card-title {
+        font-size: 18px;
         font-weight: 600;
+      }
+
+      .action-buttons {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+        .record-count {
+          font-size: 14px;
+          color: #666;
+          margin: 0 8px 0 0;
+        }
+        .page-size-select {
+          width: 110px;
+        }
       }
     }
 
-    .content {
-      padding: 24px;
+    .post-title {
+      font-weight: 500;
+    }
 
-      .search-card {
-        margin-bottom: 24px;
+    .post-subtitle {
+      font-size: 12px;
+      color: #999;
+      margin-top: 4px;
+    }
 
-        .search-container {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
+    .pagination-container {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 24px;
+      padding-top: 24px;
+      border-top: 1px solid #e6e6e6;
 
-          .search-input {
-            width: 400px;
-          }
-
-          .filter-container {
-            display: flex;
-            gap: 12px;
-          }
-        }
-      }
-
-      .post-list-card {
-        .card-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-bottom: 16px;
-
-          .card-title {
-            font-size: 18px;
-            font-weight: 600;
-          }
-
-          .action-buttons {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            flex-wrap: wrap;
-            .record-count {
-              font-size: 14px;
-              color: #666;
-              margin: 0 8px 0 0;
-            }
-            .page-size-select {
-              width: 110px;
-            }
-          }
-        }
-
-        .post-title {
-          font-weight: 500;
-        }
-
-        .post-subtitle {
-          font-size: 12px;
-          color: #999;
-          margin-top: 4px;
-        }
-
-        .pagination-container {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-top: 24px;
-          padding-top: 24px;
-          border-top: 1px solid #e6e6e6;
-
-          .pagination-info {
-            font-size: 14px;
-            color: #666;
-          }
-        }
+      .pagination-info {
+        font-size: 14px;
+        color: #666;
       }
     }
   }
