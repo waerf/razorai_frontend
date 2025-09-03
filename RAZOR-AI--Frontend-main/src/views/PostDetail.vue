@@ -1070,11 +1070,28 @@ export default {
         console.log('发布评论响应:', response);
 
         if (response.data && response.data.comment) {
+          // 获取新评论的完整信息
+          let author = this.userName || `用户${this.currentUserId}`;
+          let likeCount = 0;
+          let likedByMe = false;
+
+          // 获取新评论的评论者名字
+          try {
+            const nameRes = await getCommentAuthorName(
+              response.data.comment.id
+            );
+            author = nameRes.data?.authorName || author;
+          } catch (e) {
+            // 使用默认值
+          }
+
           // 添加新评论到列表顶部
           const newComment = {
             ...response.data.comment,
-            author: this.userName || `用户${this.currentUserId}`,
+            author,
             avatar: this.defaultAvatar,
+            likeCount,
+            likedByMe,
           };
           this.comments.unshift(newComment);
 
@@ -1086,6 +1103,9 @@ export default {
           this.newComment = '';
 
           this.$message?.success('评论发布成功');
+
+          // 强制更新视图
+          this.$forceUpdate();
         }
       } catch (error) {
         console.error('发布评论失败:', error);
@@ -1124,18 +1144,37 @@ export default {
         const response = await deleteCommunityComment(comment.id, payload);
         console.log('删除评论响应:', response);
 
-        // 从列表中移除评论
-        const index = this.comments.findIndex((c) => c.id === comment.id);
-        if (index !== -1) {
-          this.comments.splice(index, 1);
-
-          // 更新评论数量
-          this.totalComments = Math.max(0, this.totalComments - 1);
-          this.post.comments = this.totalComments;
+        // 判断是主评论还是回复
+        if (comment.replyId) {
+          // 这是一个回复，从回复列表中删除
+          if (this.commentReplies[comment.replyId]) {
+            const replyIndex = this.commentReplies[comment.replyId].findIndex(
+              (r) => r.id === comment.id
+            );
+            if (replyIndex !== -1) {
+              this.commentReplies[comment.replyId].splice(replyIndex, 1);
+            }
+          }
+        } else {
+          // 这是一个主评论，从主评论列表中删除
+          const index = this.comments.findIndex((c) => c.id === comment.id);
+          if (index !== -1) {
+            this.comments.splice(index, 1);
+            // 同时删除相关的回复
+            if (this.commentReplies[comment.id]) {
+              this.$delete(this.commentReplies, comment.id);
+            }
+          }
         }
 
+        // 更新评论数量
+        this.totalComments = Math.max(0, this.totalComments - 1);
+        this.post.comments = this.totalComments;
+
         this.$message?.success('评论删除成功');
-        window.location.reload(); // 删除后刷新页面，保证评论区同步
+
+        // 强制更新视图
+        this.$forceUpdate();
       } catch (error) {
         console.error('删除评论失败:', error);
         this.$message?.error('删除评论失败，请稍后重试');
@@ -1303,17 +1342,37 @@ export default {
         // 发送评论/回复
         const res = await createCommunityComment(this.id, payload);
         if (res.data && res.data.comment) {
+          // 获取当前用户信息和新回复的完整数据
+          let author = this.userName || `用户${this.currentUserId}`;
+          let likeCount = 0;
+          let likedByMe = false;
+
+          // 获取新回复的评论者名字
+          try {
+            const nameRes = await getCommentAuthorName(res.data.comment.id);
+            author = nameRes.data?.authorName || author;
+          } catch (e) {
+            // 使用默认值
+          }
+
           const newReply = {
             ...res.data.comment,
             repliedAuthor,
+            author,
+            avatar: this.defaultAvatar,
+            likeCount,
+            likedByMe,
           };
+
           if (!this.commentReplies[comment.id])
             this.$set(this.commentReplies, comment.id, []);
           this.commentReplies[comment.id].unshift(newReply);
           this.replyContent[comment.id] = '';
           this.$message?.success('回复发布成功');
           this.$set(this.replyBoxVisible, comment.id, false);
-          window.location.reload(); // 发布后刷新页面
+
+          // 强制更新视图以确保新回复立即显示
+          this.$forceUpdate();
         }
       } catch (error) {
         this.$message?.error(error?.message || '回复发布失败');
@@ -1326,7 +1385,7 @@ export default {
       this.isSubmittingReply = true;
       try {
         let repliedAuthor = null;
-        let author = '';
+        let author = this.userName || `用户${this.currentUserId}`;
         let payload = {
           userId: this.currentUserId,
           // 内容加上@被回复人名字
@@ -1334,31 +1393,40 @@ export default {
           // replyId始终为主评论id
           replyId: parentCommentId,
         };
-        try {
-          const nameRes = await getCommentAuthorName(reply.id);
-          author = nameRes.data?.authorName || `用户${reply.userId}`;
-        } catch (e) {
-          author = `用户${reply.userId}`;
-        }
+
         // 被回复人名字优先用reply.author
         let atText = reply.author ? `@${reply.author} ` : '';
         payload.commentContent = atText + this.replyContent[reply.id];
+
         // 发送回复评论
         const res = await createCommunityComment(this.id, payload);
         if (res.data && res.data.comment) {
+          // 获取新回复的评论者名字
+          try {
+            const nameRes = await getCommentAuthorName(res.data.comment.id);
+            author = nameRes.data?.authorName || author;
+          } catch (e) {
+            // 使用默认值
+          }
+
           const newReply = {
             ...res.data.comment,
             repliedAuthor,
             author,
             avatar: this.defaultAvatar,
+            likeCount: 0,
+            likedByMe: false,
           };
+
           if (!this.commentReplies[parentCommentId])
             this.$set(this.commentReplies, parentCommentId, []);
           this.commentReplies[parentCommentId].unshift(newReply);
           this.replyContent[reply.id] = '';
           this.$message?.success('回复发布成功');
           this.$set(this.replyBoxVisible, reply.id, false);
-          window.location.reload(); // 发布后刷新页面
+
+          // 强制更新视图以确保新回复立即显示
+          this.$forceUpdate();
         }
       } catch (error) {
         this.$message?.error(error?.message || '回复发布失败');
