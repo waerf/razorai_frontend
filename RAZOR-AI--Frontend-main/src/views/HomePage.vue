@@ -40,7 +40,7 @@
               :style="
                 userInput.trim()
                   ? {
-                      backgroundColor: accentColor,
+                      backgroundColor: '#0F88EB',
                       color: '#fff',
                       borderColor: accentColor,
                     }
@@ -243,6 +243,10 @@ export default {
       return text.length > length ? text.slice(0, length) + '...' : text;
     },
     async sendMessageToRobot() {
+      if (!this.isLoggedIn) {
+        this.$message.warning('请先登录');
+        return;
+      }
       if (this.userInput.trim() && this.selectedRobot) {
         // 名字为时间戳YMD+时间格式(精确到时分)
         const defaultName =
