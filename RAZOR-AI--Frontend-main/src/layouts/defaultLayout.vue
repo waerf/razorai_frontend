@@ -149,6 +149,7 @@
           <el-icon name="loading" class="menu-item-icon"></el-icon>测试页面
         </div> -->
         <div class="chat-history">
+          <!-- 对话项：增加文字容器，让图标与文字紧密对齐 -->
           <div
             class="chat-item"
             v-for="chat in chatlists"
@@ -156,8 +157,15 @@
             @click="navigateToChat(chat.id)"
           >
             <el-icon name="chat-dot-square" class="chat-icon"></el-icon>
-            <span v-if="!isSidebarHidden">{{ chat.name }}</span>
-            <span v-if="!isSidebarHidden">{{ chat.agent_name }}</span>
+
+            <div class="chat-text-container">
+              <div v-if="!isSidebarHidden" class="chat-title">
+                {{ chat.title }}
+              </div>
+              <div v-if="!isSidebarHidden" class="chat-name">
+                {{ chat.name }}
+              </div>
+            </div>
           </div>
         </div>
       </aside>
@@ -615,5 +623,53 @@ export default {
       padding: 6px;
     }
   }
+}
+
+.chat-history {
+  padding: 4px 0;
+  margin: 0;
+  list-style: none;
+}
+
+.chat-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 5px 12px;
+  margin: 0;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.chat-icon {
+  font-size: 14px;
+  color: #606266;
+  margin-top: 1px;
+}
+
+.chat-text-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  flex: 1;
+}
+
+.chat-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: #303133;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.3;
+}
+
+.chat-title {
+  font-size: 12px;
+  color: #909399;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.3;
 }
 </style>

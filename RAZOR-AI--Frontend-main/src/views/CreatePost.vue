@@ -21,17 +21,16 @@
             />
           </div>
 
-          <!-- 帖子内容 -->
+          <!-- 帖子内容 (Markdown 编辑器) -->
           <div class="form-group">
-            <label for="content" class="form-label">帖子内容</label>
-            <textarea
-              id="content"
+            <label for="content" class="form-label">
+              帖子内容 (支持 Markdown)
+            </label>
+            <mavon-editor
               v-model="post.content"
-              class="form-textarea"
-              placeholder="请输入帖子内容..."
-              rows="10"
-              required
-            ></textarea>
+              :toolbarsFlag="true"
+              style="height: 400px"
+            />
           </div>
 
           <!-- 帖子标签 -->
@@ -76,7 +75,7 @@ export default {
     return {
       post: {
         title: '',
-        content: '',
+        content: '', // Markdown 源文本
         tags: [],
       },
       allTags: [
@@ -114,7 +113,6 @@ export default {
         this.$router.push('/login');
         return;
       }
-
       if (!this.post.title.trim() || !this.post.content.trim()) {
         return this.$message.warning('标题和内容不能为空');
       }
@@ -128,12 +126,11 @@ export default {
           userId: this.userId,
           postContent: JSON.stringify({
             title: this.post.title,
-            content: this.post.content,
+            content: this.post.content, // Markdown 源文本
             tags: this.post.tags,
             author: this.userName,
           }),
         };
-
         const res = await createCommunityPost(payload);
 
         if (res.data && res.data.success !== false) {

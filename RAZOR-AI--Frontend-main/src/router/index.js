@@ -26,6 +26,8 @@ import AdminPage from '@/views/AdminPage.vue';
 import AdminLogin from '@/views/AdminLoginPage.vue';
 import AdminFeedback from '@/views/AdminFeedbackPage.vue';
 import Editpost from '@/views/EditPostsPage.vue';
+import BotsEditversion from '@/views/BotsEditVersionPage.vue';
+import BotsHistoryVersions from '@/views/BotsHistoryVersionPage.vue';
 
 Vue.use(VueRouter);
 
@@ -44,7 +46,7 @@ const routes = [
         },
       },
       {
-        path: 'MyBots',
+        path: '/MyBots',
         name: 'MyBots',
         component: MyBots,
         meta: {
@@ -52,7 +54,23 @@ const routes = [
         },
       },
       {
-        path: 'subscribedBots',
+        path: '/BotsHistoryVersions/:agentId',
+        name: 'BotsHistoryVersions',
+        component: BotsHistoryVersions,
+        meta: {
+          title: '查看历史版本',
+        },
+      },
+      {
+        path: '/BotsEditversion/:agentId',
+        name: 'BotsEditversion',
+        component: BotsEditversion,
+        meta: {
+          title: '编辑当前版本',
+        },
+      },
+      {
+        path: '/subscribedBots',
         name: 'SubscribedBots',
         component: SubscribedBots,
         meta: {

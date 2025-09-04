@@ -43,64 +43,31 @@
         </div>
 
         <div class="bots-grid" v-else>
-          <!-- 机器人卡片 -->
+          <!-- 机器人卡片：仅保留名称、描述、核心操作按钮 -->
           <div
             v-for="robot in filteredRobots"
             :key="robot.agent_id"
             class="bot-card card-hover"
           >
             <div class="p-5">
-              <!-- 条件渲染过期标签 -->
-              <div v-if="!robot.status" class="expired-tag">
-                <i class="fa fa-warning mr-1"></i>已过期
+              <!-- 1. 机器人名称（核心信息） -->
+              <div class="mb-3">
+                <h2 class="text-lg font-semibold">{{ robot.agent_name }}</h2>
               </div>
 
-              <div class="flex justify-between items-start mb-4">
-                <div>
-                  <h2 class="text-lg font-semibold">{{ robot.agent_name }}</h2>
-                  <p class="text-sm text-gray-500 mt-1">
-                    {{ robot.category || '未分类' }}
-                  </p>
-                </div>
-                <span class="status-active" v-if="robot.status"> 活跃 </span>
-              </div>
-
-              <div class="mb-4">
-                <p class="text-sm text-gray-600 line-clamp-2 mb-3">
-                  {{ robot.description || '该机器人暂无描述信息' }}
-                </p>
-
-                <div class="flex items-center text-sm text-gray-600 mb-2">
-                  <div class="flex items-center mr-4">
-                    <i class="fa fa-star text-yellow-400 mr-1"></i>
-                    <span>{{
-                      robot.rating ? robot.rating.toFixed(1) : '0.0'
-                    }}</span>
-                  </div>
-                  <div class="flex items-center">
-                    <i class="fa fa-user mr-1"></i>
-                    <span>{{ robot.user_count || 0 }} 用户</span>
-                  </div>
-                </div>
-              </div>
-
-              <div
-                class="flex items-center text-sm text-gray-600 mb-4 flex-wrap"
-              >
-                <div class="flex items-center mr-4 mb-2">
+              <!-- 2. 机器人订阅时间（核心信息） -->
+              <div class="flex flex-wrap gap-4 mb-4 text-sm text-gray-600">
+                <div class="flex items-center">
                   <i class="fa fa-calendar mr-1"></i>
-                  <span>开始时间: {{ robot.startime }}</span>
+                  <span>开始: {{ robot.start_time | formatToMinute }}</span>
                 </div>
-                <div class="flex items-center mr-4 mb-2">
+                <div class="flex items-center">
                   <i class="fa fa-calendar-check-o mr-1"></i>
-                  <span>结束时间: {{ robot.endtime }}</span>
-                </div>
-                <div class="flex items-center mb-2">
-                  <i class="fa fa-clock-o mr-1"></i>
-                  <span>剩余: {{ getRemainingDays(robot.endtime) }} 天</span>
+                  <span>结束: {{ robot.end_time | formatToMinute }}</span>
                 </div>
               </div>
 
+              <!-- 3. 核心操作按钮：开始对话 + 机器人详情 -->
               <div class="border-t border-gray-100 pt-4 flex justify-between">
                 <a
                   href="#"
@@ -165,9 +132,12 @@
 
 <script>
 import { mapState, mapActions } from 'vuex';
+import { fetchUserSubscriptions as apiFetchUserSubscriptions } from '../utils/api';
+import { createChat as apicreateChat } from '../utils/api';
 import RobotDetailDialog from './RobotDetailPage.vue';
 import SubscriptionSelector from '@/components/SubscriptionSelector.vue';
 import { subscribeAgent as apiSubscribeAgent } from '../utils/api';
+//import chat from '@/store/chat';
 
 export default {
   name: 'SubscribedBotsPage',
@@ -217,12 +187,12 @@ export default {
 
         this.loading = true;
 
-        // 调用Vuex action而不是直接调用API
-        const result = await this.fetchUserSubscriptions(userId);
+        const result = await apiFetchUserSubscriptions(userId);
+        console.log('找到订阅机器人结果:', result);
 
-        if (result.success) {
+        if (result.status == 200) {
           const subscriptions = this.subscribedRobots;
-          console.log('成功调取订阅机器人信息');
+          console.log('当前订阅机器人列表:', subscriptions);
           if (subscriptions.length === 0) {
             this.$message.info('您当前没有订阅任何机器人');
           } else {
@@ -255,27 +225,21 @@ export default {
       };
       console.log('进入会话参数:', payload);
 
-      this.$router.push({
-        path: `/chatRobot/null`,
-        query: payload,
-      });
-    },
+      try {
+        // 调用接口，创建会话，返回真实 chatId
+        const res = await apicreateChat(payload);
+        const chatId = res.data.chat_id;
+        console.log('创建的聊天ID:', chatId);
 
-    // 计算剩余天数
-    getRemainingDays(endtime) {
-      if (!endtime) return 0;
-
-      // 解析日期字符串 (兼容 'YYYY/MM/DD' 或 'YYYY-MM-DD' 格式)
-      const parts = endtime.split(/[/-]/);
-      if (parts.length !== 3) return 0;
-
-      const endDate = new Date(parts[0], parts[1] - 1, parts[2]);
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-
-      const timeDiff = endDate - today;
-      const daysRemaining = Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
-      return daysRemaining >= 0 ? daysRemaining : 0;
+        // 直接跳到真实的 chatId 页面
+        this.$router.push({
+          name: 'ChatRobot',
+          params: { chatId: chatId },
+        });
+      } catch (err) {
+        this.$message.error('创建会话失败');
+        console.error(err);
+      }
     },
 
     // 打开续订弹窗
@@ -347,6 +311,29 @@ export default {
   },
   created() {
     this.getUserSubscriptions(); // 组件创建时获取用户订阅列表
+  },
+
+  filters: {
+    formatToMinute(timeStr) {
+      if (!timeStr || typeof timeStr !== 'string') {
+        return '未设置';
+      }
+
+      const date = new Date(timeStr);
+
+      if (isNaN(date.getTime())) {
+        return '时间格式错误';
+      }
+
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      const hour = String(date.getHours()).padStart(2, '0');
+      const minute = String(date.getMinutes()).padStart(2, '0');
+
+      // 5. 拼接最终格式（如：2025-09-01 17:37）
+      return `${year}-${month}-${day} ${hour}:${minute}`;
+    },
   },
 };
 </script>
