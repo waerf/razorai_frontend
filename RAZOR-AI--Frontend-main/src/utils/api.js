@@ -432,7 +432,7 @@ export const createAgentPending = (payload) =>
 export const getChatTitle = (chatId) =>
   api.post(
     `/agent/user/chat/${chatId}/title`,
-    {}, // 请求体，如果没有数据就传空对象
+    {},
     {
       headers: { skipAuth: false },
       timeout: 20000, // 20秒
