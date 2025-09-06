@@ -326,7 +326,16 @@ const router = new VueRouter({
       name: 'AdminPostReviewDetail',
       component: () => import('@/views/AdminPostReviewDetail.vue'),
       meta: {
-        title: 'RazorAI-举报详情',
+        title: 'RazorAI-帖子举报详情',
+        requiresAdmin: true,
+      },
+    },
+    {
+      path: '/admin/comment-report/:id',
+      name: 'AdminCommentReviewDetail',
+      component: () => import('@/views/AdminCommentReviewDetail.vue'),
+      meta: {
+        title: 'RazorAI-评论举报详情',
         requiresAdmin: true,
       },
     },

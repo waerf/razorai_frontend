@@ -34,7 +34,7 @@
       <el-card class="info-card">
         <div class="info-item">
           <span class="info-label">会话名称:</span>
-          <span class="info-value">{{ title || '未命名会话' }}</span>
+          <span class="info-value">{{ chattitle || '未命名会话' }}</span>
         </div>
         <div class="info-item timestamp">
           <span class="info-value">{{ new Date().toLocaleString() }}</span>
@@ -134,18 +134,23 @@ export default {
       messages: [],
       userAvatar: require('@/assets/images/Avatar/User.png'),
       botAvatar: require('@/assets/images/Avatar/Assistant.png'),
-      title: '',
       currentChat: {},
       chatId: null,
       isHistoryChat: false,
-      isFirstmessage: true,
+      isFirstmessage: false,
+      chattitle: '',
     };
   },
 
-  // 将created改为async函数，允许内部使用await
   async created() {
     this.chatId = this.$route.params.chatId;
-    console.log('当前对话ID:', this.chatId);
+    this.chattitle = this.$route.params.chatTitle || '未命名';
+    console.log('当前对话ID和名称是', this.chatId, this.chattitle);
+
+    this.isFirstmessage = ['未命名', '', undefined, null].includes(
+      this.chattitle
+    );
+    console.log('是否为首次发送消息:', this.isFirstmessage);
 
     this.isHistoryChat = !!this.chatId && this.chatId !== 'null';
     console.log('是否为历史对话:', this.isHistoryChat);
@@ -188,26 +193,6 @@ export default {
 
       // 重置历史聊天标志
       this.isHistoryChat = false;
-
-      // 获取新聊天标题
-      this.getChatTitle()
-        .then(() => {
-          console.log('[获取新聊天标题成功]', newId);
-        })
-        .catch((err) => {
-          console.error('[获取新聊天标题失败]', err);
-        });
-
-      // 拉取新聊天记录
-      this.getChatHistory()
-        .then(() => {
-          console.log('[获取新聊天记录成功]', newId);
-        })
-        .catch((err) => {
-          console.error('[获取新聊天记录失败]', err);
-        });
-    } else {
-      console.warn('[无效的新 chatId]', newId);
     }
 
     next();
@@ -221,7 +206,20 @@ export default {
         const response = await apigetChatTitle(this.chatId);
         console.log('获取聊天标题响应:', response);
         if (response.status === 200) {
-          this.title = response.data.title || '无标题';
+          const newTitle = response.data.title || '无标题';
+          this.chattitle = newTitle;
+          console.log('获取聊天标题成功:', newTitle);
+
+          try {
+            await this.$router.push({
+              name: 'ChatRobot',
+              params: { chatId: this.chatId, chatTitle: newTitle },
+            });
+          } catch (error) {
+            if (!error.message.includes('Avoided redundant navigation')) {
+              console.error('路由跳转错误:', error);
+            }
+          }
         }
       } catch (error) {
         console.error('获取聊天标题失败:', error);
@@ -353,6 +351,13 @@ export default {
         });
       } finally {
         this.$nextTick(() => this.scrollToBottom());
+
+        if (this.isFirstmessage) {
+          await this.saveChat(this.chatId);
+          console.log('首次发送未命名对话消息，开始获取标题...');
+          await this.getChatTitle();
+          this.isFirstmessage = false;
+        }
       }
     },
 

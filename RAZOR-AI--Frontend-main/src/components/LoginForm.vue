@@ -28,7 +28,6 @@
     </el-form-item>
     <el-form-item>
       <div class="form-footer">
-        <el-checkbox v-model="loginForm.rememberMe">记住我</el-checkbox>
         <div class="register-prompt">
           <span>没有账户？</span>
           <el-button type="text" @click="handleRegister">点击注册</el-button>
@@ -61,7 +60,6 @@ export default {
       loginForm: {
         identifier: '',
         password: '',
-        rememberMe: false,
       },
       loginRules: {
         identifier: [
@@ -160,7 +158,6 @@ export default {
     resetForm() {
       this.loginForm.identifier = '';
       this.loginForm.password = '';
-      this.loginForm.rememberMe = false;
     },
     navigateTo(route) {
       if (this.$route.name !== route) {

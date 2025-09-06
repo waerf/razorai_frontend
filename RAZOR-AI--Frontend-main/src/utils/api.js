@@ -193,6 +193,34 @@ export const deductUserPoints = (
     relatedId,
   });
 
+// ====================== 外部通知相关 API ======================
+// 发送外部通知（单个用户）
+export const sendExternalNotification = (payload) => {
+  // 确保payload使用大写首字母的字段名，符合后端模型要求
+  const formattedPayload = {
+    UserId: payload.UserId || payload.userId,
+    Message: payload.Message || payload.message,
+  };
+
+  // 如果提供了Email字段，则使用专门的接口发送到指定邮箱
+  if (payload.Email || payload.email) {
+    const email = payload.Email || payload.email;
+    return adminApi.post('/external-notifications/send-email', {
+      Email: email,
+      Message: formattedPayload.Message,
+    });
+  }
+
+  return adminApi.post('/external-notifications/create', formattedPayload);
+};
+
+//批量发送外部通知
+export const sendBulkExternalNotification = (payload) => {
+  // payload: { userIds, message }
+  return api.post('/external-notifications/create-bulk', payload);
+};
+// =============================================================
+
 // 管理员注册
 export const adminRegister = (payload) => {
   return adminApi.post('/api/admin/register', payload);
@@ -256,6 +284,27 @@ export const getPostReportDetail = (reportId) =>
 export const getPendingPostAudits = (params = {}) =>
   adminApi.get('/api/PostReport/pending-audits', { params });
 
+// ====================== 评论举报相关（管理员）API ======================
+
+// 管理员获取评论举报列表
+export const getCommentReportList = (params = {}) =>
+  adminApi.get('/api/CommentReport/list', { params });
+
+// 管理员审核评论举报
+export const reviewCommentReport = ({ reportId, status, reviewComment = '' }) =>
+  adminApi.post(`/api/CommentReport/review/${reportId}`, {
+    status,
+    reviewComment,
+  });
+
+// 管理员获取评论举报详情
+export const getCommentReportDetail = (reportId) =>
+  adminApi.get(`/api/CommentReport/${reportId}`);
+
+// 管理员获取待审核的评论列表（AUDIT表）
+export const getPendingCommentAudits = (params = {}) =>
+  adminApi.get('/api/CommentReport/pending-audits', { params });
+
 // 管理员审核接口
 // status: 1=通过, 2=拒绝
 export function reviewAdmin({ adminId, status, reviewComment = '' }) {
@@ -285,7 +334,7 @@ export const fetchAllFeedbacks = () => {
   });
 };
 
-// 获取最近用户反馈（仅取最近2条）
+// 获取最近用户反馈（仅取最近3条）
 export const fetchRecentFeedbacks = () => {
   return adminApi
     .get('/feedback/all', {
@@ -296,7 +345,7 @@ export const fetchRecentFeedbacks = () => {
       if (res && res.data && Array.isArray(res.data.feedbacks)) {
         return {
           ...res,
-          data: { ...res.data, feedbacks: res.data.feedbacks.slice(0, 2) },
+          data: { ...res.data, feedbacks: res.data.feedbacks.slice(0, 3) },
         };
       }
       return res;
@@ -383,7 +432,7 @@ export const createAgentPending = (payload) =>
 export const getChatTitle = (chatId) =>
   api.post(
     `/agent/user/chat/${chatId}/title`,
-    {}, // 请求体，如果没有数据就传空对象
+    {},
     {
       headers: { skipAuth: false },
       timeout: 20000, // 20秒
@@ -493,6 +542,11 @@ export const sendUserFeedback = (feedbackload) =>
 // 根据用户id获取对应通知
 export const getUserNotifications = (userId) =>
   api.get(`/notifications/unread/${userId}`);
+
+// 向用户发送审核结果通知
+export const sendReviewNotification = (payload) => {
+  return api.post('/notifications/create', payload);
+};
 
 // 根据通知id将通知标记为已读
 export const markNotificationAsRead = (notificationId) =>

@@ -36,7 +36,17 @@
     <!-- 按钮区域 -->
     <div class="action-buttons">
       <el-button @click="handleClose">取消</el-button>
-      <el-button type="primary" @click="handleConfirm">确认</el-button>
+      <el-button
+        type="primary"
+        :disabled="isDisabled"
+        :style="
+          isDisabled
+            ? { background: '#ccc', borderColor: '#ccc', color: '#fff' }
+            : {}
+        "
+        @click="handleConfirm"
+        >确认</el-button
+      >
     </div>
   </div>
 </template>
@@ -89,6 +99,7 @@ export default {
           },
         ],
       },
+      isDisabled: false,
     };
   },
   mounted() {
@@ -141,7 +152,8 @@ export default {
 
     // 确认订阅操作
     async handleConfirm() {
-      // 表单验证
+      if (this.isDisabled) return;
+      this.isDisabled = true;
       this.$refs.formRef.validate(async (valid) => {
         if (valid) {
           // 如果是自定义模式，需要额外验证自定义天数
@@ -149,10 +161,11 @@ export default {
             const customDays = Number(this.form.customDays);
             if (!this.form.customDays || isNaN(customDays) || customDays <= 0) {
               this.$message.error('请输入有效的自定义天数');
+              this.isDisabled = false;
               return;
             }
           }
-
+          this.$message.info('正在订阅中，请稍后');
           try {
             // 获取实际的订阅天数
             const actualDuration =
@@ -161,11 +174,14 @@ export default {
                 : this.form.duration;
             // 调用父组件的确认方法
             await this.onConfirm(actualDuration, this.form.points);
+            this.isDisabled = false;
             this.handleClose();
           } catch (error) {
-            console.error('订阅失败：', error);
+            this.isDisabled = false;
             this.$message.error('订阅失败，请稍后重试！');
           }
+        } else {
+          this.isDisabled = false;
         }
       });
     },

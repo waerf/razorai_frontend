@@ -104,6 +104,7 @@
 <script>
 import { fetchUserCreatedAgents } from '@/utils/api';
 import { createChat as apicreateChat } from '@/utils/api';
+import { fetchAllChats as apifetchAllChats } from '@/utils/api';
 export default {
   name: 'MyBotsPage',
   data() {
@@ -194,6 +195,11 @@ export default {
         const res = await apicreateChat(payload);
         const chatId = res.data.chat_id;
         console.log('创建的聊天ID:', chatId);
+
+        const result = await apifetchAllChats({ userId: userId });
+        this.$store.commit('chat/SET_CHATS', result.data || []);
+        console.log('输入的参数:', userId);
+        console.log('列表返回结果:', result);
 
         // 直接跳到真实的 chatId 页面
         this.$router.push({

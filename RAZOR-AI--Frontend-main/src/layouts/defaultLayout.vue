@@ -38,6 +38,7 @@
           title="向平台反馈"
         >
           <el-icon name="box"></el-icon>
+          向平台反馈
         </el-button>
 
         <!-- 用户信息 -->
@@ -148,12 +149,11 @@
           <el-icon name="loading" class="menu-item-icon"></el-icon>测试页面
         </div> -->
         <div class="chat-history">
-          <!-- 对话项：增加文字容器，让图标与文字紧密对齐 -->
           <div
             class="chat-item"
             v-for="chat in chatlists"
             :key="chat.id"
-            @click="navigateToChat(chat.id)"
+            @click="navigateToChat(chat)"
           >
             <el-icon name="chat-dot-square" class="chat-icon"></el-icon>
 
@@ -254,17 +254,6 @@
 
         <!-- 弹窗内容 -->
         <div class="feedback-content">
-          <!-- 当前路由显示 -->
-          <div class="route-info">
-            <label>当前页面：</label>
-            <el-input
-              v-model="currentRoute"
-              size="small"
-              disabled
-              class="route-input"
-            />
-          </div>
-
           <!-- 反馈内容输入 -->
           <div class="feedback-input-area">
             <label>反馈内容：</label>
@@ -476,13 +465,24 @@ export default {
         this.submittingFeedback = false;
       }
     },
-    // 跳转到聊天详情页
-    navigateToChat(chatId) {
-      // 如果当前页面的id和chatId相同，则不跳转
-      if (this.$route.params.id === chatId) {
+
+    navigateToChat(chat) {
+      if (!chat || !chat.id) {
+        this.$message.error('无效的对话数据');
         return;
       }
-      this.$router.push({ name: 'ChatRobot', params: { chatId } });
+
+      if (this.$route.params.chatId === String(chat.id)) {
+        return;
+      }
+
+      this.$router.push({
+        name: 'ChatRobot',
+        params: {
+          chatId: String(chat.id),
+          chatTitle: chat.title || '未命名对话',
+        },
+      });
     },
   },
 };
@@ -498,7 +498,7 @@ export default {
 
   .feedback-btn {
     color: #606266;
-    font-size: 18px;
+    font-size: 16px; // 调整为与用户信息字体大小一致
     padding: 8px;
     transition: color 0.3s ease;
 
@@ -586,25 +586,6 @@ export default {
     flex-direction: column;
     gap: 15px;
 
-    .route-info {
-      display: flex;
-      flex-direction: column;
-      gap: 5px;
-
-      label {
-        font-size: 14px;
-        color: #606266;
-        font-weight: 500;
-      }
-
-      .route-input {
-        .el-input__inner {
-          background-color: #f5f7fa;
-          border-color: #dcdfe6;
-        }
-      }
-    }
-
     .feedback-input-area {
       display: flex;
       flex-direction: column;
@@ -654,51 +635,53 @@ export default {
   }
 }
 
+/* 1. 容器强制靠上，消除顶部潜在间隙 */
 .chat-history {
-  padding: 4px 0;
+  display: flex;
+  flex-direction: column; /* 垂直堆叠 */
+  align-items: flex-start; /* 靠左对齐，不要拉伸 */
+  justify-content: flex-start; /* 所有项靠上排列 */
+  gap: 0; /* 消除项之间的默认间距 */
+  padding: 0;
   margin: 0;
-  list-style: none;
+  justify-content: flex-start !important; /* 强制靠上 */
+  align-items: flex-start !important; /* 不拉伸 */
 }
 
+/* 2. 极致压缩对话项的垂直占用空间 */
 .chat-item {
   display: flex;
-  align-items: flex-start;
-  gap: 6px;
-  padding: 5px 12px;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 8px; /* 进一步压缩上下内边距（从2px→1px） */
   margin: 0;
   cursor: pointer;
   transition: background-color 0.2s;
-}
-
-.chat-icon {
-  font-size: 14px;
-  color: #606266;
-  margin-top: 1px;
-}
-
-.chat-text-container {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  flex: 1;
-}
-
-.chat-name {
-  font-size: 13px;
-  font-weight: 500;
-  color: #303133;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  line-height: 1.3;
-}
-
-.chat-title {
+  width: 100%;
+  box-sizing: border-box;
   font-size: 12px;
-  color: #909399;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  line-height: 1.3;
+  /* 新增：限制最小高度，避免内容撑开过大 */
+  min-height: 24px; /* 根据文字大小设置最小高度（12px文字+1px上下内边距） */
+  line-height: 1; /* 完全贴合文字高度，消除行高冗余 */
+  flex: 0 0 auto; /* 不要拉伸，不要均分高度 */
+}
+
+/* 3. 文字内容进一步压缩垂直空间 */
+.chat-name,
+.chat-title {
+  /* 移除文字本身的行高冗余，用padding控制上下空间 */
+  line-height: 1;
+  padding: 0;
+  margin: 0;
+}
+
+/* 4. 若存在隐藏的空元素，强制不占用空间 */
+.chat-item:empty {
+  display: none;
+}
+
+.chat-history > .chat-item {
+  flex-shrink: 0; /* 禁止被压缩 */
+  flex-grow: 0; /* 禁止拉伸 */
 }
 </style>

@@ -37,7 +37,7 @@
     <el-form-item label="手机号" prop="Phone">
       <el-input
         v-model="registerForm.Phone"
-        placeholder="请输入手机号"
+        placeholder="请输入手机号（可选）"
         class="register-input"
       ></el-input>
     </el-form-item>
@@ -155,7 +155,6 @@ export default {
           { type: 'email', message: '请输入有效的邮箱地址', trigger: 'blur' },
         ],
         Phone: [
-          { required: true, message: '请输入手机号', trigger: 'blur' },
           {
             pattern: /^1[3-9]\d{9}$/,
             message: '请输入有效的手机号',
@@ -181,7 +180,7 @@ export default {
           UserName: this.registerForm.UserName,
           Password: this.registerForm.Password,
           Email: this.registerForm.Email,
-          Phone: this.registerForm.Phone,
+          Phone: this.registerForm.Phone || 'N/A', // 如果手机号为空，发送默认值
           Gender:
             this.registerForm.Gender !== null ? this.registerForm.Gender : '',
           Age: this.registerForm.Age || 0,
@@ -253,18 +252,39 @@ export default {
         });
 
         let errorMessage = '注册失败，请重试';
+        let duration = 3000; // 默认显示时间
 
         if (error.response) {
           console.error('HTTP错误响应:', error.response.data);
-          errorMessage =
-            error.response.data.message ||
-            error.response.data.error ||
-            errorMessage;
+          const responseData = error.response.data;
+
+          const errorMsg = responseData.message || responseData.error;
+
+          if (errorMsg.includes('邮箱已注册')) {
+            errorMessage = '该邮箱已被注册，请您使用其他邮箱注册';
+            duration = 6000; // 显示更长时间
+          } else if (errorMsg.includes('用户名已存在')) {
+            errorMessage = '该用户名已被使用，请更换其他用户名';
+          } else if (
+            errorMsg.includes('手机号已存在') ||
+            errorMsg.includes('手机号已注册')
+          ) {
+            errorMessage = '该手机号已被注册，请使用其他手机号注册';
+            duration = 6000; // 显示更长时间
+          } else {
+            errorMessage = errorMsg || errorMessage;
+          }
         } else if (error.message) {
           errorMessage = error.message;
         }
 
-        this.$message.error(errorMessage);
+        this.$message({
+          message: errorMessage,
+          type: 'warning',
+          duration: duration,
+          showClose: true,
+          dangerouslyUseHTMLString: false,
+        });
       }
     },
 
