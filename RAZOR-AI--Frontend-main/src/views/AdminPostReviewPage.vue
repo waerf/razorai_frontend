@@ -45,7 +45,7 @@
           label="作者"
           min-width="100"
         ></el-table-column>
-        <el-table-column label="提交时间" min-width="140">
+        <el-table-column label="举报时间" min-width="140">
           <template #default="scope">
             {{ formatTime(scope.row.time) }}
           </template>
