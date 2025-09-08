@@ -25,7 +25,9 @@
               {{ robot.name || '未命名机器人' }}
             </div>
             <div class="robot-type">
-              <span class="robot-type-badge">{{ robot.type }}</span>
+              <span class="robot-type-badge">{{
+                getTypeDisplayName(robot.type)
+              }}</span>
             </div>
           </div>
         </div>
@@ -117,6 +119,19 @@ export default {
   },
   methods: {
     getPendingAgentDetail,
+    // 获取type的中文显示名称
+    getTypeDisplayName(type) {
+      switch (parseInt(type)) {
+        case 1:
+          return '文本机器人';
+        case 2:
+          return '图像机器人';
+        case 3:
+          return '音视频机器人';
+        default:
+          return '未知类型';
+      }
+    },
     async fetchRobotDetail() {
       this.loading = true;
       // 正确获取 auditId，路由为 /admin/robots/:id
@@ -162,14 +177,23 @@ export default {
       // 先调用后端审核通过接口
       const token = MyStorage.get('admin_token');
       try {
-        // 字段映射
+        // 字段映射：1为文本机器人，2为图像机器人，3为音视频机器人
         let type = 1;
         if (typeof this.robot.type === 'number') {
           type = this.robot.type;
         } else if (typeof this.robot.type === 'string') {
-          if (this.robot.type.includes('任务')) type = 2;
-          else if (this.robot.type.includes('分析')) type = 3;
-          else type = 1;
+          if (
+            this.robot.type.includes('图像') ||
+            this.robot.type.includes('图片')
+          )
+            type = 2;
+          else if (
+            this.robot.type.includes('音视频') ||
+            this.robot.type.includes('视频') ||
+            this.robot.type.includes('音频')
+          )
+            type = 3;
+          else type = 1; // 默认为文本机器人
         }
         let llmId = 1;
         let creatorId = this.robot.creatorId;
@@ -230,14 +254,23 @@ export default {
         return;
       }
       const token = MyStorage.get('admin_token');
-      // 字段映射，和通过审核时保持一致
+      // 字段映射：1为文本机器人，2为图像机器人，3为音视频机器人
       let type = 1;
       if (typeof this.robot.type === 'number') {
         type = this.robot.type;
       } else if (typeof this.robot.type === 'string') {
-        if (this.robot.type.includes('任务')) type = 2;
-        else if (this.robot.type.includes('分析')) type = 3;
-        else type = 1;
+        if (
+          this.robot.type.includes('图像') ||
+          this.robot.type.includes('图片')
+        )
+          type = 2;
+        else if (
+          this.robot.type.includes('音视频') ||
+          this.robot.type.includes('视频') ||
+          this.robot.type.includes('音频')
+        )
+          type = 3;
+        else type = 1; // 默认为文本机器人
       }
       let llmId = this.robot.llmId || 1;
       let creatorId = this.robot.creatorId;
