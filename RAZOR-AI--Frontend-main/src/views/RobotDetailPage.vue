@@ -34,7 +34,7 @@
         <div class="robot-info-section">
           <div class="robot-info-header">
             <img
-              :src="getRobotImage(robot.type)"
+              :src="getRobotImage(robot.robotImage)"
               alt="Robot Icon"
               class="robot-detail-logo"
             />
@@ -265,7 +265,7 @@
             >
               <div class="recommendation-card-header">
                 <img
-                  :src="getRobotImage(recRobot.type)"
+                  :src="getRobotImage(recRobot.robotImage)"
                   alt="robot"
                   class="recommendation-card-logo"
                 />
@@ -579,17 +579,13 @@ export default {
         this.$emit('close');
       }
     },
-    getRobotImage(type) {
-      switch (type) {
-        case 1:
-          return require('@/assets/images/Agents/textAgent.png');
-        case 2:
-          return require('@/assets/images/Agents/imageAgent.png');
-        case 3:
-          return require('@/assets/images/Agents/videoAgent.png');
-        default:
-          return require('@/assets/images/Agents/baseAgent.png');
+    getRobotImage(robotImageUrl) {
+      // 优先使用后端返回的图片URL
+      if (robotImageUrl && robotImageUrl.trim()) {
+        return robotImageUrl;
       }
+      // 如果没有图片URL，返回默认图片
+      return require('@/assets/images/Agents/baseAgent.png');
     },
     truncate(text, length = 50) {
       if (!text) return '';
@@ -839,6 +835,11 @@ export default {
         // 确保机器人对象有price属性，当price为undefined或null时默认为1，但保留0值
         if (this.robot.price === undefined || this.robot.price === null) {
           this.robot.price = 1;
+        }
+        // 为机器人添加robotImage属性（预留对接）
+        if (!this.robot.robotImage) {
+          this.robot.robotImage =
+            'https://origin.picgo.net/2025/09/08/paperRobot7d4d306fce039302.png';
         }
       } catch (error) {
         console.error('获取机器人详情失败:', error);
@@ -1135,7 +1136,7 @@ export default {
     font-size: 1.5rem;
     cursor: pointer;
     padding: 0.5vh 1vw;
-    border-radius: 50%;
+    border-radius: 12px;
     transition: background-color 0.3s ease;
     display: flex;
     align-items: center;
@@ -1158,7 +1159,7 @@ export default {
     background: white;
     padding: 3vh 3vw;
     margin-bottom: 2vh;
-    border-radius: 8px;
+    border-radius: 12px;
     box-shadow: $box-shadow-light;
 
     .robot-info-header {
@@ -1169,7 +1170,7 @@ export default {
       .robot-detail-logo {
         width: 8vh;
         height: 8vh;
-        border-radius: 50%;
+        border-radius: 12px;
         object-fit: cover;
         background: #f0f0f0;
       }
@@ -1233,7 +1234,7 @@ export default {
 
           .action-btn {
             padding: 1.5vh 2.5vw;
-            border-radius: 6px;
+            border-radius: 12px;
             font-weight: 500;
             cursor: pointer;
             transition: all 0.3s ease;
@@ -1303,7 +1304,7 @@ export default {
   .comments-section {
     background: white;
     padding: 3vh 3vw;
-    border-radius: 8px;
+    border-radius: 12px;
     box-shadow: $box-shadow-light;
 
     .comments-header {
@@ -1323,14 +1324,14 @@ export default {
         color: white;
         border: none;
         padding: 1vh 1.5vw;
-        border-radius: 4px;
+        border-radius: 12px;
         cursor: pointer;
       }
     }
 
     .add-comment-form {
       border: 1px solid $border-color;
-      border-radius: 8px;
+      border-radius: 12px;
       padding: 2vh 2vw;
       margin-bottom: 2vh;
       background: #f8f9fa;
@@ -1367,7 +1368,7 @@ export default {
           width: 100%;
           padding: 1vh 1vw;
           border: 1px solid $border-color;
-          border-radius: 4px;
+          border-radius: 12px;
           font-size: 0.9rem;
           resize: vertical;
           min-height: 8vh;
@@ -1381,7 +1382,7 @@ export default {
 
         .el-button {
           padding: 1vh 1.5vw;
-          border-radius: 4px;
+          border-radius: 12px;
           font-size: 0.9rem;
         }
       }
@@ -1421,7 +1422,7 @@ export default {
               color: #999;
               cursor: pointer;
               padding: 0.5vh;
-              border-radius: 50%;
+              border-radius: 12px;
               width: 3vh;
               height: 3vh;
               display: flex;
@@ -1520,7 +1521,7 @@ export default {
         transition: all 0.3s ease;
         border: 1px solid $border-color;
         padding: 1.5vh 1.5vw;
-        border-radius: 8px;
+        border-radius: 12px;
 
         &:hover {
           transform: translateY(-2px);
@@ -1536,7 +1537,7 @@ export default {
           .recommendation-card-logo {
             width: 4vh;
             height: 4vh;
-            border-radius: 50%;
+            border-radius: 12px;
             object-fit: cover;
           }
 
@@ -1597,7 +1598,7 @@ export default {
             color: white;
             border: none;
             padding: 0.5vh 1vw;
-            border-radius: 4px;
+            border-radius: 12px;
             font-size: 0.8rem;
             cursor: pointer;
             transition: all 0.3s ease;

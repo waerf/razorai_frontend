@@ -35,7 +35,7 @@
       text-align: center;
       cursor: pointer;
       transition: all 0.3s ease;
-      border-radius: 0.5vh;
+      border-radius: 12px;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
@@ -89,9 +89,9 @@
       display: flex;
       align-items: center;
       gap: 0.8vw;
-      color: vars.$text-color;
+      color: #606266;
       cursor: pointer;
-      font-size: 2.25vh;
+      font-size: 1vh;
       white-space: nowrap;
    }
    /* Logo 和名称区域 */
@@ -190,7 +190,7 @@
          font-size: 1.8vh;
          margin-bottom: 0.8vh;
          background-color: vars.$background-color;
-         border-radius: 1vh;
+         border-radius: 12px;
          box-shadow: 0 0.1vh 0.4vh rgba(0, 0, 0, 0.1);
          color: vars.$text-color;
          cursor: pointer;
@@ -242,6 +242,8 @@
       }
 
       &.active {
+         font-weight: bold;
+         font-size: 2.25vh;
          background-color: vars.$selected-background-color;
          color: vars.$selected-text-color;
          border-left: 0.4vh solid vars.$accent-color;
@@ -344,8 +346,8 @@
       }
       
       .header-name-empty {
-         width: 4vw;
-         padding: 2vh 1vw;
+         width: 2vw;
+         padding: 2vh 0vw;
       }
       
       .logo-button-container {
@@ -358,8 +360,7 @@
       }
       
       .user-info {
-         font-size: 2vh;
-         min-width: 6vw;
+         font-size: 1vh;
       }
    }
 }
@@ -392,8 +393,7 @@
       }
       
       .user-info {
-         font-size: 1.8vh;
-         min-width: 5vw;
+         font-size: 1vh;
       }
    }
 }
