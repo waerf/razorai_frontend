@@ -1,10 +1,7 @@
 <template>
   <div class="admin-home">
     <!-- 侧边导航栏 -->
-    <aside class="sidebar">
-      <button class="toggle-sidebar-btn" @click="toggleSidebar">
-        <i class="el-icon-s-fold"></i>
-      </button>
+    <aside class="sidebar" :class="{ hidden: isSidebarCollapsed }">
       <div class="user-info">
         <div class="avatar">{{ adminName ? adminName.charAt(0) : '管' }}</div>
         <div>
@@ -39,6 +36,9 @@
     <main class="main-content">
       <!-- 顶部导航栏 -->
       <header class="header">
+        <button class="toggle-sidebar-btn" @click="toggleSidebar">
+          <i class="el-icon-s-fold"></i>
+        </button>
         <h1 class="title">用户反馈详情</h1>
         <div style="display: flex; align-items: center; margin-left: auto">
           <el-button
@@ -75,7 +75,7 @@
                 autocomplete="off"
               />
             </el-form-item>
-            <el-form-item label="确认新密码" prop="confirmPwd">
+            <el-form-item label="确认密码" prop="confirmPwd">
               <el-input
                 v-model="pwdForm.confirmPwd"
                 type="password"
@@ -93,6 +93,14 @@
       </header>
       <!-- 主要内容 -->
       <div class="content">
+        <el-button
+          type="default"
+          icon="el-icon-arrow-left"
+          style="margin-bottom: 16px"
+          @click="$router.push('/admin/feedback')"
+        >
+          返回列表
+        </el-button>
         <el-card class="feedback-detail-card" shadow="hover">
           <div v-if="loading" class="feedback-loading">
             <div class="skeleton skeleton-title"></div>
@@ -173,7 +181,8 @@ export default {
       feedbackDetail: null,
       loading: true,
       errorMsg: '',
-      isSidebarCollapsed: false,
+      isSidebarCollapsed:
+        localStorage.getItem('admin_sidebar_collapsed') === 'true',
       showChangePwd: false,
       adminName: '',
       pwdForm: {
@@ -231,8 +240,7 @@ export default {
     },
     toggleSidebar() {
       this.isSidebarCollapsed = !this.isSidebarCollapsed;
-      const sidebar = document.querySelector('.sidebar');
-      sidebar.classList.toggle('hidden');
+      localStorage.setItem('admin_sidebar_collapsed', this.isSidebarCollapsed);
     },
     logout() {
       this.$confirm('确定要退出登录吗？', '提示', {
@@ -248,12 +256,17 @@ export default {
               if (window.localStorage) {
                 localStorage.removeItem('admin_token');
               }
-              this.$router.push('/');
             } else {
-              this.$message.error(res.data.message || '登出失败');
+              if (window.localStorage) {
+                localStorage.removeItem('admin_token');
+              }
             }
           } catch (err) {
-            this.$message.error(err.message || '登出失败，请重试');
+            if (window.localStorage) {
+              localStorage.removeItem('admin_token');
+            }
+          } finally {
+            this.$router.push('/');
           }
         })
         .catch(() => {
@@ -355,164 +368,7 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-.admin-home {
-  display: flex;
-  min-height: 100vh;
-  background-color: #f5f5f5;
-
-  .sidebar {
-    position: relative;
-    transition: all 0.3s ease;
-
-    .toggle-sidebar-btn {
-      position: absolute;
-      top: 10px;
-      right: 10px;
-      cursor: pointer;
-      font-size: 16px;
-      background: none;
-      border: none;
-      color: #606266;
-      padding: 5px;
-
-      &:hover {
-        background-color: rgba(0, 0, 0, 0.05);
-        border-radius: 4px;
-      }
-    }
-
-    &.hidden {
-      width: 60px !important;
-
-      .nav-item {
-        span {
-          display: none;
-        }
-
-        i {
-          margin-right: 0;
-        }
-      }
-
-      .user-info {
-        flex-direction: column;
-        align-items: center;
-        padding: 10px;
-
-        .avatar {
-          margin-right: 0;
-          margin-bottom: 5px;
-        }
-
-        .username,
-        .role {
-          display: none;
-        }
-      }
-    }
-    width: 250px;
-    background-color: white;
-    border-right: 1px solid #e6e6e6;
-    padding: 20px 0;
-
-    .user-info {
-      display: flex;
-      align-items: center;
-      padding: 0 20px 20px;
-      border-bottom: 1px solid #e6e6e6;
-
-      .avatar {
-        width: 40px;
-        height: 40px;
-        border-radius: 50%;
-        background-color: #165dff;
-        color: white;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin-right: 12px;
-        font-weight: bold;
-      }
-
-      .username {
-        font-weight: 500;
-        margin-bottom: 4px;
-      }
-
-      .role {
-        font-size: 12px;
-        color: #999;
-      }
-    }
-
-    .nav-menu {
-      padding: 10px 0;
-
-      .nav-item {
-        display: flex;
-        align-items: center;
-        padding: 12px 20px;
-        margin: 4px 0;
-        cursor: pointer;
-        transition: all 0.3s;
-
-        i {
-          margin-right: 12px;
-          font-size: 18px;
-        }
-
-        &:hover {
-          background-color: #f6f6f6;
-        }
-
-        &.active {
-          background-color: #e8f3ff;
-          color: #165dff;
-          border-left: 3px solid #165dff;
-        }
-      }
-    }
-  }
-
-  .main-content {
-    flex: 1;
-    overflow: auto;
-
-    .header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 16px 24px;
-      background-color: white;
-      border-bottom: 1px solid #e6e6e6;
-      position: sticky;
-      top: 0;
-      z-index: 10;
-
-      .title {
-        font-size: 20px;
-        font-weight: 600;
-      }
-    }
-
-    .content {
-      padding: 24px;
-
-      .feedback-detail-card {
-        max-width: 600px;
-        margin: 40px auto;
-      }
-
-      .card-hover {
-        transition: all 0.3s ease;
-      }
-      .card-hover:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
-      }
-    }
-  }
-}
+@import '@/assets/styles/admin-home.scss';
 
 .feedback-header {
   display: flex;

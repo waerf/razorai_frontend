@@ -6,6 +6,8 @@ import store from './store';
 import ElementUI from 'element-ui';
 import 'element-ui/lib/theme-chalk/index.css';
 import axios from 'axios';
+import mavonEditor from 'mavon-editor';
+import 'mavon-editor/dist/css/index.css';
 
 // 引入全局样式
 /*
@@ -20,7 +22,7 @@ import '@/assets/styles/global.scss';
 Vue.config.productionTip = false;
 Vue.use(ElementUI);
 Vue.prototype.$axios = axios;
-
+Vue.use(mavonEditor);
 // 监听token过期事件
 window.addEventListener('tokenExpired', () => {
   // 触发Vuex的自动登出

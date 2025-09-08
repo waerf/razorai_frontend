@@ -1,10 +1,7 @@
 <template>
   <div class="admin-home">
     <!-- 侧边导航栏 -->
-    <aside class="sidebar">
-      <button class="toggle-sidebar-btn" @click="toggleSidebar">
-        <i class="el-icon-s-fold"></i>
-      </button>
+    <aside class="sidebar" :class="{ hidden: isSidebarCollapsed }">
       <div class="user-info">
         <div class="avatar">{{ adminName ? adminName.charAt(0) : '管' }}</div>
         <div>
@@ -41,6 +38,9 @@
     <main class="main-content">
       <!-- 顶部导航栏 -->
       <header class="header">
+        <button class="toggle-sidebar-btn" @click="toggleSidebar">
+          <i class="el-icon-s-fold"></i>
+        </button>
         <h1 class="title">用户反馈管理</h1>
         <div style="display: flex; align-items: center; margin-left: auto">
           <el-button
@@ -77,7 +77,7 @@
                 autocomplete="off"
               />
             </el-form-item>
-            <el-form-item label="确认新密码" prop="confirmPwd">
+            <el-form-item label="确认密码" prop="confirmPwd">
               <el-input
                 v-model="pwdForm.confirmPwd"
                 type="password"
@@ -96,40 +96,68 @@
 
       <!-- 主要内容 -->
       <div class="content">
+        <!-- 搜索和筛选 -->
+        <el-card class="search-card" shadow="hover">
+          <div class="search-container">
+            <el-input
+              placeholder="搜索用户名或反馈内容..."
+              prefix-icon="el-icon-search"
+              v-model="searchQuery"
+              class="search-input"
+            ></el-input>
+          </div>
+        </el-card>
+
+        <!-- 反馈列表 -->
         <el-card class="post-list-card" shadow="hover">
           <div class="card-header">
-            <h2 class="card-title">用户反馈列表</h2>
-            <span class="text-sm text-gray-500"
-              >共 {{ feedbackList.length }} 条反馈</span
-            >
-          </div>
-          <div class="p-6">
-            <div class="space-y-4">
-              <div
-                v-for="(feedback, index) in feedbackList"
-                :key="index"
-                class="p-4 border border-gray-100 rounded-lg card-hover cursor-pointer"
-                @click="
-                  $router.push(
-                    `/admin/feedback/${feedback.userId}/${feedback.id}`
-                  )
-                "
+            <h2 class="card-title">待处理用户反馈列表</h2>
+            <div class="action-buttons">
+              <span class="record-count"
+                >共 {{ feedbackList.length }} 条记录</span
               >
-                <div class="flex items-center justify-between mb-2">
-                  <p class="font-medium">{{ feedback.name }}</p>
-                  <p class="text-sm text-gray-500">{{ feedback.createdAt }}</p>
-                </div>
-                <span
-                  class="feedback-state"
-                  :class="{ processed: feedback.status === 'resolved' }"
-                >
-                  {{ feedback.status === 'pending' ? '待处理' : '已解决' }}
-                </span>
-                <p class="text-gray-600 text-sm mt-2">
-                  {{ feedback.content }}
-                </p>
-              </div>
+              <el-select v-model="pageSize" class="page-size-select">
+                <el-option label="10 条/页" value="10"></el-option>
+                <el-option label="20 条/页" value="20"></el-option>
+                <el-option label="50 条/页" value="50"></el-option>
+              </el-select>
             </div>
+          </div>
+
+          <el-table
+            :data="filteredFeedbacks"
+            style="width: 100%"
+            @row-click="viewFeedback"
+          >
+            <el-table-column
+              prop="name"
+              label="用户名"
+              min-width="120"
+            ></el-table-column>
+            <el-table-column label="反馈内容" min-width="300">
+              <template #default="scope">
+                <p>{{ scope.row.content | truncateText(100) }}</p>
+              </template>
+            </el-table-column>
+            <el-table-column label="提交时间" min-width="140">
+              <template #default="scope">
+                {{ formatTime(scope.row.createdAt) }}
+              </template>
+            </el-table-column>
+          </el-table>
+
+          <!-- 分页 -->
+          <div class="pagination-container">
+            <span class="pagination-info">
+              显示 {{ currentPageStart }} 到 {{ currentPageEnd }} 条，共
+              {{ feedbackList.length }} 条
+            </span>
+            <el-pagination
+              layout="prev, pager, next"
+              :total="feedbackList.length"
+              :page-size="pageSize"
+              @current-change="handleCurrentChange"
+            ></el-pagination>
           </div>
         </el-card>
       </div>
@@ -146,11 +174,22 @@ import {
 } from '@/utils/api';
 export default {
   name: 'AdminFeedbackPage',
+  filters: {
+    truncateText(text, length) {
+      if (!text) return '';
+      if (text.length <= length) return text;
+      return text.substring(0, length) + '...';
+    },
+  },
   data() {
     return {
-      isSidebarCollapsed: false,
+      isSidebarCollapsed:
+        localStorage.getItem('admin_sidebar_collapsed') === 'true',
       showChangePwd: false,
       adminName: '',
+      searchQuery: '',
+      pageSize: 10,
+      currentPage: 1,
       pwdForm: {
         oldPwd: '',
         newPwd: '',
@@ -182,14 +221,16 @@ export default {
           const res = await fetchAllFeedbacks();
           // 适配后端返回 { message, feedbacks: [...] }
           if (res.data && Array.isArray(res.data.feedbacks)) {
-            this.feedbackList = res.data.feedbacks.map((f) => ({
-              id: f.id,
-              name: f.userName || '未知用户',
-              createdAt: f.time,
-              content: f.feedback,
-              status: f.state === 0 ? 'pending' : 'resolved',
-              userId: f.userId,
-            }));
+            this.feedbackList = res.data.feedbacks
+              .filter((f) => f.state === 0) // 只保留未解决的反馈
+              .map((f) => ({
+                id: f.id,
+                name: f.userName || '未知用户',
+                createdAt: f.time,
+                content: f.feedback,
+                status: 'pending', // 只有待处理的状态
+                userId: f.userId,
+              }));
           } else {
             this.$message.error('获取反馈数据失败');
           }
@@ -199,7 +240,40 @@ export default {
       },
     };
   },
+  computed: {
+    filteredFeedbacks() {
+      let filtered = this.feedbackList;
+
+      // 应用搜索过滤
+      if (this.searchQuery) {
+        const query = this.searchQuery.toLowerCase();
+        filtered = filtered.filter(
+          (feedback) =>
+            feedback.name.toLowerCase().includes(query) ||
+            feedback.content.toLowerCase().includes(query)
+        );
+      }
+
+      // 应用分页
+      const start = (this.currentPage - 1) * this.pageSize;
+      const end = start + parseInt(this.pageSize);
+
+      return filtered.slice(start, end);
+    },
+    currentPageStart() {
+      return (this.currentPage - 1) * this.pageSize + 1;
+    },
+    currentPageEnd() {
+      const end = this.currentPage * this.pageSize;
+      return Math.min(end, this.feedbackList.length);
+    },
+  },
   methods: {
+    formatTime(time) {
+      if (!time) return '';
+      const d = new Date(time);
+      return d.toLocaleString();
+    },
     async fetchAdminInfo() {
       try {
         const res = await getAdminInfo();
@@ -214,8 +288,13 @@ export default {
     },
     toggleSidebar() {
       this.isSidebarCollapsed = !this.isSidebarCollapsed;
-      const sidebar = document.querySelector('.sidebar');
-      sidebar.classList.toggle('hidden');
+      localStorage.setItem('admin_sidebar_collapsed', this.isSidebarCollapsed);
+    },
+    handleCurrentChange(page) {
+      this.currentPage = page;
+    },
+    viewFeedback(feedback) {
+      this.$router.push(`/admin/feedback/${feedback.userId}/${feedback.id}`);
     },
     logout() {
       this.$confirm('确定要退出登录吗？', '提示', {
@@ -231,12 +310,17 @@ export default {
               if (window.localStorage) {
                 localStorage.removeItem('admin_token');
               }
-              this.$router.push('/');
             } else {
-              this.$message.error(res.data.message || '登出失败');
+              if (window.localStorage) {
+                localStorage.removeItem('admin_token');
+              }
             }
           } catch (err) {
-            this.$message.error(err.message || '登出失败，请重试');
+            if (window.localStorage) {
+              localStorage.removeItem('admin_token');
+            }
+          } finally {
+            this.$router.push('/');
           }
         })
         .catch(() => {
@@ -287,173 +371,66 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-.admin-home {
-  display: flex;
-  min-height: 100vh;
-  background-color: #f5f5f5;
+@import '@/assets/styles/admin-home.scss';
 
-  .sidebar {
-    position: relative;
-    transition: all 0.3s ease;
+.content {
+  padding: 24px;
 
-    .toggle-sidebar-btn {
-      position: absolute;
-      top: 10px;
-      right: 10px;
-      cursor: pointer;
-      font-size: 16px;
-      background: none;
-      border: none;
-      color: #606266;
-      padding: 5px;
+  .search-card {
+    margin-bottom: 24px;
 
-      &:hover {
-        background-color: rgba(0, 0, 0, 0.05);
-        border-radius: 4px;
-      }
-    }
-
-    &.hidden {
-      width: 60px !important;
-
-      .nav-item {
-        span {
-          display: none;
-        }
-
-        i {
-          margin-right: 0;
-        }
-      }
-
-      .user-info {
-        flex-direction: column;
-        align-items: center;
-        padding: 10px;
-
-        .avatar {
-          margin-right: 0;
-          margin-bottom: 5px;
-        }
-
-        .username,
-        .role {
-          display: none;
-        }
-      }
-    }
-    width: 250px;
-    background-color: white;
-    border-right: 1px solid #e6e6e6;
-    padding: 20px 0;
-
-    .user-info {
+    .search-container {
       display: flex;
       align-items: center;
-      padding: 0 20px 20px;
-      border-bottom: 1px solid #e6e6e6;
+      justify-content: space-between;
 
-      .avatar {
-        width: 40px;
-        height: 40px;
-        border-radius: 50%;
-        background-color: #165dff;
-        color: white;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin-right: 12px;
-        font-weight: bold;
-      }
-
-      .username {
-        font-weight: 500;
-        margin-bottom: 4px;
-      }
-
-      .role {
-        font-size: 12px;
-        color: #999;
-      }
-    }
-
-    .nav-menu {
-      padding: 10px 0;
-
-      .nav-item {
-        display: flex;
-        align-items: center;
-        padding: 12px 20px;
-        margin: 4px 0;
-        cursor: pointer;
-        transition: all 0.3s;
-
-        i {
-          margin-right: 12px;
-          font-size: 18px;
-        }
-
-        &:hover {
-          background-color: #f6f6f6;
-        }
-
-        &.active {
-          background-color: #e8f3ff;
-          color: #165dff;
-          border-left: 3px solid #165dff;
-        }
+      .search-input {
+        width: 400px;
       }
     }
   }
 
-  .main-content {
-    flex: 1;
-    overflow: auto;
-
-    .header {
+  .post-list-card {
+    .card-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 16px 24px;
-      background-color: white;
-      border-bottom: 1px solid #e6e6e6;
-      position: sticky;
-      top: 0;
-      z-index: 10;
+      margin-bottom: 16px;
 
-      .title {
-        font-size: 20px;
+      .card-title {
+        font-size: 18px;
         font-weight: 600;
+      }
+
+      .action-buttons {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+        .record-count {
+          font-size: 14px;
+          color: #666;
+          margin: 0 8px 0 0;
+        }
+        .page-size-select {
+          width: 110px;
+        }
       }
     }
 
-    .content {
-      padding: 24px;
+    .pagination-container {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 24px;
+      padding-top: 24px;
+      border-top: 1px solid #e6e6e6;
 
-      .card-hover {
-        transition: all 0.3s ease;
-      }
-      .card-hover:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+      .pagination-info {
+        font-size: 14px;
+        color: #666;
       }
     }
   }
-}
-// 复用详情页的状态样式
-.feedback-state {
-  display: inline-block;
-  padding: 2px 10px;
-  border-radius: 12px;
-  font-size: 13px;
-  background: #f0f0f0;
-  color: #888;
-  margin-bottom: 8px;
-  border: 1px solid #e0e0e0;
-}
-.feedback-state.processed {
-  background: #e6f7e6;
-  color: #52c41a;
-  border: 1px solid #b7eb8f;
 }
 </style>

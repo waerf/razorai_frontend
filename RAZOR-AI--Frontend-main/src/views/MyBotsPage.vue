@@ -21,55 +21,78 @@
         </button>
       </div>
 
-      <!-- 机器人列表区域 -->
-      <div class="form-card">
-        <div class="flex items-center mb-6">
-          <h2 class="text-xl font-bold mr-auto">机器人列表</h2>
+      <!-- 加载中状态 -->
+      <div
+        v-if="loading"
+        class="flex justify-center items-center fixed inset-0 bg-white bg-opacity-70 z-50"
+      >
+        <div class="flex flex-col items-center">
+          <i class="fa fa-spinner fa-spin text-3xl text-gray-600 mb-4"></i>
+          <span class="text-gray-600 text-lg">正在加载，请稍候...</span>
         </div>
+      </div>
 
-        <div class="bots-grid">
-          <!-- 机器人卡片 -->
-          <div v-for="bot in bots" :key="bot.id" class="bot-card card-hover">
-            <div class="p-5">
-              <div class="flex justify-between items-start mb-4">
-                <div>
-                  <h2 class="text-lg font-semibold">{{ bot.name }}</h2>
-                  <p class="text-sm text-gray-500 mt-1">
-                    {{ bot.description }}
-                  </p>
-                </div>
-                <span class="status-active"> 活跃 </span>
-              </div>
+      <!-- 空数据状态 -->
+      <div
+        v-else-if="!activeBots.length"
+        class="text-center py-20 text-gray-500"
+      >
+        <i class="fa fa-robot text-3xl mb-2"></i>
+        <p>您还没有创建任何机器人</p>
+      </div>
 
-              <div class="flex items-center text-sm text-gray-600 mb-4">
-                <div class="flex items-center mr-4">
-                  <i class="fa fa-code-fork mr-1"></i>
-                  <span>当前版本：{{ bot.version }}</span>
-                </div>
-                <div class="flex items-center">
-                  <i class="fa fa-comments-o mr-1"></i>
-                  <span>{{ bot.conversations }} 次对话</span>
-                </div>
-              </div>
+      <!-- 机器人列表区域 -->
+      <div v-else class="bots-grid">
+        <!-- 机器人卡片 -->
+        <div
+          v-for="bot in activeBots"
+          :key="bot.id"
+          class="bot-card card-hover"
+        >
+          <div class="p-5">
+            <!-- 名字 & 描述 -->
+            <div class="mb-4">
+              <h2 class="text-lg font-semibold">{{ bot.name }}</h2>
+              <p class="text-sm text-gray-500 mt-1">{{ bot.description }}</p>
+            </div>
 
-              <div class="border-t border-gray-100 pt-4 flex justify-between">
-                <a
-                  href="#"
-                  class="text-razor-blue hover:text-razor-darkBlue font-medium flex items-center transition-all hover:pl-1"
-                  @click.prevent="$router.push('/ChatRobot')"
-                >
-                  <i class="fa fa-comments-o mr-1"></i>
-                  开始对话
-                </a>
-                <a
-                  href="#"
-                  class="text-gray-600 hover:text-gray-800 font-medium flex items-center transition-all hover:pr-1"
-                  @click.prevent="$router.push('/bot-detail')"
-                >
-                  <i class="fa fa-cog mr-1"></i>
-                  编辑设置
-                </a>
+            <!-- 价格 & 活跃状态 -->
+            <div
+              class="flex justify-between items-center text-sm text-gray-600 mb-4"
+            >
+              <div>
+                <i class="fa fa-yen mr-1"></i>
+                <span>价格：{{ bot.price }}</span>
               </div>
+              <span class="status-active text-green-600">活跃</span>
+            </div>
+
+            <!-- 按钮 -->
+            <div class="border-t border-gray-100 pt-4 flex justify-between">
+              <a
+                href="#"
+                class="text-razor-blue hover:text-razor-darkBlue font-medium flex items-center transition-all hover:pl-1"
+                @click.prevent="startConversation(bot)"
+              >
+                <i class="fa fa-comments-o mr-1"></i>
+                开始对话
+              </a>
+              <a
+                href="#"
+                class="text-gray-600 hover:text-gray-800 font-medium flex items-center transition-all hover:pr-1"
+                @click.prevent="$router.push(`/BotsEditversion/${bot.id}`)"
+              >
+                <i class="fa fa-cog mr-1"></i>
+                编辑当前版本
+              </a>
+              <a
+                href="#"
+                class="text-gray-600 hover:text-gray-800 font-medium flex items-center transition-all hover:pr-1"
+                @click.prevent="$router.push(`/BotsHistoryVersions/${bot.id}`)"
+              >
+                <i class="fa fa-cog mr-1"></i>
+                查看历史版本
+              </a>
             </div>
           </div>
         </div>
@@ -79,30 +102,121 @@
 </template>
 
 <script>
+import { fetchUserCreatedAgents } from '@/utils/api';
+import { createChat as apicreateChat } from '@/utils/api';
+import { fetchAllChats as apifetchAllChats } from '@/utils/api';
 export default {
   name: 'MyBotsPage',
   data() {
     return {
-      // 机器人数据
       bots: [
         {
-          id: 1,
-          name: '小助手Bot',
-          description: '知识问答 · 创意生成',
-          status: 'active',
-          version: 'v1.2',
-          conversations: 328,
-        },
-        {
-          id: 2,
-          name: '客服机器人',
-          description: '自动回复 · 问题分类',
-          status: 'active',
-          version: 'v1.0',
-          conversations: 156,
+          id: null,
+          name: '',
+          description: '',
+          type: null,
+          price: null,
+          llmId: null,
+          chatPrompt: '',
+          creatorId: null,
+          subscriptionCnt: null,
+          auditStatus: null,
+          version: '',
         },
       ],
+      loading: true,
     };
+  },
+
+  computed: {
+    activeBots() {
+      return this.bots
+        .filter((bot) => bot.auditStatus === 1)
+        .slice()
+        .reverse();
+    },
+  },
+
+  methods: {
+    // 获取用户创建机器人信息
+    async getUserCreatedAI() {
+      try {
+        const userId = this.$store.state.user?.userId;
+        console.log('准备获取机器人列表, userId:', userId);
+
+        if (!userId) {
+          this.$message.error('未获取到用户信息，请重新登录');
+          return;
+        }
+
+        this.loading = true;
+        console.log('正在请求 fetchUserCreatedAgents...');
+
+        const result = await fetchUserCreatedAgents(userId);
+        console.log('API返回结果:', result);
+
+        if (result.status === 200) {
+          const createdBots = result.data.data || [];
+          this.bots = createdBots;
+          console.log('成功赋值给 bots:', this.bots);
+
+          if (createdBots.length === 0) {
+            this.$message.info('您当前没有创建任何机器人');
+          } else {
+            console.log(`成功获取 ${createdBots.length} 个创建的机器人`);
+          }
+        } else {
+          this.$message.warning(`获取创建列表失败: ${result.message}`);
+        }
+      } catch (error) {
+        console.error('获取创建列表失败:', error);
+        this.$message.error('获取创建列表时发生网络错误，请重试');
+      } finally {
+        this.loading = false;
+      }
+    },
+
+    async startConversation(bot) {
+      const userId = this.$store.state.user?.userId;
+      if (!userId) {
+        this.$message.error('未获取到用户信息，请重新登录');
+        return;
+      }
+
+      const payload = {
+        name: bot.name || `chat_${Date.now()}`,
+        agentId: bot.id,
+        userId: userId,
+      };
+      console.log('进入会话参数:', payload);
+
+      try {
+        // 调用接口，创建会话，返回真实 chatId
+        const res = await apicreateChat(payload);
+        const chatId = res.data.chat_id;
+        console.log('创建的聊天ID:', chatId);
+
+        const result = await apifetchAllChats({ userId: userId });
+        this.$store.commit('chat/SET_CHATS', result.data || []);
+        console.log('输入的参数:', userId);
+        console.log('列表返回结果:', result);
+
+        // 直接跳到真实的 chatId 页面
+        this.$router.push({
+          name: 'ChatRobot',
+          params: { chatId: chatId },
+        });
+      } catch (err) {
+        this.$message.error('创建会话失败');
+        console.error(err);
+      }
+    },
+  },
+
+  // 页面初始化时调用
+  created() {
+    console.log('MyBotsPage 已加载, 开始初始化...');
+    this.getUserCreatedAI();
   },
 };
 </script>

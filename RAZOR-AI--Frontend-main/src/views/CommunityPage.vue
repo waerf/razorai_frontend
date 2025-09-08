@@ -5,17 +5,6 @@
       <div class="content-layout">
         <!-- 中间帖子列表 -->
         <section class="post-feed">
-          <!-- 发布按钮 -->
-          <div class="action-bar">
-            <button
-              class="primary-btn"
-              @click="$router.push('/community/CreatePost')"
-            >
-              <i class="fa fa-plus-circle mr-2"></i>
-              <span>发布帖子</span>
-            </button>
-          </div>
-
           <!-- 筛选区 -->
           <div class="filter-card top-filter">
             <div class="filter-header">
@@ -24,7 +13,17 @@
                 共 <span class="count-number">{{ totalCount }}</span> 个帖子
               </p>
             </div>
-
+            <!-- 发布按钮 -->
+            <div class="action-bar">
+              <button
+                class="primary-btn"
+                @click="$router.push('/community/CreatePost')"
+                style="float: right; margin-top: -80px"
+              >
+                <i class="fa fa-plus-circle mr-2"></i>
+                <span>发布帖子</span>
+              </button>
+            </div>
             <div class="filter-tabs">
               <button
                 class="tab-item"
@@ -51,7 +50,10 @@
                   <div class="author-name-wrap">
                     <p class="author-name">{{ post.authorName }}</p>
                   </div>
-                  <p class="post-time">{{ post.createTime }}</p>
+                  <p class="post-time">
+                    发布于{{ post.createTime | formatToMinute }}
+                    {{ post.category }}
+                  </p>
                 </div>
               </div>
 
@@ -63,7 +65,10 @@
                 <h2 class="post-title-title">{{ post.title }}</h2>
               </router-link>
 
-              <p class="post-excerpt">{{ post.excerpt }}</p>
+              <div
+                class="post-excerpt markdown-body"
+                v-html="renderMarkdown(post.excerpt)"
+              ></div>
 
               <!-- 标签 -->
               <div class="post-tags">
@@ -87,12 +92,6 @@
                   <div class="action-display">
                     <span>{{ post.commentCount }} 条评论</span>
                   </div>
-                </div>
-                <div class="stats-group">
-                  <button class="share-btn" @click="sharePost(post.id)">
-                    <i class="fa fa-share-alt mr-1.5"></i>
-                    <span>分享</span>
-                  </button>
                 </div>
               </div>
             </article>
@@ -131,7 +130,22 @@ import {
   getCommunityCommentCount,
 } from '@/utils/api';
 
+import { marked } from 'marked';
+
 export default {
+  filters: {
+    formatToMinute(timeStr) {
+      if (!timeStr) return '未设置';
+
+      // 把 T 替换为空格
+      const normalized = timeStr.replace('T', ' ');
+
+      // 截取到分钟部分 (前16个字符：YYYY-MM-DD HH:MM)
+      const formatted = normalized.slice(0, 16);
+
+      return formatted;
+    },
+  },
   data() {
     return {
       posts: [],
@@ -147,6 +161,11 @@ export default {
     this.fetchPosts(true);
   },
   methods: {
+    renderMarkdown(mdText) {
+      if (!mdText) return '';
+      return marked(mdText, { breaks: true }); // 自动换行
+    },
+
     // 获取帖子列表
     async fetchPosts(reset = false) {
       if (reset) {
@@ -188,18 +207,25 @@ export default {
             };
           });
 
-          // 🔥 并行获取点赞数和评论数
+          //并行获取点赞数和评论数
           await Promise.all(
             this.posts.map(async (post) => {
+              // 评论数量
               try {
-                const [likeRes, commentRes] = await Promise.all([
-                  getCommunityLikeCount(post.id),
-                  getCommunityCommentCount(post.id),
-                ]);
-                post.likeCount = likeRes.data?.likeCount ?? 0;
+                const commentRes = await getCommunityCommentCount(post.id);
                 post.commentCount = commentRes.data?.commentCount ?? 0;
               } catch (e) {
-                console.error(`获取帖子 ${post.id} 的点赞/评论数失败:`, e);
+                console.error(`获取帖子 ${post.id} 的评论数失败:`, e);
+                post.commentCount = 0;
+              }
+
+              // 点赞数量
+              try {
+                const likeRes = await getCommunityLikeCount(post.id);
+                post.likeCount = likeRes.data?.likeCount ?? 0;
+              } catch (e) {
+                console.error(`获取帖子 ${post.id} 的点赞数失败:`, e);
+                post.likeCount = 0;
               }
             })
           );
@@ -249,10 +275,9 @@ export default {
 
 .container {
   position: relative;
-  left: 3.5vw;
   width: 70vw;
-  margin: 0;
-  padding: 0 200px; /* 两边保留点空隙 */
+  margin: 0 auto;
+  padding: 0 20px; /* 两边保留点空隙 */
 }
 
 .text-primary {
@@ -332,9 +357,13 @@ export default {
 
 /* 帖子列表 */
 .post-list {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr); /* 两列等分 */
+  gap: 50px;
+  justify-content: center;
+  width: fit-content;
+  margin: 0 auto;
+  box-sizing: border-box;
 }
 
 .post-card {
@@ -345,10 +374,9 @@ export default {
   transition: all 0.3s ease;
   word-wrap: break-word;
   overflow-wrap: break-word;
-  max-width: 100%;
+  width: 430px;
   box-sizing: border-box;
 }
-
 .post-card:hover {
   transform: translateY(-5px);
   box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);

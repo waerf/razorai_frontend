@@ -1,38 +1,58 @@
 <!-- filepath: /d:/MyGitHub/razor-ai-frontend/src/views/HomePage.vue -->
 <template>
   <div class="homepage">
-    <!-- 第一层：Logo + 通知区域 -->
-    <div class="header-section">
-      <!-- 左侧：占位通知区域（用于平衡布局，让logo居中） -->
-      <div class="notification-area placeholder-notification">
-        <div class="notification-header">
-          <el-button
-            size="mini"
-            class="placeholder-btn"
-            disabled
-            style="visibility: hidden"
-          >
-            <i class="el-icon-refresh"></i>
-          </el-button>
-          <h3 class="notification-title">占位区域</h3>
-          <el-button
-            size="mini"
-            class="placeholder-btn"
-            disabled
-            style="visibility: hidden"
-          >
-            <i class="el-icon-refresh"></i>
-          </el-button>
+    <!-- 上部分布局：Logo + 机器人选项卡 + 通知区域 -->
+    <div class="top-section">
+      <!-- 左侧：Logo 和机器人选项卡 -->
+      <div class="left-content">
+        <!-- Logo 和名称 -->
+        <div class="header">
+          <img src="@/assets/images/logo.png" alt="Razor AI" class="logo" />
+          <h1 class="title">Razor AI</h1>
         </div>
-        <div class="notification-list">
-          <div class="no-notifications">保持布局平衡</div>
-        </div>
-      </div>
 
-      <!-- 中间：Logo 和名称 -->
-      <div class="header">
-        <img src="@/assets/images/logo.png" alt="Razor AI" class="logo" />
-        <h1 class="title">Razor AI</h1>
+        <!-- 已经订阅的机器人选项卡和输入框 -->
+        <div class="subscribed-robots">
+          <el-tabs
+            v-model="selectedRobot"
+            class="subscribed-tabs"
+            @tab-click="handleRobotSelect"
+          >
+            <el-tab-pane
+              v-for="robot in filteredSubscribedRobots"
+              :key="robot.agent_id"
+              :label="robot.agent_name"
+              :name="robot.agent_id.toString()"
+            >
+            </el-tab-pane>
+          </el-tabs>
+          <div class="chat-input-section">
+            <el-input
+              v-model="userInput"
+              type="textarea"
+              :autosize="{ minRows: 2, maxRows: 3 }"
+              placeholder="选择机器人并输入您的问题..."
+              class="chat-input"
+              clearable
+            ></el-input>
+            <el-button
+              class="send-button"
+              :style="
+                userInput.trim()
+                  ? {
+                      backgroundColor: '#0F88EB',
+                      color: '#fff',
+                      borderColor: accentColor,
+                    }
+                  : {}
+              "
+              type="info"
+              icon="el-icon-upload2"
+              @click="sendMessageToRobot"
+              >发送并创建对话</el-button
+            >
+          </div>
+        </div>
       </div>
 
       <!-- 右侧：通知区域 -->
@@ -99,45 +119,6 @@
       </div>
     </div>
 
-    <!-- 第二层：机器人选项卡和输入框 -->
-    <div class="chat-section">
-      <!-- 已经订阅的机器人选项卡 -->
-      <div class="subscribed-robots">
-        <el-tabs
-          v-model="selectedRobot"
-          class="subscribed-tabs"
-          @tab-click="handleRobotSelect"
-        >
-          <el-tab-pane
-            v-for="robot in filteredSubscribedRobots"
-            :key="robot.agent_id"
-            :label="robot.agent_name"
-            :name="robot.agent_id.toString()"
-          >
-          </el-tab-pane>
-        </el-tabs>
-
-        <!-- 输入框区域 -->
-        <div class="chat-input-section">
-          <el-input
-            v-model="userInput"
-            type="textarea"
-            :autosize="{ minRows: 2, maxRows: 3 }"
-            placeholder="选择机器人并输入您的问题..."
-            class="chat-input"
-            clearable
-          ></el-input>
-          <el-button
-            class="send-button"
-            type="info"
-            icon="el-icon-upload2"
-            @click="sendMessageToRobot"
-            >发送并创建对话</el-button
-          >
-        </div>
-      </div>
-    </div>
-
     <!-- 快速访问区域 -->
     <div class="quick-access-section">
       <h2 class="section-title">快速访问</h2>
@@ -184,11 +165,8 @@
 <script>
 import user from '@/store/user';
 import { mapActions, mapState } from 'vuex';
-import { saveChatHistory as apisaveChatHistory } from '../utils/api'; // 保存对话
-import { sendMessage as apisendMessage } from '../utils/api'; // 发送消息
-import { createChat as apicreateChat } from '../utils/api'; // 创建对话
-import { closeChat as apicloseChat } from '../utils/api'; // 关闭对话
-import { deleteChat as apideleteChat } from '../utils/api'; // 删除对话
+import { createChat as apicreateChat } from '../utils/api';
+import { fetchAllChats as apifetchAllChats } from '@/utils/api';
 import {
   getUserNotifications,
   markNotificationAsRead,
@@ -202,6 +180,8 @@ export default {
       loading: false, // 加载状态
       notifications: [], // 通知列表，从API获取
       notificationCount: 0, // 通知总数
+      accentColor: '#3f51b5', // 默认accent色，可根据实际变量替换
+      Subscribed: [],
     };
   },
   computed: {
@@ -239,6 +219,7 @@ export default {
         const user_id = user.state.userId;
         console.log('user_id:', user_id);
         const response = await this.fetchUserSubscriptions(user_id);
+        this.Subscribed = this.$store.state.agent.haveSubscribed || [];
         console.log(
           'subscribed agents:',
           this.$store.state.agent.haveSubscribed
@@ -260,198 +241,54 @@ export default {
       }
       return text.length > length ? text.slice(0, length) + '...' : text;
     },
+
     async sendMessageToRobot() {
-      if (this.userInput.trim() && this.selectedRobot) {
-        // 名字为时间戳YMD+时间格式(精确到时分)
-        const defaultName =
-          new Date().toLocaleDateString().replace(/\//g, '') +
-          new Date().toLocaleTimeString().slice(0, 5);
-
-        // 第一步，创造对话
-        // 第二步，发送消息
-        // 第三步, 保存用户发送消息和机器人回复消息
-        // 第四步，获取对话详细信息
-        // 第五步，更新对话列表
-        // 第六步，转到对话详细页面
-
-        // 第一步，创造对话, 获得chat_id
-        const chat_id = await this.createChatinHome(defaultName);
-        if (!chat_id) {
-          this.$message.error('无法创建对话，请稍后重试');
-          return;
-        }
-        // 第二步，发送消息
-        const answer = await this.sendMessageinHome(chat_id, this.userInput);
-        if (!answer || !answer.content) {
-          this.$message.error('无法发送消息，请稍后重试');
-          await this.closeChatinHome(chat_id);
-          await this.deleteChatinHome(chat_id);
-          return;
-        }
-        // 获取当前选中的机器人信息
-        const currentRobot = this.haveSubscribed.find(
-          (robot) => robot.agent_id.toString() === this.selectedRobot
-        );
-        this.$message.success(
-          `已向机器人 ${currentRobot?.agent_name || '未知机器人'} 发送消息: ${this.userInput} 名称: ${defaultName} chat_id: ${chat_id}`
-        );
-        console.log('answer.content:', answer.content);
-        console.log('answer.role:', answer.role);
-        this.userInput = '';
-
-        // 第三步，保存用户发送消息和机器人恢复信息到数据库
-        const responseFromSave = await this.saveChatHistoryinHome(chat_id);
-        if (responseFromSave.status === 200) {
-          console.log('保存对话成功:', responseFromSave);
-        } else {
-          this.$message.error('保存对话失败:', responseFromSave.message);
-          await this.closeChatinHome(chat_id);
-          await this.deleteChatinHome(chat_id);
-          return;
-        }
-        console.log('responseFromSave:', responseFromSave);
-
-        // 第四步，关闭会话
-        const responseFromClose = await this.closeChatinHome(chat_id);
-        if (responseFromClose.status === 200) {
-          this.$message.success('关闭对话成功:', responseFromClose.message);
-        } else {
-          this.$message.error('关闭对话失败:', responseFromClose.message);
-          await this.deleteChatinHome(chat_id);
-          return;
-        }
-
-        // 第五步，刷新并跳转到对话详情页面
-        await this.handleReloadAndNavigate(chat_id);
-        // await location.reload(); // 刷新页面
-        // await this.$router.replace({
-        //   name: 'ChatRobot',
-        //   params: { id: chat_id },
-        // });
-      } else {
-        this.$message.warning('请选择机器人并输入内容');
+      const userId = this.$store.state.user?.userId;
+      if (!userId) {
+        this.$message.error('未获取到用户信息，请重新登录');
+        return;
       }
-    },
 
-    async handleReloadAndNavigate(chat_id) {
-      try {
-        // 跳转到目标页面，使用 replace 以替换当前历史记录
-        await this.$router.replace({
-          name: 'ChatRobot',
-          params: { id: chat_id },
-        });
-      } catch (error) {
-        console.error('导航失败:', error);
-      } finally {
-        // 刷新页面
-        this.$message.success('刷新页面');
-        location.reload(); // 刷新页面
+      if (!this.selectedRobot) {
+        this.$message.warning('请先选择一个机器人');
+        return;
       }
-    },
 
-    async deleteChatinHome(id) {
-      try {
-        const response = await apideleteChat({ chat_id: id });
-        if (response.status === 200) {
-          console.log('删除对话成功:', response);
-        } else {
-          console.error('删除对话失败:', response);
-        }
-        return response;
-      } catch (error) {
-        console.error('error in deleteChatinHome:', error);
-      }
-    },
+      // 定义 selectedRobotInfo 并查找对应机器人信息
+      const selectedRobotInfo = this.haveSubscribed.find(
+        (robot) => robot.agent_id.toString() === this.selectedRobot
+      );
 
-    async createChatinHome(defaultName) {
-      try {
-        // 根据this.selectedRobot获取agent_id
-        const robot = this.haveSubscribed.find(
-          (robot) => robot.agent_id.toString() === this.selectedRobot
-        );
-        if (!robot || !robot.agent_id) {
-          this.$message.error('无法获取机器人信息，请稍后重试');
-          return;
-        } else {
-          console.log('robot:', robot);
-          const payload = {
-            agent_id: robot.agent_id,
-            user_id: user.state.userId,
-            name: defaultName,
-          };
-          console.log('xxxxxpayload:', payload);
-          const responseFromCreate = await apicreateChat(payload);
-          if (responseFromCreate.status === 200) {
-            console.log('创建对话成功:', responseFromCreate);
-            console.log(
-              'response.data.chat_id:',
-              responseFromCreate.data.chat_id
-            );
-            return responseFromCreate.data.chat_id;
-          } else {
-            console.error('创建对话失败:', responseFromCreate);
-          }
-        }
-      } catch (error) {
-        console.error('error in sendMessageToRobot:', error);
+      if (!selectedRobotInfo) {
+        this.$message.error('未找到选中的机器人信息');
+        return;
       }
-    },
-    async sendMessageinHome(chat_id, content) {
-      // try {
-      //   const payload = {
-      //     chat_id: chat_id,
-      //     content: content,
-      //   };
-      //   console.log('xxxxxpayload:', payload);
-      //   const response = await apisendMessage(payload);
-      //   if (response.status === 200) {
-      //     console.log('发送消息成功:', response);
-      //     return response.data;
-      //   } else {
-      //     console.error('发送消息失败:', response);
-      //   }
-      //   console.log('test-response:', response);
-      // } catch (error) {
-      //   console.error('出错在sendMessageinHome:', error);
-      // }
+
       const payload = {
-        chat_id: chat_id,
-        content: content,
+        name: selectedRobotInfo.agent_name,
+        agentId: this.selectedRobot,
+        userId: userId,
       };
-      console.log('xxxxxpayload:', payload);
-      const response = await apisendMessage(payload);
-      if (response.status === 200) {
-        console.log('发送消息成功:', response);
-        return response.data;
-      } else {
-        console.error('发送消息失败:', response);
-      }
-      console.log('test-response:', response);
-    },
-    async saveChatHistoryinHome(id) {
+      console.log('进入会话参数（含选中机器人名称）:', payload);
+
       try {
-        const response = await apisaveChatHistory({ chat_id: id });
-        if (response.status === 200) {
-          console.log('保存对话成功:', response);
-        } else {
-          console.error('保存对话失败:', response);
-        }
-        return response;
-      } catch (error) {
-        console.error('error in saveChatHistoryinHome:', error);
-      }
-    },
-    async closeChatinHome(id) {
-      try {
-        const response = await apicloseChat({ chat_id: id });
-        if (response.status === 200) {
-          console.log('关闭对话成功:', response);
-        } else {
-          console.error('关闭对话失败:', response);
-        }
-        return response;
-      } catch (error) {
-        console.error('error in closeChatinHome:', error);
+        const res = await apicreateChat(payload);
+        const chatId = res.data.chat_id;
+        console.log('创建的聊天ID:', chatId);
+
+        const result = await apifetchAllChats({ userId: userId });
+        this.$store.commit('chat/SET_CHATS', result.data || []);
+
+        this.$router.push({
+          name: 'ChatRobot',
+          params: {
+            chatId: chatId,
+            robotName: selectedRobotInfo?.agent_name || '未知机器人',
+          },
+        });
+      } catch (err) {
+        this.$message.error('创建会话失败');
+        console.error(err);
       }
     },
 
@@ -636,39 +473,75 @@ export default {
   display: flex;
   flex-direction: column;
 
-  // 第一层：三列布局 - 占位通知区域 + Logo + 通知区域
-  .header-section {
+  .top-section {
     display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
     margin-bottom: 30px;
     gap: 20px;
 
-    .header {
+    .left-content {
+      flex: 1;
       display: flex;
       flex-direction: column;
       align-items: center;
-      flex: 0 0 auto; // 不伸缩，保持原始大小
 
-      .logo {
-        width: 100px;
-        height: 100px;
+      .header {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        margin-bottom: 20px;
+
+        .logo {
+          width: 100px;
+          height: 100px;
+        }
+
+        .title {
+          font-size: 2rem;
+          color: $primary-color;
+        }
       }
 
-      .title {
-        font-size: 2rem;
-        color: $primary-color;
-        margin-top: 10px;
+      .subscribed-robots {
+        width: 80%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+
+        .subscribed-tabs {
+          width: 100%;
+        }
+
+        .chat-input-section {
+          display: flex;
+          align-items: center;
+          margin-top: 15px;
+          width: 100%;
+
+          .chat-input {
+            flex: 1;
+            margin-right: 15px;
+          }
+
+          .send-button {
+            width: 25%;
+            height: 100%;
+            transition:
+              background-color 0.2s,
+              color 0.2s,
+              border-color 0.2s;
+          }
+        }
       }
     }
 
     .notification-area {
-      flex: 1;
-      max-width: 300px;
-      min-width: 300px;
+      width: 15vw;
+      padding: 1vh 1vw;
+      background-color: #f8f9fa;
+      border-radius: 8px;
+      border: 1px solid #e9ecef;
       max-height: 20vh;
       overflow-y: scroll;
-      background-color: white;
 
       // 自定义滚动条样式
       &::-webkit-scrollbar {
@@ -695,173 +568,112 @@ export default {
       scrollbar-width: thin;
       scrollbar-color: #ccc white;
 
-      // 占位通知区域样式
-      &.placeholder-notification {
-        background-color: white;
-        opacity: 0.3;
-        pointer-events: none;
-
-        .notification-title {
-          color: #ccc;
-        }
-
-        .no-notifications {
-          color: #ddd;
-        }
-      }
-    }
-  }
-
-  // 第二层：机器人选项卡和输入框
-  .chat-section {
-    width: 100%;
-    display: flex;
-    justify-content: center;
-    margin-bottom: 30px;
-
-    .subscribed-robots {
-      width: 80%;
-      max-width: 800px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-
-      .subscribed-tabs {
-        width: 100%;
-      }
-
-      .chat-input-section {
-        display: flex;
-        align-items: center;
-        margin-top: 15px;
-        width: 100%;
-
-        .chat-input {
-          flex: 1;
-          margin-right: 15px;
-        }
-
-        .send-button {
-          width: 25%;
-          height: 100%;
-        }
-      }
-    }
-  }
-
-  // 通知区域样式（现在在header-section内）
-  .notification-area {
-    width: 400px;
-    padding: 1vh 1vw;
-    background-color: #f8f9fa;
-    border-radius: 8px;
-    border: 1px solid #e9ecef;
-
-    .notification-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 15px;
-
-      .notification-title {
-        font-size: 1.1rem;
-        font-weight: 600;
-        color: $text-color;
-        text-align: center;
-        margin: 0;
-        flex: 1;
-      }
-
-      .refresh-btn {
-        font-size: 0.8rem;
-        padding: 5px 8px;
-        color: #666;
-        border: 1px solid #ddd;
-        background: white;
-
-        &:hover {
-          color: $accent-color;
-          border-color: $accent-color;
-        }
-      }
-
-      .placeholder-btn {
-        font-size: 0.8rem;
-        padding: 5px 8px;
-        pointer-events: none;
-      }
-    }
-
-    .notification-list {
-      .notification-item {
-        background: white;
-        border-radius: 6px;
-        padding: 12px;
-        margin-bottom: 10px;
-        border: 1px solid #e9ecef;
-        cursor: pointer;
-        transition: all 0.3s ease;
+      .notification-header {
         display: flex;
         justify-content: space-between;
         align-items: center;
+        margin-bottom: 15px;
 
-        &.unread {
-          border-left: 3px solid #f56c6c;
-          background-color: #ffebee;
-          color: #d32f2f;
-        }
-
-        &:hover {
-          background-color: #f0f0f0;
-        }
-
-        &.clicked {
-          background-color: white;
-          color: #333;
-          border-color: #e9ecef;
-        }
-
-        &:last-child {
-          margin-bottom: 0;
-        }
-
-        .notification-content {
+        .notification-title {
+          font-size: 1.1rem;
+          font-weight: 600;
+          color: $text-color;
+          text-align: center;
+          margin: 0;
           flex: 1;
-          cursor: pointer;
+        }
 
-          .notification-text {
-            font-size: 0.9rem;
-            line-height: 1.4;
-            margin-bottom: 5px;
-            word-wrap: break-word;
-          }
+        .refresh-btn {
+          font-size: 0.8rem;
+          padding: 5px 8px;
+          color: #666;
+          border: 1px solid #ddd;
+          background: white;
 
-          .notification-time {
-            font-size: 0.8rem;
-            color: #666;
-            text-align: right;
+          &:hover {
+            color: $accent-color;
+            border-color: $accent-color;
           }
         }
 
-        .notification-actions {
-          margin-left: 8px;
-
-          .delete-btn {
-            color: #999;
-            padding: 4px;
-
-            &:hover {
-              color: #f56c6c;
-            }
-          }
+        .placeholder-btn {
+          font-size: 0.8rem;
+          padding: 5px 8px;
+          pointer-events: none;
         }
       }
 
-      .no-notifications {
-        text-align: center;
-        color: #999;
-        font-size: 0.9rem;
-        padding: 20px;
+      .notification-list {
+        .notification-item {
+          background: white;
+          border-radius: 6px;
+          padding: 12px;
+          margin-bottom: 10px;
+          border: 1px solid #e9ecef;
+          cursor: pointer;
+          transition: all 0.3s ease;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+
+          &.unread {
+            border-left: 3px solid #f56c6c;
+            background-color: #ffebee;
+            color: #d32f2f;
+          }
+
+          &:hover {
+            background-color: #f0f0f0;
+          }
+
+          &.clicked {
+            background-color: white;
+            color: #333;
+            border-color: #e9ecef;
+          }
+
+          &:last-child {
+            margin-bottom: 0;
+          }
+
+          .notification-content {
+            flex: 1;
+            cursor: pointer;
+
+            .notification-text {
+              font-size: 0.9rem;
+              line-height: 1.4;
+              margin-bottom: 5px;
+              word-wrap: break-word;
+            }
+
+            .notification-time {
+              font-size: 0.8rem;
+              color: #666;
+              text-align: right;
+            }
+          }
+
+          .notification-actions {
+            margin-left: 8px;
+
+            .delete-btn {
+              color: #999;
+              padding: 4px;
+
+              &:hover {
+                color: #f56c6c;
+              }
+            }
+          }
+        }
+
+        .no-notifications {
+          text-align: center;
+          color: #999;
+          font-size: 0.9rem;
+          padding: 20px;
+        }
       }
     }
   }
@@ -919,67 +731,6 @@ export default {
           font-size: 0.9rem;
           color: $secondary-color;
           line-height: 1.4;
-        }
-      }
-    }
-  }
-
-  // 响应式设计
-  @media (max-width: 768px) {
-    .header-section {
-      flex-direction: column;
-      align-items: center;
-      gap: 15px;
-
-      // 在移动端隐藏占位通知区域
-      .placeholder-notification {
-        display: none;
-      }
-
-      .header {
-        .logo {
-          width: 80px;
-          height: 80px;
-        }
-
-        .title {
-          font-size: 1.5rem;
-        }
-      }
-
-      .notification-area {
-        width: 100%;
-        max-width: none;
-        min-width: none;
-      }
-    }
-
-    .chat-section {
-      .subscribed-robots {
-        width: 100%;
-
-        .chat-input-section {
-          flex-direction: column;
-          gap: 10px;
-
-          .chat-input {
-            margin-right: 0;
-          }
-
-          .send-button {
-            width: 100%;
-          }
-        }
-      }
-    }
-
-    .quick-access-section {
-      .quick-access-cards {
-        grid-template-columns: 1fr;
-        gap: 15px;
-
-        .quick-access-card {
-          padding: 20px 15px;
         }
       }
     }

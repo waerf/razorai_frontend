@@ -1,9 +1,6 @@
 <template>
   <div class="admin-post-review-detail">
-    <aside class="sidebar">
-      <button class="toggle-sidebar-btn" @click="toggleSidebar">
-        <i class="el-icon-s-fold"></i>
-      </button>
+    <aside class="sidebar" :class="{ hidden: isSidebarCollapsed }">
       <div class="user-info">
         <div class="avatar">{{ adminName ? adminName.charAt(0) : '管' }}</div>
         <div>
@@ -36,6 +33,9 @@
     </aside>
     <main class="main-content">
       <header class="header">
+        <button class="toggle-sidebar-btn" @click="toggleSidebar">
+          <i class="el-icon-s-fold"></i>
+        </button>
         <h1 class="title">帖子举报详情</h1>
         <div style="display: flex; align-items: center; margin-left: auto">
           <el-button
@@ -72,7 +72,7 @@
                 autocomplete="off"
               />
             </el-form-item>
-            <el-form-item label="确认新密码" prop="confirmPwd">
+            <el-form-item label="确认密码" prop="confirmPwd">
               <el-input
                 v-model="pwdForm.confirmPwd"
                 type="password"
@@ -89,6 +89,14 @@
         </el-dialog>
       </header>
       <div class="content">
+        <el-button
+          type="default"
+          icon="el-icon-arrow-left"
+          style="margin-bottom: 16px"
+          @click="$router.push('/admin/posts')"
+        >
+          返回列表
+        </el-button>
         <el-card v-if="loading" class="loading-card"
           ><el-skeleton rows="6" animated
         /></el-card>
@@ -99,7 +107,7 @@
               getStatusText(report.status)
             }}</el-tag>
           </div>
-          <el-descriptions :column="2" border>
+          <el-descriptions :column="2" border :label-width="90">
             <el-descriptions-item label="举报ID">{{
               report.reportId
             }}</el-descriptions-item>
@@ -137,25 +145,19 @@
             <el-descriptions-item label="举报详情" :span="2">{{
               report.reportDetails
             }}</el-descriptions-item>
-            <el-descriptions-item label="审核管理员">{{
-              report.adminName || '未审核'
-            }}</el-descriptions-item>
-            <el-descriptions-item label="审核备注">{{
-              report.reviewComment || '-'
-            }}</el-descriptions-item>
             <el-descriptions-item label="创建时间">{{
-              report.createdAt
+              formatTime(report.createdAt)
             }}</el-descriptions-item>
             <el-descriptions-item label="更新时间">{{
-              report.updatedAt
+              formatTime(report.updatedAt)
             }}</el-descriptions-item>
           </el-descriptions>
           <div class="action-section" v-if="report.status === 0">
             <el-form :model="reviewForm" label-width="80px" class="review-form">
               <el-form-item label="审核操作">
                 <el-radio-group v-model="reviewForm.status">
-                  <el-radio :label="1">通过</el-radio>
-                  <el-radio :label="2">拒绝</el-radio>
+                  <el-radio :label="1">有效</el-radio>
+                  <el-radio :label="2">无效</el-radio>
                 </el-radio-group>
               </el-form-item>
               <el-form-item label="审核备注">
@@ -189,11 +191,14 @@ import {
   changeAdminPassword,
   getPostReportDetail,
   reviewPostReport,
+  //sendReviewNotification,
 } from '@/utils/api';
 export default {
   name: 'AdminPostReviewDetail',
   data() {
     return {
+      isSidebarCollapsed:
+        localStorage.getItem('admin_sidebar_collapsed') === 'true',
       adminName: '',
       showChangePwd: false,
       pwdForm: {
@@ -232,6 +237,11 @@ export default {
     };
   },
   methods: {
+    formatTime(time) {
+      if (!time) return '';
+      const d = new Date(time);
+      return d.toLocaleString();
+    },
     async fetchAdminInfo() {
       try {
         const res = await getAdminInfo();
@@ -244,8 +254,7 @@ export default {
     },
     toggleSidebar() {
       this.isSidebarCollapsed = !this.isSidebarCollapsed;
-      const sidebar = document.querySelector('.sidebar');
-      sidebar.classList.toggle('hidden');
+      localStorage.setItem('admin_sidebar_collapsed', this.isSidebarCollapsed);
     },
     logout() {
       this.$confirm('确定要退出登录吗？', '提示', {
@@ -260,12 +269,17 @@ export default {
             if (window.localStorage) {
               localStorage.removeItem('admin_token');
             }
-            this.$router.push('/');
           } else {
-            this.$message.error(res.data.message || '登出失败');
+            if (window.localStorage) {
+              localStorage.removeItem('admin_token');
+            }
           }
         } catch (err) {
-          this.$message.error(err.message || '登出失败，请重试');
+          if (window.localStorage) {
+            localStorage.removeItem('admin_token');
+          }
+        } finally {
+          this.$router.push('/');
         }
       });
       // 用户取消操作时无需处理
@@ -379,8 +393,22 @@ export default {
           reviewComment: this.reviewForm.reviewComment,
         });
         if (res.data && res.data.success) {
+          /*
+          // 审核通过时向举报人发送通知，内容为“您举报的帖子已被处理，感谢您的反馈”
+          if (this.reviewForm.status === 1 && this.report.reporterId) {
+            const notifyMsg = `您举报的帖子已被处理，感谢您的反馈。`;
+            sendReviewNotification({
+              userId: this.report.reporterId,
+              notificationType: 0,
+              message: notifyMsg,
+            }).catch(() => {}); // 忽略通知失败
+          }
+          */
           this.$message.success(res.data.message || '审核成功');
           this.fetchReportDetail();
+
+          // 审核提交成功后，返回列表页
+          this.$router.push('/admin/posts');
         } else {
           this.$message.error(res.data.message || '审核失败');
         }
@@ -399,140 +427,47 @@ export default {
 </script>
 
 <style lang="scss" scoped>
+@import '@/assets/styles/admin-home.scss';
+
 .admin-post-review-detail {
-  display: flex;
-  min-height: 100vh;
-  background-color: #f5f5f5;
-  .sidebar {
-    position: relative;
-    transition: all 0.3s ease;
-    width: 250px;
-    background-color: white;
-    border-right: 1px solid #e6e6e6;
-    padding: 20px 0;
-    .toggle-sidebar-btn {
-      position: absolute;
-      top: 10px;
-      right: 10px;
-      cursor: pointer;
-      font-size: 16px;
-      background: none;
-      border: none;
-      color: #606266;
-      padding: 5px;
-      &:hover {
-        background-color: rgba(0, 0, 0, 0.05);
-        border-radius: 4px;
-      }
+  @extend .admin-home;
+
+  // 内容区自定义样式
+  .content {
+    padding: 24px;
+
+    .loading-card {
+      min-height: 300px;
     }
-    &.hidden {
-      width: 60px !important;
-      .nav-item {
-        span {
-          display: none;
-        }
-        i {
-          margin-right: 0;
-        }
-      }
-      .user-info {
-        flex-direction: column;
-        align-items: center;
-        padding: 10px;
-        .avatar {
-          margin-bottom: 8px;
-        }
-        .username,
-        .role {
-          text-align: center;
-        }
-      }
-    }
-    .user-info {
-      display: flex;
-      align-items: center;
-      padding: 0 20px 20px;
-      border-bottom: 1px solid #e6e6e6;
-      .avatar {
-        width: 40px;
-        height: 40px;
-        border-radius: 50%;
-        background-color: #165dff;
-        color: white;
+
+    .detail-card {
+      max-width: 800px;
+      margin: 0 auto;
+
+      .detail-header {
         display: flex;
         align-items: center;
-        justify-content: center;
-        margin-right: 12px;
-        font-weight: bold;
+        justify-content: space-between;
+        margin-bottom: 20px;
       }
-      .username {
-        font-weight: 500;
-        margin-bottom: 4px;
-      }
-      .role {
-        font-size: 12px;
-        color: #999;
-      }
-    }
-    .nav-menu {
-      padding: 10px 0;
-      .nav-item {
-        display: flex;
-        align-items: center;
-        padding: 12px 20px;
-        margin: 4px 0;
-        cursor: pointer;
-        transition: all 0.3s;
-        i {
-          margin-right: 10px;
-        }
-        &:hover {
-          background: #f0f6ff;
-        }
-        &.active {
-          background: #e6f7ff;
-          color: #165dff;
+
+      ::v-deep .el-descriptions__cell {
+        &.is-bordered-label {
+          min-width: 90px;
         }
       }
-    }
-  }
-  .main-content {
-    flex: 1;
-    overflow: auto;
-    .header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 16px 24px;
-      background-color: white;
-      border-bottom: 1px solid #e6e6e6;
-      position: sticky;
-      top: 0;
-      z-index: 10;
-      .title {
-        font-size: 20px;
-        font-weight: 600;
-      }
-    }
-    .content {
-      padding: 24px;
-      .loading-card {
-        min-height: 300px;
-      }
-      .detail-card {
-        max-width: 800px;
-        margin: 0 auto;
-        .detail-header {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          margin-bottom: 20px;
+
+      ::v-deep .el-descriptions__cell {
+        &.el-descriptions-item__content {
+          white-space: nowrap;
         }
-        .action-section {
-          margin-top: 32px;
-          .review-form {
-            max-width: 400px;
-          }
+      }
+
+      .action-section {
+        margin-top: 32px;
+
+        .review-form {
+          max-width: 400px;
         }
       }
     }

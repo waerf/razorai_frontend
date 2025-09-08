@@ -26,6 +26,8 @@ import AdminPage from '@/views/AdminPage.vue';
 import AdminLogin from '@/views/AdminLoginPage.vue';
 import AdminFeedback from '@/views/AdminFeedbackPage.vue';
 import Editpost from '@/views/EditPostsPage.vue';
+import BotsEditversion from '@/views/BotsEditVersionPage.vue';
+import BotsHistoryVersions from '@/views/BotsHistoryVersionPage.vue';
 
 Vue.use(VueRouter);
 
@@ -44,7 +46,7 @@ const routes = [
         },
       },
       {
-        path: 'MyBots',
+        path: '/MyBots',
         name: 'MyBots',
         component: MyBots,
         meta: {
@@ -52,7 +54,23 @@ const routes = [
         },
       },
       {
-        path: 'subscribedBots',
+        path: '/BotsHistoryVersions/:agentId',
+        name: 'BotsHistoryVersions',
+        component: BotsHistoryVersions,
+        meta: {
+          title: '查看历史版本',
+        },
+      },
+      {
+        path: '/BotsEditversion/:agentId',
+        name: 'BotsEditversion',
+        component: BotsEditversion,
+        meta: {
+          title: '编辑当前版本',
+        },
+      },
+      {
+        path: '/subscribedBots',
         name: 'SubscribedBots',
         component: SubscribedBots,
         meta: {
@@ -308,7 +326,16 @@ const router = new VueRouter({
       name: 'AdminPostReviewDetail',
       component: () => import('@/views/AdminPostReviewDetail.vue'),
       meta: {
-        title: 'RazorAI-举报详情',
+        title: 'RazorAI-帖子举报详情',
+        requiresAdmin: true,
+      },
+    },
+    {
+      path: '/admin/comment-report/:id',
+      name: 'AdminCommentReviewDetail',
+      component: () => import('@/views/AdminCommentReviewDetail.vue'),
+      meta: {
+        title: 'RazorAI-评论举报详情',
         requiresAdmin: true,
       },
     },

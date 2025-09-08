@@ -1,10 +1,7 @@
 <template>
   <div class="admin-home">
     <!-- 侧边导航栏 -->
-    <aside class="sidebar">
-      <button class="toggle-sidebar-btn" @click="toggleSidebar">
-        <i class="el-icon-s-fold"></i>
-      </button>
+    <aside class="sidebar" :class="{ hidden: isSidebarCollapsed }">
       <div class="user-info">
         <div class="avatar">{{ adminName.charAt(0) }}</div>
         <div>
@@ -41,6 +38,9 @@
     <main class="main-content">
       <!-- 顶部导航栏 -->
       <header class="header">
+        <button class="toggle-sidebar-btn" @click="toggleSidebar">
+          <i class="el-icon-s-fold"></i>
+        </button>
         <h1 class="title">控制台</h1>
         <div style="display: flex; align-items: center; margin-left: auto">
           <el-button
@@ -77,7 +77,7 @@
                 autocomplete="off"
               />
             </el-form-item>
-            <el-form-item label="确认新密码" prop="confirmPwd">
+            <el-form-item label="确认密码" prop="confirmPwd">
               <el-input
                 v-model="pwdForm.confirmPwd"
                 type="password"
@@ -121,6 +121,25 @@
               class="stat-card"
               shadow="hover"
               style="cursor: pointer"
+              @click.native="handleStatCardClick('/admin/posts')"
+            >
+              <div class="stat-content">
+                <div>
+                  <p class="stat-label">待审核帖子和评论</p>
+                  <p class="stat-value">
+                    {{ pendingPostsTotal + pendingCommentsTotal }}
+                  </p>
+                </div>
+                <div class="stat-icon">
+                  <i class="el-icon-document"></i>
+                </div>
+              </div>
+            </el-card>
+
+            <el-card
+              class="stat-card"
+              shadow="hover"
+              style="cursor: pointer"
               @click.native="handleStatCardClick('/admin/feedback')"
             >
               <div class="stat-content">
@@ -130,23 +149,6 @@
                 </div>
                 <div class="stat-icon">
                   <i class="el-icon-chat-dot-round"></i>
-                </div>
-              </div>
-            </el-card>
-
-            <el-card
-              class="stat-card"
-              shadow="hover"
-              style="cursor: pointer"
-              @click.native="handleStatCardClick('/admin/posts')"
-            >
-              <div class="stat-content">
-                <div>
-                  <p class="stat-label">待审核帖子</p>
-                  <p class="stat-value">5</p>
-                </div>
-                <div class="stat-icon">
-                  <i class="el-icon-document"></i>
                 </div>
               </div>
             </el-card>
@@ -167,10 +169,16 @@
               </div>
 
               <div class="items-list">
-                <div class="item" v-for="item in pendingRobots" :key="item.id">
+                <div
+                  class="item"
+                  v-for="item in pendingRobots"
+                  :key="item.id"
+                  @click="navigateToRobotDetail(item)"
+                  style="cursor: pointer"
+                >
                   <div class="item-header">
                     <p class="item-name">{{ item.name }}</p>
-                    <p class="item-time">{{ item.time }}</p>
+                    <p class="item-time">{{ formatTime(item.time) }}</p>
                   </div>
                   <el-tag
                     :type="item.status === 'pending' ? 'warning' : 'success'"
@@ -181,10 +189,10 @@
               </div>
             </el-card>
 
-            <!-- 待审核帖子 -->
+            <!-- 待审核帖子和评论 -->
             <el-card class="content-card" shadow="hover">
               <div class="card-header">
-                <h2 class="card-title">待审核帖子</h2>
+                <h2 class="card-title">待审核帖子和评论</h2>
                 <el-link
                   type="primary"
                   :underline="false"
@@ -194,18 +202,26 @@
               </div>
 
               <div class="items-list">
-                <div class="item" v-for="item in pendingPosts" :key="item.id">
+                <div
+                  class="item"
+                  v-for="item in combinedPendingItems.slice(0, 3)"
+                  :key="item.id"
+                  @click="navigateToDetail(item)"
+                  style="cursor: pointer"
+                >
                   <div class="item-header">
                     <p class="item-name">{{ item.name }}</p>
-                    <p class="item-time">{{ item.time }}</p>
+                    <p class="item-time">{{ formatTime(item.time) }}</p>
                   </div>
-                  <el-tag type="warning">待审核</el-tag>
+                  <el-tag type="warning">{{
+                    item.type === 'post' ? '帖子' : '评论'
+                  }}</el-tag>
                 </div>
               </div>
             </el-card>
 
             <!-- 最新用户反馈 -->
-            <el-card class="content-card full-width" shadow="hover">
+            <el-card class="content-card" shadow="hover">
               <div class="card-header">
                 <h2 class="card-title">最新用户反馈</h2>
                 <el-link
@@ -221,10 +237,12 @@
                   class="feedback-item"
                   v-for="feedback in recentFeedbacks"
                   :key="feedback.id"
+                  @click="navigateToFeedbackDetail(feedback)"
+                  style="cursor: pointer"
                 >
                   <div class="feedback-header">
                     <p class="feedback-user">{{ feedback.user }}</p>
-                    <p class="feedback-time">{{ feedback.time }}</p>
+                    <p class="feedback-time">{{ formatTime(feedback.time) }}</p>
                   </div>
                   <p class="feedback-content">{{ feedback.content }}</p>
                 </div>
@@ -245,13 +263,25 @@ import {
   getAdminInfo,
   fetchRecentFeedbacks,
   fetchAllFeedbacks,
+  getPostReportList,
+  getCommentReportList,
 } from '@/utils/api';
 
 export default {
   name: 'AdminHomePage',
+  computed: {
+    combinedPendingItems() {
+      // 合并帖子和评论，按时间排序
+      const combined = [...this.pendingPosts, ...this.pendingComments];
+      return combined.sort((a, b) => {
+        return new Date(b.time) - new Date(a.time);
+      });
+    },
+  },
   data() {
     return {
-      isSidebarCollapsed: false,
+      isSidebarCollapsed:
+        localStorage.getItem('admin_sidebar_collapsed') === 'true',
       activeTab: 'review',
       showChangePwd: false,
       pwdForm: {
@@ -283,10 +313,10 @@ export default {
       pendingRobotsLoading: false,
       pendingRobotsTotal: 0, // 新增总数量
       adminName: '', // 新增管理员名称
-      pendingPosts: [
-        { id: 1, name: '违规内容举报', time: '2025-07-15 14:30' },
-        { id: 2, name: '敏感词检测', time: '2025-07-15 10:45' },
-      ],
+      pendingPosts: [], // 待审核帖子列表
+      pendingPostsTotal: 0, // 待审核帖子总数
+      pendingComments: [], // 待审核评论列表
+      pendingCommentsTotal: 0, // 待审核评论总数
       recentFeedbacks: [],
       feedbackTotal: 0,
       async fetchRecentFeedbacks() {
@@ -296,6 +326,7 @@ export default {
           if (res && res.data && Array.isArray(res.data.feedbacks)) {
             this.recentFeedbacks = res.data.feedbacks.map((fb) => ({
               id: fb.id,
+              userId: fb.userId,
               user: fb.userName || `用户${fb.userId}`,
               time: fb.time,
               content: fb.feedback,
@@ -326,8 +357,43 @@ export default {
     };
   },
   methods: {
+    formatTime(time) {
+      if (!time) return '';
+      const d = new Date(time);
+      return d.toLocaleString();
+    },
     handleStatCardClick(path) {
       this.$router.push(path);
+    },
+    navigateToDetail(item) {
+      if (item.type === 'post') {
+        this.$router.push({
+          name: 'AdminPostReviewDetail',
+          params: { id: item.id },
+        });
+      } else {
+        this.$router.push({
+          name: 'AdminCommentReviewDetail',
+          params: { id: item.id },
+        });
+      }
+    },
+    navigateToRobotDetail(robot) {
+      this.$router.push({
+        name: 'AdminRobotReviewDetail',
+        params: { id: robot.id },
+      });
+    },
+    navigateToFeedbackDetail(feedback) {
+      if (feedback && feedback.id) {
+        this.$router.push({
+          name: 'AdminFeedbackDetail',
+          params: {
+            userId: feedback.userId || 'unknown',
+            feedbackId: feedback.id,
+          },
+        });
+      }
     },
     async fetchAdminInfo() {
       try {
@@ -353,27 +419,30 @@ export default {
             const res = await adminLogout();
             if (res.data && res.data.success) {
               this.$message.success(res.data.message || '登出成功');
-              // 清除本地token
               if (window.localStorage) {
                 localStorage.removeItem('admin_token');
               }
-              this.$router.push('/');
             } else {
-              this.$message.error(res.data.message || '登出失败');
+              if (window.localStorage) {
+                localStorage.removeItem('admin_token');
+              }
             }
           } catch (err) {
-            this.$message.error(err.message || '登出失败，请重试');
+            if (window.localStorage) {
+              localStorage.removeItem('admin_token');
+            }
+          } finally {
+            this.$router.push('/');
           }
         })
         .catch(() => {
           // 用户取消
         });
-      // ...existing code...
     },
     toggleSidebar() {
       this.isSidebarCollapsed = !this.isSidebarCollapsed;
-      const sidebar = document.querySelector('.sidebar');
-      sidebar.classList.toggle('hidden');
+      localStorage.setItem('admin_sidebar_collapsed', this.isSidebarCollapsed);
+      // 不再需要手动切换class，由上面的:class绑定自动处理
     },
     async fetchPendingRobots() {
       this.pendingRobotsLoading = true;
@@ -381,7 +450,7 @@ export default {
         const res = await getPendingRobots({ page: 1, pageSize: 3 });
         if (res.data && res.data.success) {
           this.pendingRobots = res.data.data.map((robot) => ({
-            id: robot.id,
+            id: robot.auditId, // 使用auditId作为ID
             name: robot.name,
             time: robot.createdAt,
             status: 'pending',
@@ -395,6 +464,74 @@ export default {
         this.$message.error(err.message || '获取待审核机器人失败');
       }
       this.pendingRobotsLoading = false;
+    },
+    async fetchPendingPosts() {
+      try {
+        // 获取待审核举报列表（status=0）
+        const res = await getPostReportList({
+          status: 0,
+          page: 1,
+          pageSize: 100,
+        });
+        if (res.data && res.data.success) {
+          this.pendingPosts = res.data.data.map((item) => {
+            let postTitle = '未知帖子';
+            if (item.postTitle) {
+              try {
+                const titleObj = JSON.parse(item.postTitle);
+                postTitle = titleObj.title || '未知帖子';
+              } catch (e) {
+                postTitle = item.postTitle;
+              }
+            }
+            return {
+              id: item.reportId || item.id,
+              name: postTitle,
+              time: item.createdAt || '',
+              type: 'post',
+            };
+          });
+          this.pendingPostsTotal = res.data.data.length;
+        } else {
+          this.pendingPosts = [];
+          this.pendingPostsTotal = 0;
+        }
+      } catch (err) {
+        this.pendingPosts = [];
+        this.pendingPostsTotal = 0;
+      }
+    },
+
+    async fetchPendingComments() {
+      try {
+        // 获取待审核评论举报列表（status=0）
+        const res = await getCommentReportList({
+          status: 0,
+          page: 1,
+          pageSize: 100,
+        });
+        if (res.data && res.data.success) {
+          this.pendingComments = res.data.data.map((item) => {
+            return {
+              id: item.reportId || item.id,
+              name: item.commentContent
+                ? item.commentContent.length > 30
+                  ? `${item.commentContent.substring(0, 30)}...`
+                  : item.commentContent
+                : '未知评论',
+              time: item.createdAt || '',
+              type: 'comment',
+            };
+          });
+          this.pendingCommentsTotal = res.data.data.length;
+        } else {
+          this.pendingComments = [];
+          this.pendingCommentsTotal = 0;
+        }
+      } catch (err) {
+        this.pendingComments = [];
+        this.pendingCommentsTotal = 0;
+      }
     },
     async submitPwdForm() {
       this.$refs.pwdFormRef.validate(async (valid) => {
@@ -437,6 +574,8 @@ export default {
     this.fetchAdminInfo();
     this.fetchRecentFeedbacks();
     this.fetchAllFeedbackTotal();
+    this.fetchPendingPosts();
+    this.fetchPendingComments();
   },
 };
 </script>
@@ -449,35 +588,23 @@ export default {
 
   .sidebar {
     position: relative;
-    transition: all 0.3s ease;
-
-    .toggle-sidebar-btn {
-      position: absolute;
-      top: 10px;
-      right: 10px;
-      cursor: pointer;
-      font-size: 16px;
-      background: none;
-      border: none;
-      color: #606266;
-      padding: 5px;
-
-      &:hover {
-        background-color: rgba(0, 0, 0, 0.05);
-        border-radius: 4px;
-      }
-    }
+    transition: width 0.3s ease;
 
     &.hidden {
       width: 60px !important;
 
       .nav-item {
         span {
-          display: none;
+          opacity: 0;
+          white-space: nowrap;
+          width: 0;
+          overflow: hidden;
+          transition: opacity 0.1s ease;
         }
 
         i {
           margin-right: 0;
+          width: auto; /* 收缩状态下取消固定宽度 */
         }
       }
 
@@ -485,15 +612,32 @@ export default {
         flex-direction: column;
         align-items: center;
         padding: 10px;
+        height: 80px; /* 固定高度 */
+        box-sizing: border-box;
+        position: relative; /* 使用相对定位 */
+        transition: padding 0.3s ease; /* 只对padding应用过渡效果 */
 
         .avatar {
+          position: absolute; /* 绝对定位，固定位置 */
+          left: 10px; /* 与展开状态保持一致 */
+          top: 20px; /* 垂直居中 */
           margin-right: 0;
-          margin-bottom: 5px;
+          margin-bottom: 0;
+          width: 40px; /* 保持与展开状态相同的尺寸 */
+          height: 40px; /* 保持与展开状态相同的尺寸 */
+          min-width: 40px; /* 防止缩小 */
+          min-height: 40px; /* 防止缩小 */
         }
 
         .username,
         .role {
-          display: none;
+          opacity: 0;
+          width: 0;
+          white-space: nowrap;
+          overflow: hidden;
+          transition: opacity 0.1s ease;
+          position: absolute;
+          left: -9999px; /* 移出可视区域 */
         }
       }
     }
@@ -505,30 +649,48 @@ export default {
     .user-info {
       display: flex;
       align-items: center;
-      padding: 0 20px 20px;
+      padding: 0 10px 0 70px; /* 左侧留出空间给头像 */
       border-bottom: 1px solid #e6e6e6;
+      height: 80px; /* 固定高度 */
+      box-sizing: border-box;
+      transition: padding 0.3s ease; /* 只对padding应用过渡效果，不影响定位 */
+      position: relative; /* 相对定位，让头像可以绝对定位 */
 
       .avatar {
+        position: absolute; /* 绝对定位，固定位置 */
+        left: 10px; /* 与收缩状态保持一致 */
+        top: 20px; /* 垂直居中 */
         width: 40px;
         height: 40px;
+        min-width: 40px;
+        min-height: 40px;
         border-radius: 50%;
         background-color: #165dff;
         color: white;
         display: flex;
         align-items: center;
         justify-content: center;
-        margin-right: 12px;
         font-weight: bold;
+        transition: none; /* 移除过渡效果，固定位置 */
       }
 
       .username {
         font-weight: 500;
         margin-bottom: 4px;
+        opacity: 1;
+        transition: opacity 0.2s ease 0.2s; /* 延迟显示文字 */
+        white-space: nowrap;
+        padding-left: 0; /* 不需要额外的左侧padding，因为.user-info已经设置了 */
+        position: relative; /* 确保不影响头像的绝对定位 */
       }
 
       .role {
         font-size: 12px;
         color: #999;
+        opacity: 1;
+        transition: opacity 0.2s ease 0.2s; /* 延迟显示文字 */
+        white-space: nowrap;
+        padding-left: 0; /* 不需要额外的左侧padding */
       }
     }
 
@@ -538,14 +700,28 @@ export default {
       .nav-item {
         display: flex;
         align-items: center;
-        padding: 12px 20px;
+        height: 48px; /* 固定高度 */
+        padding: 0 20px;
         margin: 4px 0;
         cursor: pointer;
-        transition: all 0.3s;
+        transition: background-color 0.3s ease;
+        box-sizing: border-box;
+
+        span {
+          opacity: 1;
+          transition: opacity 0.2s ease 0.2s; /* 延迟显示文字 */
+          white-space: nowrap;
+          overflow: hidden;
+        }
 
         i {
           margin-right: 12px;
           font-size: 18px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 20px; /* 固定宽度 */
+          transition: margin-right 0.2s ease;
         }
 
         &:hover {
@@ -567,7 +743,7 @@ export default {
 
     .header {
       display: flex;
-      justify-content: space-between;
+      justify-content: flex-start;
       align-items: center;
       padding: 16px 24px;
       background-color: white;
@@ -575,6 +751,21 @@ export default {
       position: sticky;
       top: 0;
       z-index: 10;
+
+      .toggle-sidebar-btn {
+        cursor: pointer;
+        font-size: 18px;
+        background: none;
+        border: none;
+        color: #606266;
+        padding: 5px;
+        margin-right: 16px;
+
+        &:hover {
+          background-color: rgba(0, 0, 0, 0.05);
+          border-radius: 4px;
+        }
+      }
 
       .title {
         font-size: 20px;
@@ -625,14 +816,11 @@ export default {
 
       .content-grid {
         display: grid;
-        grid-template-columns: repeat(2, 1fr);
+        grid-template-columns: repeat(3, 1fr);
         gap: 16px;
 
         .content-card {
-          &.full-width {
-            grid-column: 1 / -1;
-          }
-
+          /* 移除全宽样式，使每个卡片占据一列 */
           .card-header {
             display: flex;
             justify-content: space-between;
@@ -670,12 +858,12 @@ export default {
           }
 
           .feedback-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
 
             .feedback-item {
-              padding: 12px;
+              padding: 10px;
               border: 1px solid #f0f0f0;
               border-radius: 4px;
 

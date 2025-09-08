@@ -139,6 +139,22 @@ export const updateUserInfo = (userId, payload) =>
     },
   });
 
+// 头像相关API
+// 上传用户头像
+export const uploadUserAvatar = (userId, avatarUrl) =>
+  api.post(`/user/${userId}/avatar`, { AvatarUrl: avatarUrl });
+
+// 获取用户头像
+export const getUserAvatar = (userId) => api.get(`/user/${userId}/avatar`);
+
+// 更新用户头像
+export const updateUserAvatar = (userId, avatarUrl) =>
+  api.put(`/user/${userId}/avatar`, { AvatarUrl: avatarUrl });
+
+// 删除用户头像
+export const deleteUserAvatar = (userId) =>
+  api.delete(`/user/${userId}/avatar`);
+
 // 获取用户积分余额
 export const getUserPoints = () => api.get('/points/balance');
 
@@ -192,6 +208,34 @@ export const deductUserPoints = (
     description,
     relatedId,
   });
+
+// ====================== 外部通知相关 API ======================
+// 发送外部通知（单个用户）
+export const sendExternalNotification = (payload) => {
+  // 确保payload使用大写首字母的字段名，符合后端模型要求
+  const formattedPayload = {
+    UserId: payload.UserId || payload.userId,
+    Message: payload.Message || payload.message,
+  };
+
+  // 如果提供了Email字段，则使用专门的接口发送到指定邮箱
+  if (payload.Email || payload.email) {
+    const email = payload.Email || payload.email;
+    return adminApi.post('/external-notifications/send-email', {
+      Email: email,
+      Message: formattedPayload.Message,
+    });
+  }
+
+  return adminApi.post('/external-notifications/create', formattedPayload);
+};
+
+//批量发送外部通知
+export const sendBulkExternalNotification = (payload) => {
+  // payload: { userIds, message }
+  return api.post('/external-notifications/create-bulk', payload);
+};
+// =============================================================
 
 // 管理员注册
 export const adminRegister = (payload) => {
@@ -256,6 +300,27 @@ export const getPostReportDetail = (reportId) =>
 export const getPendingPostAudits = (params = {}) =>
   adminApi.get('/api/PostReport/pending-audits', { params });
 
+// ====================== 评论举报相关（管理员）API ======================
+
+// 管理员获取评论举报列表
+export const getCommentReportList = (params = {}) =>
+  adminApi.get('/api/CommentReport/list', { params });
+
+// 管理员审核评论举报
+export const reviewCommentReport = ({ reportId, status, reviewComment = '' }) =>
+  adminApi.post(`/api/CommentReport/review/${reportId}`, {
+    status,
+    reviewComment,
+  });
+
+// 管理员获取评论举报详情
+export const getCommentReportDetail = (reportId) =>
+  adminApi.get(`/api/CommentReport/${reportId}`);
+
+// 管理员获取待审核的评论列表（AUDIT表）
+export const getPendingCommentAudits = (params = {}) =>
+  adminApi.get('/api/CommentReport/pending-audits', { params });
+
 // 管理员审核接口
 // status: 1=通过, 2=拒绝
 export function reviewAdmin({ adminId, status, reviewComment = '' }) {
@@ -285,7 +350,7 @@ export const fetchAllFeedbacks = () => {
   });
 };
 
-// 获取最近用户反馈（仅取最近2条）
+// 获取最近用户反馈（仅取最近3条）
 export const fetchRecentFeedbacks = () => {
   return adminApi
     .get('/feedback/all', {
@@ -296,7 +361,7 @@ export const fetchRecentFeedbacks = () => {
       if (res && res.data && Array.isArray(res.data.feedbacks)) {
         return {
           ...res,
-          data: { ...res.data, feedbacks: res.data.feedbacks.slice(0, 2) },
+          data: { ...res.data, feedbacks: res.data.feedbacks.slice(0, 3) },
         };
       }
       return res;
@@ -362,8 +427,15 @@ export const subscribeAgent = (payload) =>
     headers: { skipAuth: false },
   });
 
+// 创建机器人
 export const createAI = (payload) =>
   api.post('/agent/user/creation', payload, {
+    headers: { skipAuth: false },
+  });
+
+// 获取用户的创建所有机器人
+export const fetchUserCreatedAgents = (userId) =>
+  api.get(`/user/${userId}/agents`, {
     headers: { skipAuth: false },
   });
 
@@ -371,6 +443,17 @@ export const createAgentPending = (payload) =>
   adminApi.post('/admin/agent-review/pending', payload, {
     headers: { skipAuth: false },
   });
+
+//获取对话名称
+export const getChatTitle = (chatId) =>
+  api.post(
+    `/agent/user/chat/${chatId}/title`,
+    {},
+    {
+      headers: { skipAuth: false },
+      timeout: 20000, // 20秒
+    }
+  );
 
 // 启用机器人
 export const startRobots = () =>
@@ -401,7 +484,7 @@ export const sendMessage = (payload) =>
     { question: payload.content },
     {
       headers: { skipAuth: false },
-      timeout: 5000, // 设置 5 秒超时时间
+      timeout: 60000, // 设置 60 秒超时时间
     }
   );
 
@@ -420,6 +503,32 @@ export const closeChat = (chatId) =>
 // 永久删除会话
 export const deleteChat = (chat_id) =>
   api.delete(`/agent/user/chat/delete/${chat_id}`, {
+    headers: { skipAuth: false },
+  });
+
+// 获取机器人设置
+export const getAgentSettings = (agentId) =>
+  api.get(`/agent/agent/${agentId}`, {
+    headers: { skipAuth: false },
+  });
+
+// 更新机器人设置
+export const updateAgentSettings = (agentId, payload) =>
+  api.put(`/agent/update/${agentId}`, payload, {
+    headers: {
+      skipAuth: false,
+    },
+  });
+
+// 获取所有机器人设置
+export const getAgentAllSettings = (agentId) =>
+  api.get(`/agent/${agentId}/versions`, {
+    headers: { skipAuth: false },
+  });
+
+// 获取指定版本的机器人设置
+export const getAgentVersion = (agentId, versionNumber) =>
+  api.get(`/agent/${agentId}/versions/${versionNumber}`, {
     headers: { skipAuth: false },
   });
 
@@ -449,6 +558,11 @@ export const sendUserFeedback = (feedbackload) =>
 // 根据用户id获取对应通知
 export const getUserNotifications = (userId) =>
   api.get(`/notifications/unread/${userId}`);
+
+// 向用户发送审核结果通知
+export const sendReviewNotification = (payload) => {
+  return api.post('/notifications/create', payload);
+};
 
 // 根据通知id将通知标记为已读
 export const markNotificationAsRead = (notificationId) =>
@@ -595,7 +709,7 @@ export const reportCommunityComment = (reportload) =>
 
 // 举报帖子
 export const reportCommunityPost = (reportload) =>
-  api.post(`/community/posts/${reportload.postId}/report`, reportload, {
+  api.post(`/api/PostReport/create`, reportload, {
     headers: { skipAuth: false },
   });
 

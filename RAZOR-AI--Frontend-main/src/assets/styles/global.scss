@@ -1,6 +1,7 @@
 // src/assets/styles/global.scss
 @use './variables.scss' as vars;
 @use 'sass:color';// 引入颜色函数
+@import './admin-home.scss';
 html, body {
     margin: 0;
     padding: 0;

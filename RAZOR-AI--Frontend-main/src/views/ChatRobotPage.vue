@@ -9,9 +9,6 @@
               <i class="el-icon-comments-o title-icon"></i>
               机器人对话
             </h1>
-            <p class="sub-title">
-              与 {{ currentChat?.name || '小助手Bot' }} 的对话
-            </p>
           </div>
           <div class="action-section">
             <!-- 导出按钮 -->
@@ -35,22 +32,12 @@
 
       <!-- 对话信息卡片 -->
       <el-card class="info-card">
-        <div class="chat-info">
-          <div class="info-item">
-            <span class="info-label">机器人名称:</span>
-            <span class="info-value">{{
-              currentChat?.agent_name || '未知'
-            }}</span>
-          </div>
-          <div class="info-item">
-            <span class="info-label">会话名称:</span>
-            <span class="info-value">{{
-              currentChat?.name || '未命名会话'
-            }}</span>
-          </div>
-          <div class="info-item timestamp">
-            <span class="info-value">{{ new Date().toLocaleString() }}</span>
-          </div>
+        <div class="info-item">
+          <span class="info-label">会话名称:</span>
+          <span class="info-value">{{ chattitle || '未命名会话' }}</span>
+        </div>
+        <div class="info-item timestamp">
+          <span class="info-value">{{ new Date().toLocaleString() }}</span>
         </div>
       </el-card>
 
@@ -61,7 +48,7 @@
             <!-- 欢迎消息 -->
             <div v-if="messages.length === 0" class="welcome-message">
               <p>
-                👋 您好！我是{{ currentChat?.name || '小助手Bot' }},
+                👋 您好！我是{{ currentChat?.name || '你的机器人小助手' }},
                 有什么可以帮助您的吗？
               </p>
             </div>
@@ -92,14 +79,6 @@
                 }"
               >
                 <div class="message-content">{{ msg.content }}</div>
-                <div class="message-time">
-                  {{
-                    new Date().toLocaleTimeString([], {
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })
-                  }}
-                </div>
               </div>
               <!-- 用户消息头像 -->
               <img
@@ -115,7 +94,7 @@
             <el-input
               v-model="newMessage"
               placeholder="输入您想聊的内容..."
-              @keyup.enter="sendMessage"
+              @keyup.enter.native="sendMessage"
               class="message-input"
               clearable
             >
@@ -143,7 +122,7 @@ import {
   saveChatHistory as apisaveChatHistory,
   sendMessage as apisendMessage,
   createChat as apicreateChat,
-  startRobots as apistartRobots,
+  getChatTitle as apigetChatTitle,
 } from '../utils/api';
 import { mapActions } from 'vuex';
 
@@ -155,71 +134,104 @@ export default {
       messages: [],
       userAvatar: require('@/assets/images/Avatar/User.png'),
       botAvatar: require('@/assets/images/Avatar/Assistant.png'),
-      currentChat: null,
+      currentChat: {},
       chatId: null,
-      robotsStarted: false,
+      isHistoryChat: false,
+      isFirstmessage: false,
+      chattitle: '',
     };
   },
 
-  created() {
+  async created() {
     this.chatId = this.$route.params.chatId;
-    console.log('当前对话ID:', this.chatId);
+    this.chattitle = this.$route.params.chatTitle || '未命名';
+    console.log('当前对话ID和名称是', this.chatId, this.chattitle);
+
+    this.isFirstmessage = ['未命名', '', undefined, null].includes(
+      this.chattitle
+    );
+    console.log('是否为首次发送消息:', this.isFirstmessage);
+
+    this.isHistoryChat = !!this.chatId && this.chatId !== 'null';
+    console.log('是否为历史对话:', this.isHistoryChat);
+
+    await this.createNewChat();
 
     if (this.chatId && this.chatId !== 'null') {
       this.getChatHistory();
-    } else {
-      this.createNewChat();
     }
   },
 
-  mounted() {
-    // 开启定时保存，每隔10秒保存一次
-    this.startAutoSave();
-  },
-
-  deactivated() {
-    // 组件被缓存时
-    this.switchChat();
-    console.log('组件被缓存，停止自动保存');
-  },
-
   beforeRouteLeave(to, from, next) {
-    // 停止自动保存
     this.switchChat();
-    // 清空消息，避免跳转时残留
     this.messages = [];
-    console.log('离开路由，停止自动保存并清空消息');
+    this.isHistoryChat = false;
+    console.log('离开路由，保存并清空消息');
     next();
   },
 
-  watch: {
-    '$route.params.chatId': {
-      async handler(newId, oldId) {
-        // 如果有旧会话，先切换保存它
-        if (oldId) {
-          await this.switchChat(oldId);
-        }
+  beforeRouteUpdate(to, from, next) {
+    const newId = to.params.chatId;
+    const oldId = from?.params?.chatId;
 
-        if (newId) {
-          this.chatId = newId;
-          this.messages = [];
-          await this.getChatHistory();
-          this.startAutoSave();
-        }
-      },
-      immediate: true,
-    },
+    console.log('[路由更新触发]', oldId, '=>', newId);
+
+    // 如果存在旧会话，做清理工作
+    if (oldId && oldId !== 'null') {
+      this.saveChat(oldId);
+      console.log('[保存旧会话]', oldId);
+    }
+
+    if (newId && newId !== 'null') {
+      console.log('[切换到新会话]', newId);
+
+      // 更新 chatId
+      this.chatId = newId;
+
+      // 清空消息
+      this.messages = [];
+
+      // 重置历史聊天标志
+      this.isHistoryChat = false;
+    }
+
+    next();
   },
 
   methods: {
     ...mapActions('chat', ['getChatByID']),
+
+    async getChatTitle() {
+      try {
+        const response = await apigetChatTitle(this.chatId);
+        console.log('获取聊天标题响应:', response);
+        if (response.status === 200) {
+          const newTitle = response.data.title || '无标题';
+          this.chattitle = newTitle;
+          console.log('获取聊天标题成功:', newTitle);
+
+          try {
+            await this.$router.push({
+              name: 'ChatRobot',
+              params: { chatId: this.chatId, chatTitle: newTitle },
+            });
+          } catch (error) {
+            if (!error.message.includes('Avoided redundant navigation')) {
+              console.error('路由跳转错误:', error);
+            }
+          }
+        }
+      } catch (error) {
+        console.error('获取聊天标题失败:', error);
+      }
+    },
 
     async getChatHistory() {
       try {
         const response = await apifetchChatDetailedHistory(this.chatId);
         console.log('获取聊天记录响应:', response);
         if (response.status === 200) {
-          this.messages = (response.data || []).slice().reverse();
+          this.messages = response.data || [];
         }
         this.$nextTick(() => this.scrollToBottom());
       } catch (error) {
@@ -227,22 +239,65 @@ export default {
       }
     },
 
+    async saveChat(chatId) {
+      if (!chatId) return;
+      try {
+        const response = await apisaveChatHistory({ chat_id: chatId });
+        console.log('保存聊天记录响应:', response);
+      } catch (error) {
+        console.error('保存聊天记录失败:', error);
+      }
+    },
+
     async createNewChat() {
       try {
+        if (this.isHistoryChat) {
+          if (!this.chatId) {
+            console.error('历史对话启动失败：缺少chatId');
+            return;
+          }
+
+          const requestBody = {
+            name: 'string',
+            agentId: -1,
+            userId: -1,
+            chatId: this.chatId,
+          };
+          console.log('历史对话启动 - 请求体:', requestBody);
+          const historyRes = await apicreateChat(requestBody);
+          console.log('历史对话启动 - API响应:', historyRes);
+
+          return;
+        }
+
         const { agentId, userId, name } = this.$route.query;
-        const requestBody = { name, agentId, userId, chatId: null };
-        console.log('创建新对话请求体:', requestBody);
+        if (!agentId || !userId) {
+          console.error('首次创建对话失败：缺少agentId或userId');
+          return;
+        }
 
-        const res = await apicreateChat(requestBody);
-        console.log('创建新对话响应:', res);
+        const requestBody = {
+          name: name,
+          agentId,
+          userId,
+          chatId: this.chatId,
+        };
+        console.log('首次创建对话 - 请求体:', requestBody);
 
-        if (res.data.chat_id) {
-          this.chatId = res.data.chat_id;
-          this.currentChat = res.data;
+        const createRes = await apicreateChat(requestBody);
+        console.log('首次创建对话 - API响应:', createRes);
+
+        if (createRes.data.chat_id) {
+          this.chatId = createRes.data.chat_id;
+          this.currentChat = createRes.data;
           this.$router.replace(`/chatRobot/${this.chatId}`);
         }
       } catch (error) {
-        console.error('创建新对话失败:', error);
+        if (this.isHistoryChat) {
+          console.error('历史对话启动失败:', error);
+        } else {
+          console.error('首次创建对话失败:', error);
+        }
       }
     },
 
@@ -250,33 +305,18 @@ export default {
       const content = this.newMessage.trim();
       if (!content) return;
 
+      // 先显示用户消息
       this.messages.push({ content, role: 'user' });
       this.newMessage = '';
 
       this.$nextTick(() => this.scrollToBottom());
 
       try {
-        if (!this.robotsStarted) {
-          try {
-            const startRes = await apistartRobots();
-            console.log('机器人启动结果:', startRes);
-            if (startRes?.status === 200) {
-              this.robotsStarted = true;
-            }
-          } catch (e) {
-            console.error('机器人启动失败:', e);
-            this.messages.push({
-              content: '对不起，机器人启动失败，请稍后再试。',
-              role: 'assistant',
-            });
-            return;
-          }
-        }
-
         const response = await apisendMessage({
           chat_id: this.chatId,
           content,
         });
+
         console.log('发送消息:', content);
         console.log('接口返回:', response);
 
@@ -311,37 +351,13 @@ export default {
         });
       } finally {
         this.$nextTick(() => this.scrollToBottom());
-      }
-    },
 
-    async startAutoSave() {
-      if (!this.chatId) return;
-
-      if (this.saveInterval) {
-        console.log('已有定时器，不再重复开启:', this.saveInterval);
-        return;
-      }
-
-      // 每10秒自动保存一次
-      this.saveInterval = setInterval(async () => {
-        try {
-          const response = await apisaveChatHistory({ chat_id: this.chatId });
-          if (response.status === 200) {
-            console.log('聊天记录已自动保存', response.data);
-          }
-        } catch (error) {
-          console.error('自动保存聊天记录失败:', error);
+        if (this.isFirstmessage) {
+          await this.saveChat(this.chatId);
+          console.log('首次发送未命名对话消息，开始获取标题...');
+          await this.getChatTitle();
+          this.isFirstmessage = false;
         }
-      }, 10000);
-
-      console.log('已开启自动保存定时器:', this.saveInterval);
-    },
-
-    stopAutoSave() {
-      if (this.saveInterval) {
-        console.log('清除定时器:', this.saveInterval);
-        clearInterval(this.saveInterval);
-        this.saveInterval = null;
       }
     },
 
@@ -361,12 +377,13 @@ export default {
 
       try {
         // 1. 先保存当前对话记录
-        await apisaveChatHistory({ chat_id: this.chatId });
+        this.saveChat(this.chatId);
         console.log('聊天记录已保存，开始导出TXT');
 
         // 2. 获取后端聊天记录
         const res = await apifetchChatDetailedHistory(this.chatId);
         let records = res.data || [];
+        console.log('获取的聊天记录:', records);
 
         if (records.length === 0) {
           this.$message.warning('当前没有对话记录可导出');
@@ -377,8 +394,8 @@ export default {
         records = records.slice().reverse();
 
         // 3. 生成 TXT 内容
-        let txtContent = `对话记录 - ${this.currentChat?.name || '未知会话'}\n`;
-        txtContent += `机器人: ${this.currentChat?.agent_name || '未知机器人'}\n`;
+        console.log('currentChat:', this.currentChat);
+        let txtContent = `对话记录 - ${this.currentChat?.title || '未知会话'}\n`;
         txtContent += `导出时间: ${new Date().toLocaleString()}\n\n`;
 
         records.forEach((msg) => {
@@ -415,7 +432,7 @@ export default {
 
       try {
         // 1. 保存聊天记录
-        await apisaveChatHistory({ chat_id: this.chatId });
+        this.saveChat(this.chatId);
         console.log('切换前聊天记录已保存');
 
         // 2. 关闭内存会话
@@ -424,10 +441,6 @@ export default {
         if (response.status === 200) {
           console.log('切换对话成功：', response.data);
           this.$message.success(response.data.message || '切换对话成功');
-
-          // 3. 清理定时器
-          this.stopAutoSave();
-          console.log('切换对话，停止定时保存');
         }
       } catch (error) {
         console.error('切换对话异常:', error);

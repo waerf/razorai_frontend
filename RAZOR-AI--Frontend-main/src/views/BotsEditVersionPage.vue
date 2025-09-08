@@ -8,8 +8,8 @@
       class="creat-robot-form"
     >
       <div class="form-header">
-        <h1 class="form-title">创建新机器人</h1>
-        <p class="form-subtitle">设置机器人的基本信息和参数</p>
+        <h1 class="form-title">编辑当前机器人设置</h1>
+        <p class="form-subtitle">修改机器人的基本信息和参数</p>
       </div>
 
       <el-form-item label="机器人名字" prop="name">
@@ -70,7 +70,8 @@
         ></el-input>
       </el-form-item>
 
-      <el-form-item label="价格">
+      <el-form-item label="价格" prop="price">
+        <!-- 补充prop，确保验证生效 -->
         <el-input-number
           v-model="form.price"
           :min="0"
@@ -83,7 +84,7 @@
       <el-form-item class="form-actions">
         <el-button class="cancel-button" @click="onCancel"> 取消 </el-button>
         <el-button type="primary" class="submit-button" @click="onSubmit">
-          创建机器人
+          更新机器人
         </el-button>
       </el-form-item>
     </el-form>
@@ -91,7 +92,8 @@
 </template>
 
 <script>
-import { reviewAI as apireviewAI } from '@/utils/api';
+import { getAgentSettings, updateAgentSettings } from '@/utils/api';
+
 export default {
   data() {
     return {
@@ -129,13 +131,56 @@ export default {
         { label: 'Claude', value: 3 },
         { label: 'GPT-4', value: 4 },
       ],
+      agentId: null,
+      isLoading: false,
     };
   },
+  async created() {
+    this.agentId = this.$route.params.agentId;
+    if (!this.agentId) {
+      this.$message.error('未获取到机器人ID，无法编辑');
+      this.$router.go(-1);
+      return;
+    }
+
+    await this.loadAgentSettings();
+  },
   methods: {
+    async loadAgentSettings() {
+      this.isLoading = true;
+      try {
+        const response = await getAgentSettings(this.agentId);
+        console.log('获取机器人配置:', response);
+        if (response.status === 200 && response.data?.agent) {
+          const agentData = response.data.agent;
+          this.form = {
+            name: agentData.name || '',
+            type: agentData.type !== undefined ? agentData.type : null,
+            LLM_id: agentData.llmId !== undefined ? agentData.llmId : null,
+            chatprompt: agentData.chatPrompt || '',
+            description: agentData.description || '',
+            price: agentData.price !== undefined ? agentData.price : 0,
+          };
+        } else {
+          this.$message.error(
+            '加载机器人配置失败：' + (response.data?.message || '数据异常')
+          );
+          this.$router.go(-1);
+        }
+      } catch (error) {
+        console.error('加载机器人配置错误：', error);
+        this.$message.error(
+          '加载失败：' + (error.response?.data?.message || '网络异常')
+        );
+        this.$router.go(-1);
+      } finally {
+        this.isLoading = false;
+      }
+    },
+
     onSubmit() {
       this.$refs.form.validate((valid) => {
         if (valid) {
-          // 获取用户ID并检查
           const userId = this.$store.state.user?.userId;
           if (!userId) {
             this.$message.error('未获取到用户信息，请重新登录');
@@ -145,51 +190,48 @@ export default {
           const payload = {
             name: this.form.name,
             type: this.form.type,
-            LLM_id: this.form.LLM_id,
-            chatprompt: this.form.chatprompt,
+            llmId: this.form.LLM_id,
+            chatPrompt: this.form.chatprompt,
             description: this.form.description,
-            creator_id: userId,
             price: this.form.price,
           };
-          console.log('提交参数:', payload);
-          this.apicreateRobot(payload);
+          console.log('更新机器人参数:', payload);
+          this.updateAgentSettings(this.agentId, payload);
         } else {
           console.log('表单验证失败');
           this.$message.warning('请完善表单信息后重试');
         }
       });
     },
-    onCancel() {
-      this.$router.go(-1); // 返回上一页
-    },
-    async apicreateRobot(payload) {
-      try {
-        const response = await apireviewAI(payload);
-        console.log('接口响应:', response);
 
-        const isSuccess =
-          response.status === 200 &&
-          (response.data.code === 200 || response.data.success);
+    async updateAgentSettings(agentId, payload) {
+      this.isLoading = true;
+      try {
+        const response = await updateAgentSettings(agentId, payload);
+        console.log('更新机器人响应:', response);
+        const isSuccess = response.status === 200;
 
         if (isSuccess) {
-          this.$message.success('请等待管理员审核');
-          // 重置表单
-          this.$refs.form?.resetFields();
+          this.$message.success('机器人更新成功,请管理员审核');
+          this.$router.go(-1);
         } else {
-          const errorMsg = response.data?.message || '创建失败，服务器返回异常';
-          this.$message.error(`创建失败: ${errorMsg}`);
+          const errorMsg = response.data?.message || '更新失败，服务器返回异常';
+          this.$message.error(`更新失败: ${errorMsg}`);
         }
       } catch (error) {
-        console.error('创建机器人错误详情:', error);
-        console.error('错误响应数据:', error.response?.data);
-        console.error('错误状态码:', error.response?.status);
-
+        console.error('更新机器人错误详情:', error);
         const errorMsg =
           error.response?.data?.message ||
           error.message ||
           '网络错误，请稍后重试';
-        this.$message.error(`创建失败: ${errorMsg}`);
+        this.$message.error(`更新失败: ${errorMsg}`);
+      } finally {
+        this.isLoading = false;
       }
+    },
+
+    onCancel() {
+      this.$router.go(-1);
     },
   },
 };
