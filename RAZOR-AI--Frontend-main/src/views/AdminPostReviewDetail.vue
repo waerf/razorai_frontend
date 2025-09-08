@@ -31,9 +31,6 @@
         <el-descriptions-item label="帖子作者">{{
           parsedPostTitle.author || '-'
         }}</el-descriptions-item>
-        <el-descriptions-item label="帖子内容" :span="2">{{
-          parsedPostTitle.content || '-'
-        }}</el-descriptions-item>
         <el-descriptions-item label="帖子标签" :span="2">
           <template v-if="parsedPostTitle.tags && parsedPostTitle.tags.length">
             <el-tag
