@@ -9,9 +9,6 @@
               <i class="el-icon-comments-o title-icon"></i>
               机器人对话
             </h1>
-            <p class="sub-title">
-              与 {{ currentChat?.name || '小助手Bot' }} 的对话
-            </p>
           </div>
           <div class="action-section">
             <!-- 导出按钮 -->
@@ -35,20 +32,12 @@
 
       <!-- 对话信息卡片 -->
       <el-card class="info-card">
-        <div class="chat-info">
-          <div class="info-item">
-            <span class="info-label">机器人名称:</span>
-            <span class="info-value">{{
-              currentChat?.agent_name || '未知'
-            }}</span>
-          </div>
-          <div class="info-item">
-            <span class="info-label">会话名称:</span>
-            <span class="info-value">{{ title || '未命名会话' }}</span>
-          </div>
-          <div class="info-item timestamp">
-            <span class="info-value">{{ new Date().toLocaleString() }}</span>
-          </div>
+        <div class="info-item">
+          <span class="info-label">会话名称:</span>
+          <span class="info-value">{{ chattitle || '未命名会话' }}</span>
+        </div>
+        <div class="info-item timestamp">
+          <span class="info-value">{{ new Date().toLocaleString() }}</span>
         </div>
       </el-card>
 
@@ -59,7 +48,7 @@
             <!-- 欢迎消息 -->
             <div v-if="messages.length === 0" class="welcome-message">
               <p>
-                👋 您好！我是{{ currentChat?.name || '小助手Bot' }},
+                👋 您好！我是{{ currentChat?.name || '你的机器人小助手' }},
                 有什么可以帮助您的吗？
               </p>
             </div>
@@ -105,7 +94,7 @@
             <el-input
               v-model="newMessage"
               placeholder="输入您想聊的内容..."
-              @keyup.enter="sendMessage"
+              @keyup.enter.native="sendMessage"
               class="message-input"
               clearable
             >
@@ -145,28 +134,39 @@ export default {
       messages: [],
       userAvatar: require('@/assets/images/Avatar/User.png'),
       botAvatar: require('@/assets/images/Avatar/Assistant.png'),
-      title: '',
       currentChat: {},
       chatId: null,
+      isHistoryChat: false,
+      isFirstmessage: false,
+      chattitle: '',
     };
   },
 
-  created() {
+  async created() {
     this.chatId = this.$route.params.chatId;
-    console.log('当前对话ID:', this.chatId);
+    this.chattitle = this.$route.params.chatTitle || '未命名';
+    console.log('当前对话ID和名称是', this.chatId, this.chattitle);
+
+    this.isFirstmessage = ['未命名', '', undefined, null].includes(
+      this.chattitle
+    );
+    console.log('是否为首次发送消息:', this.isFirstmessage);
+
+    this.isHistoryChat = !!this.chatId && this.chatId !== 'null';
+    console.log('是否为历史对话:', this.isHistoryChat);
+
+    await this.createNewChat();
 
     if (this.chatId && this.chatId !== 'null') {
-      this.getChatTitle();
       this.getChatHistory();
-    } else {
-      this.createNewChat();
     }
   },
 
   beforeRouteLeave(to, from, next) {
     this.switchChat();
     this.messages = [];
-    console.log('离开路由，停止自动保存并清空消息');
+    this.isHistoryChat = false;
+    console.log('离开路由，保存并清空消息');
     next();
   },
 
@@ -191,25 +191,8 @@ export default {
       // 清空消息
       this.messages = [];
 
-      // 获取新聊天标题
-      this.getChatTitle()
-        .then(() => {
-          console.log('[获取新聊天标题成功]', newId);
-        })
-        .catch((err) => {
-          console.error('[获取新聊天标题失败]', err);
-        });
-
-      // 拉取新聊天记录
-      this.getChatHistory()
-        .then(() => {
-          console.log('[获取新聊天记录成功]', newId);
-        })
-        .catch((err) => {
-          console.error('[获取新聊天记录失败]', err);
-        });
-    } else {
-      console.warn('[无效的新 chatId]', newId);
+      // 重置历史聊天标志
+      this.isHistoryChat = false;
     }
 
     next();
@@ -223,7 +206,20 @@ export default {
         const response = await apigetChatTitle(this.chatId);
         console.log('获取聊天标题响应:', response);
         if (response.status === 200) {
-          this.title = response.data.title || '无标题';
+          const newTitle = response.data.title || '无标题';
+          this.chattitle = newTitle;
+          console.log('获取聊天标题成功:', newTitle);
+
+          try {
+            await this.$router.push({
+              name: 'ChatRobot',
+              params: { chatId: this.chatId, chatTitle: newTitle },
+            });
+          } catch (error) {
+            if (!error.message.includes('Avoided redundant navigation')) {
+              console.error('路由跳转错误:', error);
+            }
+          }
         }
       } catch (error) {
         console.error('获取聊天标题失败:', error);
@@ -235,7 +231,7 @@ export default {
         const response = await apifetchChatDetailedHistory(this.chatId);
         console.log('获取聊天记录响应:', response);
         if (response.status === 200) {
-          this.messages = (response.data || []).slice().reverse();
+          this.messages = response.data || [];
         }
         this.$nextTick(() => this.scrollToBottom());
       } catch (error) {
@@ -255,20 +251,53 @@ export default {
 
     async createNewChat() {
       try {
+        if (this.isHistoryChat) {
+          if (!this.chatId) {
+            console.error('历史对话启动失败：缺少chatId');
+            return;
+          }
+
+          const requestBody = {
+            name: 'string',
+            agentId: -1,
+            userId: -1,
+            chatId: this.chatId,
+          };
+          console.log('历史对话启动 - 请求体:', requestBody);
+          const historyRes = await apicreateChat(requestBody);
+          console.log('历史对话启动 - API响应:', historyRes);
+
+          return;
+        }
+
         const { agentId, userId, name } = this.$route.query;
-        const requestBody = { name, agentId, userId, chatId: null };
-        console.log('创建新对话请求体:', requestBody);
+        if (!agentId || !userId) {
+          console.error('首次创建对话失败：缺少agentId或userId');
+          return;
+        }
 
-        const res = await apicreateChat(requestBody);
-        console.log('创建新对话响应:', res);
+        const requestBody = {
+          name: name,
+          agentId,
+          userId,
+          chatId: this.chatId,
+        };
+        console.log('首次创建对话 - 请求体:', requestBody);
 
-        if (res.data.chat_id) {
-          this.chatId = res.data.chat_id;
-          this.currentChat = res.data;
+        const createRes = await apicreateChat(requestBody);
+        console.log('首次创建对话 - API响应:', createRes);
+
+        if (createRes.data.chat_id) {
+          this.chatId = createRes.data.chat_id;
+          this.currentChat = createRes.data;
           this.$router.replace(`/chatRobot/${this.chatId}`);
         }
       } catch (error) {
-        console.error('创建新对话失败:', error);
+        if (this.isHistoryChat) {
+          console.error('历史对话启动失败:', error);
+        } else {
+          console.error('首次创建对话失败:', error);
+        }
       }
     },
 
@@ -322,6 +351,13 @@ export default {
         });
       } finally {
         this.$nextTick(() => this.scrollToBottom());
+
+        if (this.isFirstmessage) {
+          await this.saveChat(this.chatId);
+          console.log('首次发送未命名对话消息，开始获取标题...');
+          await this.getChatTitle();
+          this.isFirstmessage = false;
+        }
       }
     },
 
@@ -359,8 +395,7 @@ export default {
 
         // 3. 生成 TXT 内容
         console.log('currentChat:', this.currentChat);
-        let txtContent = `对话记录 - ${this.currentChat?.name || '未知会话'}\n`;
-        txtContent += `机器人: ${this.currentChat?.agent_name || '未知机器人'}\n`;
+        let txtContent = `对话记录 - ${this.currentChat?.title || '未知会话'}\n`;
         txtContent += `导出时间: ${new Date().toLocaleString()}\n\n`;
 
         records.forEach((msg) => {

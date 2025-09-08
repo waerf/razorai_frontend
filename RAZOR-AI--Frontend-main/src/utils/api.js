@@ -432,7 +432,7 @@ export const createAgentPending = (payload) =>
 export const getChatTitle = (chatId) =>
   api.post(
     `/agent/user/chat/${chatId}/title`,
-    {}, // 请求体，如果没有数据就传空对象
+    {},
     {
       headers: { skipAuth: false },
       timeout: 20000, // 20秒
@@ -468,7 +468,7 @@ export const sendMessage = (payload) =>
     { question: payload.content },
     {
       headers: { skipAuth: false },
-      timeout: 20000, // 设置 20 秒超时时间
+      timeout: 60000, // 设置 60 秒超时时间
     }
   );
 
@@ -487,6 +487,32 @@ export const closeChat = (chatId) =>
 // 永久删除会话
 export const deleteChat = (chat_id) =>
   api.delete(`/agent/user/chat/delete/${chat_id}`, {
+    headers: { skipAuth: false },
+  });
+
+// 获取机器人设置
+export const getAgentSettings = (agentId) =>
+  api.get(`/agent/agent/${agentId}`, {
+    headers: { skipAuth: false },
+  });
+
+// 更新机器人设置
+export const updateAgentSettings = (agentId, payload) =>
+  api.put(`/agent/update/${agentId}`, payload, {
+    headers: {
+      skipAuth: false,
+    },
+  });
+
+// 获取所有机器人设置
+export const getAgentAllSettings = (agentId) =>
+  api.get(`/agent/${agentId}/versions`, {
+    headers: { skipAuth: false },
+  });
+
+// 获取指定版本的机器人设置
+export const getAgentVersion = (agentId, versionNumber) =>
+  api.get(`/agent/${agentId}/versions/${versionNumber}`, {
     headers: { skipAuth: false },
   });
 

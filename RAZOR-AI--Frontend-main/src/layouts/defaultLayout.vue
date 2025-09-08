@@ -153,11 +153,18 @@
             class="chat-item"
             v-for="chat in chatlists"
             :key="chat.id"
-            @click="navigateToChat(chat.id)"
+            @click="navigateToChat(chat)"
           >
             <el-icon name="chat-dot-square" class="chat-icon"></el-icon>
-            <span v-if="!isSidebarHidden">{{ chat.name }}</span>
-            <span v-if="!isSidebarHidden">{{ chat.agent_name }}</span>
+
+            <div class="chat-text-container">
+              <div v-if="!isSidebarHidden" class="chat-title">
+                {{ chat.title }}
+              </div>
+              <div v-if="!isSidebarHidden" class="chat-name">
+                {{ chat.name }}
+              </div>
+            </div>
           </div>
         </div>
       </aside>
@@ -458,13 +465,24 @@ export default {
         this.submittingFeedback = false;
       }
     },
-    // 跳转到聊天详情页
-    navigateToChat(chatId) {
-      // 如果当前页面的id和chatId相同，则不跳转
-      if (this.$route.params.id === chatId) {
+
+    navigateToChat(chat) {
+      if (!chat || !chat.id) {
+        this.$message.error('无效的对话数据');
         return;
       }
-      this.$router.push({ name: 'ChatRobot', params: { chatId } });
+
+      if (this.$route.params.chatId === String(chat.id)) {
+        return;
+      }
+
+      this.$router.push({
+        name: 'ChatRobot',
+        params: {
+          chatId: String(chat.id),
+          chatTitle: chat.title || '未命名对话',
+        },
+      });
     },
   },
 };
@@ -615,5 +633,55 @@ export default {
       padding: 6px;
     }
   }
+}
+
+/* 1. 容器强制靠上，消除顶部潜在间隙 */
+.chat-history {
+  display: flex;
+  flex-direction: column; /* 垂直堆叠 */
+  align-items: flex-start; /* 靠左对齐，不要拉伸 */
+  justify-content: flex-start; /* 所有项靠上排列 */
+  gap: 0; /* 消除项之间的默认间距 */
+  padding: 0;
+  margin: 0;
+  justify-content: flex-start !important; /* 强制靠上 */
+  align-items: flex-start !important; /* 不拉伸 */
+}
+
+/* 2. 极致压缩对话项的垂直占用空间 */
+.chat-item {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 8px; /* 进一步压缩上下内边距（从2px→1px） */
+  margin: 0;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  width: 100%;
+  box-sizing: border-box;
+  font-size: 12px;
+  /* 新增：限制最小高度，避免内容撑开过大 */
+  min-height: 24px; /* 根据文字大小设置最小高度（12px文字+1px上下内边距） */
+  line-height: 1; /* 完全贴合文字高度，消除行高冗余 */
+  flex: 0 0 auto; /* 不要拉伸，不要均分高度 */
+}
+
+/* 3. 文字内容进一步压缩垂直空间 */
+.chat-name,
+.chat-title {
+  /* 移除文字本身的行高冗余，用padding控制上下空间 */
+  line-height: 1;
+  padding: 0;
+  margin: 0;
+}
+
+/* 4. 若存在隐藏的空元素，强制不占用空间 */
+.chat-item:empty {
+  display: none;
+}
+
+.chat-history > .chat-item {
+  flex-shrink: 0; /* 禁止被压缩 */
+  flex-grow: 0; /* 禁止拉伸 */
 }
 </style>

@@ -80,10 +80,18 @@
               <a
                 href="#"
                 class="text-gray-600 hover:text-gray-800 font-medium flex items-center transition-all hover:pr-1"
-                @click.prevent="$router.push('/bot-detail')"
+                @click.prevent="$router.push(`/BotsEditversion/${bot.id}`)"
               >
                 <i class="fa fa-cog mr-1"></i>
-                编辑设置
+                编辑当前版本
+              </a>
+              <a
+                href="#"
+                class="text-gray-600 hover:text-gray-800 font-medium flex items-center transition-all hover:pr-1"
+                @click.prevent="$router.push(`/BotsHistoryVersions/${bot.id}`)"
+              >
+                <i class="fa fa-cog mr-1"></i>
+                查看历史版本
               </a>
             </div>
           </div>
@@ -96,6 +104,7 @@
 <script>
 import { fetchUserCreatedAgents } from '@/utils/api';
 import { createChat as apicreateChat } from '@/utils/api';
+import { fetchAllChats as apifetchAllChats } from '@/utils/api';
 export default {
   name: 'MyBotsPage',
   data() {
@@ -120,7 +129,6 @@ export default {
   },
 
   computed: {
-    // 只展示活跃状态（auditStatus = 1）
     activeBots() {
       return this.bots
         .filter((bot) => bot.auditStatus === 1)
@@ -187,6 +195,11 @@ export default {
         const res = await apicreateChat(payload);
         const chatId = res.data.chat_id;
         console.log('创建的聊天ID:', chatId);
+
+        const result = await apifetchAllChats({ userId: userId });
+        this.$store.commit('chat/SET_CHATS', result.data || []);
+        console.log('输入的参数:', userId);
+        console.log('列表返回结果:', result);
 
         // 直接跳到真实的 chatId 页面
         this.$router.push({

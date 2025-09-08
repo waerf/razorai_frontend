@@ -74,7 +74,7 @@
                 <!-- 标题 + 时间 -->
                 <div class="conversation-title">
                   <h3 class="title-text">
-                    {{ conversation.name || '未命名对话' }}
+                    {{ conversation.title || '未命名对话' }}
                   </h3>
                   <span class="timestamp">{{
                     formatDate(conversation.created_at)
@@ -96,7 +96,7 @@
               <div class="conversation-actions">
                 <el-button
                   size="mini"
-                  @click.stop="viewConversation(conversation.id)"
+                  @click.stop="viewConversation(conversation)"
                 >
                   查看详情
                 </el-button>
@@ -212,8 +212,6 @@ export default {
     ...mapState('chat', ['chats']),
 
     filteredByRobot() {
-      // 路由 '/conversationHistory' 并没有 :id
-      // 所以这里一般是 undefined
       const robotId = this.$route.params.id;
       if (!Array.isArray(this.chats)) return [];
 
@@ -231,17 +229,16 @@ export default {
     },
 
     filteredConversations() {
-      // 先从 filteredByRobot 复制数据
       let result = [...this.filteredByRobot];
 
       if (this.searchQuery) {
         const query = this.searchQuery.toLowerCase();
         result = result.filter((conv) => {
-          const name = (conv.name || '').toLowerCase();
+          const title = (conv.title || '').toLowerCase();
           const content = (conv.content || '').toLowerCase();
           const agentIdStr = conv.agent_id ? String(conv.agent_id) : '';
           return (
-            name.includes(query) ||
+            title.includes(query) ||
             content.includes(query) ||
             agentIdStr.includes(query)
           );
@@ -354,14 +351,18 @@ export default {
       }
     },
 
-    viewConversation(conversationId) {
-      if (!conversationId) {
-        this.$message.error('无效的对话 ID');
+    viewConversation(conversation) {
+      if (!conversation || !conversation.id) {
+        this.$message.error('无效的对话数据');
         return;
       }
+
       this.$router.push({
         name: 'ChatRobot',
-        params: { chatId: String(conversationId) },
+        params: {
+          chatId: String(conversation.id),
+          chatTitle: conversation.title || '未命名对话',
+        },
       });
     },
 

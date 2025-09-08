@@ -38,7 +38,8 @@
                   >
                 </div>
                 <p class="post-time">
-                  {{ post.postTime }} · 发布于 {{ post.category }}
+                  发布于{{ post.postTime | formatToMinute }}
+                  {{ post.category }}
                 </p>
               </div>
             </div>
@@ -59,7 +60,10 @@
 
           <div class="post-content">
             <!-- 使用 v-html 渲染 API 返回的真实帖子内容 -->
-            <div class="content-section" v-html="post.content"></div>
+            <div
+              class="content-section markdown-body"
+              v-html="renderMarkdown(post.content)"
+            ></div>
           </div>
 
           <!-- 帖子底部操作 -->
@@ -595,8 +599,31 @@ import {
   checkUserLikedComment,
 } from '@/utils/api'; // 你的api文件路径
 import { mapState } from 'vuex';
+import { marked } from 'marked';
 
 export default {
+  filters: {
+    formatToMinute(timeStr) {
+      if (!timeStr || typeof timeStr !== 'string') {
+        return '未设置';
+      }
+
+      const date = new Date(timeStr);
+
+      if (isNaN(date.getTime())) {
+        return '时间格式错误';
+      }
+
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      const hour = String(date.getHours()).padStart(2, '0');
+      const minute = String(date.getMinutes()).padStart(2, '0');
+
+      // 5. 拼接最终格式（如：2025-09-01 17:37）
+      return `${year}-${month}-${day} ${hour}:${minute}`;
+    },
+  },
   props: ['id'],
   computed: {
     ...mapState('user', ['userId', 'userName', 'token']),
@@ -715,6 +742,10 @@ export default {
   },
 
   methods: {
+    renderMarkdown(mdText) {
+      if (!mdText) return '';
+      return marked(mdText, { breaks: true });
+    },
     // 跳转首页并弹出登录弹窗
     goToLoginDialog() {
       if (this.$route.path !== '/') {
