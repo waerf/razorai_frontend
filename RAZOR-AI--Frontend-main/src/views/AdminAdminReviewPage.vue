@@ -472,6 +472,16 @@ export default {
 </script>
 
 <style lang="scss" scoped>
+// 按钮圆角统一
+:deep(.el-button) {
+  border-radius: 12px !important;
+}
+
+// 全局卡片圆角统一
+:deep(.el-card) {
+  border-radius: 12px !important;
+}
+
 @import '@/assets/styles/admin-home.scss';
 
 // 复用 admin-home 的布局和 sidebar 样式，单独调整 admin-admin-review 的内容区

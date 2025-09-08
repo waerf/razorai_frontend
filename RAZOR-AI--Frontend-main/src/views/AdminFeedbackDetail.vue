@@ -368,6 +368,16 @@ export default {
 </script>
 
 <style lang="scss" scoped>
+// 全局卡片圆角统一
+:deep(.el-card) {
+  border-radius: 12px !important;
+}
+
+// 按钮圆角统一
+:deep(.el-button) {
+  border-radius: 12px !important;
+}
+
 @import '@/assets/styles/admin-home.scss';
 
 .feedback-header {

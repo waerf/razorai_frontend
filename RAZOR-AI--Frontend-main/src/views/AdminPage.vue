@@ -581,6 +581,16 @@ export default {
 </script>
 
 <style lang="scss" scoped>
+// 全局卡片圆角统一
+:deep(.el-card) {
+  border-radius: 12px !important;
+}
+
+// 按钮圆角统一
+:deep(.el-button) {
+  border-radius: 12px !important;
+}
+
 .admin-home {
   display: flex;
   min-height: 100vh;
@@ -664,7 +674,6 @@ export default {
         height: 40px;
         min-width: 40px;
         min-height: 40px;
-        border-radius: 50%;
         background-color: #165dff;
         color: white;
         display: flex;
@@ -763,7 +772,6 @@ export default {
 
         &:hover {
           background-color: rgba(0, 0, 0, 0.05);
-          border-radius: 4px;
         }
       }
 
@@ -783,6 +791,8 @@ export default {
         margin-bottom: 24px;
 
         .stat-card {
+          border-radius: 12px !important;
+
           .stat-content {
             display: flex;
             justify-content: space-between;
@@ -820,6 +830,8 @@ export default {
         gap: 16px;
 
         .content-card {
+          border-radius: 12px !important;
+
           /* 移除全宽样式，使每个卡片占据一列 */
           .card-header {
             display: flex;
@@ -837,7 +849,7 @@ export default {
             .item {
               padding: 12px;
               border: 1px solid #f0f0f0;
-              border-radius: 4px;
+              border-radius: 12px;
               margin-bottom: 8px;
 
               .item-header {
@@ -865,7 +877,7 @@ export default {
             .feedback-item {
               padding: 10px;
               border: 1px solid #f0f0f0;
-              border-radius: 4px;
+              border-radius: 12px;
 
               .feedback-header {
                 display: flex;

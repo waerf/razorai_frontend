@@ -104,6 +104,16 @@ export default {
 </script>
 
 <style scoped>
+/* 全局卡片圆角统一 */
+:deep(.el-card) {
+  border-radius: 12px !important;
+}
+
+/* 按钮圆角统一 */
+:deep(.el-button) {
+  border-radius: 12px !important;
+}
+
 .admin-login {
   position: fixed;
   top: 0;
@@ -120,7 +130,7 @@ export default {
 .login-container {
   background: #fff;
   padding: 30px;
-  border-radius: 5px;
+  border-radius: 12px;
   width: 400px;
 }
 

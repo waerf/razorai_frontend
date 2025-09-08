@@ -136,8 +136,13 @@ export default {
             llmId: this.form.LLM_id,
             chatPrompt: this.form.chatprompt,
             description: this.form.description,
+<<<<<<< Updated upstream
             creatorId: userId,
             price: 0,
+=======
+            CreatorId: userId,
+            price: this.form.price,
+>>>>>>> Stashed changes
           };
           console.log('提交参数:', payload);
           this.apiCreateAgentForReview(payload);
