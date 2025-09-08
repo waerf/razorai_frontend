@@ -10,7 +10,7 @@ const api = axios.create({
 
 const adminApi = axios.create({
   //baseURL: '/api',
-  baseURL: 'http://localhost:5253',
+  baseURL: '/api',
   timeout: 10000,
 });
 

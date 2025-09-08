@@ -22,6 +22,7 @@ import community from '@/views/CommunityPage.vue';
 import PostDetail from '@/views/PostDetail.vue';
 import ScoreMessage from '@/views/ScoreMessage.vue';
 //import { component } from 'vue/types/umd';
+import AdminLayout from '@/layouts/AdminLayout.vue';
 import AdminPage from '@/views/AdminPage.vue';
 import AdminLogin from '@/views/AdminLoginPage.vue';
 import AdminFeedback from '@/views/AdminFeedbackPage.vue';
@@ -233,15 +234,6 @@ const router = new VueRouter({
       },
     },
     {
-      path: '/admin/admin-review',
-      name: 'AdminAdminReview',
-      component: () => import('@/views/AdminAdminReviewPage.vue'),
-      meta: {
-        title: 'RazorAI-管理员审核',
-        requiresAdmin: true,
-      },
-    },
-    {
       path: '/admin/register',
       name: 'AdminRegister',
       component: () => import('@/views/AdminRegisterPage.vue'),
@@ -251,75 +243,93 @@ const router = new VueRouter({
     },
     {
       path: '/admin',
-      name: 'Admin',
-      component: AdminPage,
+      component: AdminLayout,
       meta: {
-        title: 'RazorAI-管理员控制台',
         requiresAdmin: true,
       },
-    },
-    {
-      path: '/admin/review',
-      name: 'AdminReview',
-      component: () => import('@/views/AdminReviewPage.vue'),
-      meta: {
-        title: 'RazorAI-机器人审核',
-        requiresAdmin: true,
-      },
-    },
-    {
-      path: '/admin/robots/:id',
-      name: 'AdminRobotReviewDetail',
-      component: () => import('@/views/AdminRobotReviewDetail.vue'),
-      meta: {
-        title: 'RazorAI-机器人审核详情',
-        requiresAdmin: true,
-      },
-    },
-    {
-      path: '/admin/feedback',
-      name: 'AdminFeedback',
-      component: AdminFeedback,
-      meta: {
-        title: 'RazorAI-用户反馈',
-        requiresAdmin: true,
-      },
-    },
-    {
-      path: '/admin/feedback/:userId/:feedbackId',
-      name: 'AdminFeedbackDetail',
-      component: () => import('@/views/AdminFeedbackDetail.vue'),
-      meta: {
-        title: 'RazorAI-反馈详情',
-        requiresAdmin: true,
-      },
-    },
-    {
-      path: '/admin/posts',
-      name: 'PostReview',
-      component: () => import('@/views/AdminPostReviewPage.vue'),
-      meta: {
-        title: 'RazorAI-帖子审核',
-        requiresAdmin: true,
-      },
-    },
-    {
-      path: '/admin/post-report/:id',
-      name: 'AdminPostReviewDetail',
-      component: () => import('@/views/AdminPostReviewDetail.vue'),
-      meta: {
-        title: 'RazorAI-帖子举报详情',
-        requiresAdmin: true,
-      },
-    },
-    {
-      path: '/admin/comment-report/:id',
-      name: 'AdminCommentReviewDetail',
-      component: () => import('@/views/AdminCommentReviewDetail.vue'),
-      meta: {
-        title: 'RazorAI-评论举报详情',
-        requiresAdmin: true,
-      },
+      children: [
+        {
+          path: '',
+          name: 'Admin',
+          component: AdminPage,
+          meta: {
+            title: 'RazorAI-管理员控制台',
+            requiresAdmin: true,
+          },
+        },
+        {
+          path: 'admin-review',
+          name: 'AdminAdminReview',
+          component: () => import('@/views/AdminAdminReviewPage.vue'),
+          meta: {
+            title: 'RazorAI-管理员审核',
+            requiresAdmin: true,
+          },
+        },
+        {
+          path: 'review',
+          name: 'AdminReview',
+          component: () => import('@/views/AdminReviewPage.vue'),
+          meta: {
+            title: 'RazorAI-机器人审核',
+            requiresAdmin: true,
+          },
+        },
+        {
+          path: 'robots/:id',
+          name: 'AdminRobotReviewDetail',
+          component: () => import('@/views/AdminRobotReviewDetail.vue'),
+          meta: {
+            title: 'RazorAI-机器人审核详情',
+            requiresAdmin: true,
+          },
+        },
+        {
+          path: 'feedback',
+          name: 'AdminFeedback',
+          component: AdminFeedback,
+          meta: {
+            title: 'RazorAI-用户反馈',
+            requiresAdmin: true,
+          },
+        },
+        {
+          path: 'feedback/:userId/:feedbackId',
+          name: 'AdminFeedbackDetail',
+          component: () => import('@/views/AdminFeedbackDetail.vue'),
+          meta: {
+            title: 'RazorAI-反馈详情',
+            requiresAdmin: true,
+          },
+        },
+        {
+          path: 'posts',
+          name: 'PostReview',
+          component: () => import('@/views/AdminPostReviewPage.vue'),
+          meta: {
+            title: 'RazorAI-帖子审核',
+            requiresAdmin: true,
+          },
+        },
+        {
+          path: 'post-report/:id',
+          name: 'AdminPostReviewDetail',
+          component: () => import('@/views/AdminPostReviewDetail.vue'),
+          meta: {
+            title: 'RazorAI-帖子举报详情',
+            requiresAdmin: true,
+          },
+        },
+        {
+          path: 'comment-report/:id',
+          name: 'AdminCommentReviewDetail',
+          component: () => import('@/views/AdminCommentReviewDetail.vue'),
+          meta: {
+            title: 'RazorAI-评论举报详情',
+            requiresAdmin: true,
+          },
+        },
+      ],
     },
   ],
 });
