@@ -48,9 +48,9 @@
         <el-descriptions-item label="举报原因">{{
           report.reportReason
         }}</el-descriptions-item>
-        <el-descriptions-item label="举报详情" :span="2">{{
-          report.reportDetails
-        }}</el-descriptions-item>
+        <el-descriptions-item label="举报详情" :span="2">
+          <div class="markdown-content" v-html="formattedReportDetails"></div>
+        </el-descriptions-item>
         <el-descriptions-item label="创建时间">{{
           formatTime(report.createdAt)
         }}</el-descriptions-item>
@@ -86,6 +86,7 @@
 </template>
 
 <script>
+import { marked } from 'marked';
 import {
   getPostReportDetail,
   reviewPostReport,
@@ -214,6 +215,17 @@ export default {
   mounted() {
     this.fetchReportDetail();
   },
+  computed: {
+    formattedReportDetails() {
+      if (!this.report.reportDetails) return '';
+      try {
+        return marked(this.report.reportDetails);
+      } catch (error) {
+        console.error('Markdown parsing error:', error);
+        return this.report.reportDetails; // 如果解析失败，返回原始文本
+      }
+    },
+  },
 };
 </script>
 
@@ -263,6 +275,106 @@ export default {
 
       .review-form {
         max-width: 400px;
+      }
+    }
+
+    // Markdown 内容样式
+    .markdown-content {
+      line-height: 1.6;
+      color: #333;
+
+      h1,
+      h2,
+      h3,
+      h4,
+      h5,
+      h6 {
+        margin: 16px 0 8px 0;
+        font-weight: 600;
+        color: #2c3e50;
+      }
+
+      h1 {
+        font-size: 1.6em;
+      }
+      h2 {
+        font-size: 1.4em;
+      }
+      h3 {
+        font-size: 1.2em;
+      }
+      h4 {
+        font-size: 1.1em;
+      }
+
+      p {
+        margin: 8px 0;
+      }
+
+      ul,
+      ol {
+        margin: 8px 0;
+        padding-left: 20px;
+      }
+
+      li {
+        margin: 4px 0;
+      }
+
+      code {
+        background: #f5f5f5;
+        padding: 2px 4px;
+        border-radius: 3px;
+        font-family: 'Courier New', monospace;
+        font-size: 0.9em;
+      }
+
+      pre {
+        background: #f5f5f5;
+        padding: 12px;
+        border-radius: 6px;
+        overflow-x: auto;
+        margin: 12px 0;
+
+        code {
+          background: none;
+          padding: 0;
+        }
+      }
+
+      blockquote {
+        border-left: 4px solid #409eff;
+        margin: 12px 0;
+        padding: 8px 12px;
+        background: #f8f9fa;
+        color: #666;
+      }
+
+      a {
+        color: #409eff;
+        text-decoration: none;
+
+        &:hover {
+          text-decoration: underline;
+        }
+      }
+
+      table {
+        border-collapse: collapse;
+        width: 100%;
+        margin: 12px 0;
+
+        th,
+        td {
+          border: 1px solid #ddd;
+          padding: 8px;
+          text-align: left;
+        }
+
+        th {
+          background: #f5f5f5;
+          font-weight: 600;
+        }
       }
     }
   }
