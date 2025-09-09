@@ -148,7 +148,7 @@ export default {
             LLM_id: this.form.LLM_id,
             chatprompt: this.form.chatprompt,
             description: this.form.description,
-            creator_id: userId,
+            CreatorId: userId,
             price: this.form.price,
           };
           console.log('提交参数:', payload);
