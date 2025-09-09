@@ -1,293 +1,152 @@
 <template>
   <div class="admin-post-review">
-    <!-- 侧边导航栏 -->
-    <aside class="sidebar" :class="{ hidden: isSidebarCollapsed }">
-      <div class="user-info">
-        <div class="avatar">{{ adminName ? adminName.charAt(0) : '管' }}</div>
-        <div>
-          <p class="username">{{ adminName || '管理员' }}</p>
-          <p class="role">系统管理员</p>
+    <!-- 搜索和筛选 -->
+    <el-card class="search-card" shadow="hover">
+      <div class="search-container">
+        <el-input
+          placeholder="搜索帖子标题或内容..."
+          prefix-icon="el-icon-search"
+          v-model="searchQuery"
+          class="search-input"
+        ></el-input>
+        <!-- 已移除状态和类型筛选 -->
+      </div>
+    </el-card>
+
+    <!-- 列表切换标签 -->
+    <el-tabs v-model="activeTab" @tab-click="handleTabClick">
+      <el-tab-pane label="待审核帖子" name="posts"></el-tab-pane>
+      <el-tab-pane label="待审核评论" name="comments"></el-tab-pane>
+    </el-tabs>
+
+    <!-- 帖子列表 -->
+    <el-card v-if="activeTab === 'posts'" class="post-list-card" shadow="hover">
+      <div class="card-header">
+        <h2 class="card-title">待审核帖子列表</h2>
+        <div class="action-buttons">
+          <span class="record-count">共 {{ posts.length }} 条记录</span>
+          <el-select v-model="pageSize" class="page-size-select">
+            <el-option label="10 条/页" value="10"></el-option>
+            <el-option label="20 条/页" value="20"></el-option>
+            <el-option label="50 条/页" value="50"></el-option>
+          </el-select>
         </div>
       </div>
 
-      <nav class="nav-menu">
-        <div class="nav-item" @click="$router.push('/admin')">
-          <i class="el-icon-menu"></i>
-          <span>控制台概览</span>
-        </div>
-        <div class="nav-item" @click="$router.push('/admin/admin-review')">
-          <i class="el-icon-user-solid"></i>
-          <span>管理员审核</span>
-        </div>
-        <div class="nav-item" @click="$router.push('/admin/review')">
-          <i class="el-icon-cpu"></i>
-          <span>机器人审核</span>
-        </div>
-        <div class="nav-item active">
-          <i class="el-icon-document"></i>
-          <span>帖子审核</span>
-        </div>
-        <div class="nav-item" @click="$router.push('/admin/feedback')">
-          <i class="el-icon-chat-dot-round"></i>
-          <span>用户反馈</span>
-        </div>
-      </nav>
-    </aside>
+      <el-table :data="filteredPosts" style="width: 100%" @row-click="viewPost">
+        <el-table-column label="帖子标题" min-width="220">
+          <template #default="scope">
+            <p class="post-title">{{ scope.row.title }}</p>
+            <p class="post-subtitle">{{ scope.row.subtitle }}</p>
+          </template>
+        </el-table-column>
+        <el-table-column
+          prop="author"
+          label="作者"
+          min-width="100"
+        ></el-table-column>
+        <el-table-column label="举报时间" min-width="140">
+          <template #default="scope">
+            {{ formatTime(scope.row.time) }}
+          </template>
+        </el-table-column>
+        <!-- 已移除类型列 -->
+        <el-table-column label="状态" min-width="100">
+          <template #default="scope">
+            <el-tag :type="getStatusTagType(scope.row.status)" size="small">
+              {{ getStatusText(scope.row.status) }}
+            </el-tag>
+          </template>
+        </el-table-column>
+      </el-table>
 
-    <!-- 主内容区 -->
-    <main class="main-content">
-      <!-- 顶部导航栏 -->
-      <header class="header">
-        <button class="toggle-sidebar-btn" @click="toggleSidebar">
-          <i class="el-icon-s-fold"></i>
-        </button>
-        <h1 class="title">帖子审核</h1>
-        <div style="display: flex; align-items: center; margin-left: auto">
-          <el-button
-            type="warning"
-            style="margin-right: 8px"
-            @click="showChangePwd = true"
-            >修改密码</el-button
-          >
-          <el-button type="primary" @click="logout">退出登录</el-button>
-        </div>
-        <el-dialog
-          title="修改密码"
-          :visible.sync="showChangePwd"
-          width="400px"
-          @close="resetPwdForm"
-        >
-          <el-form
-            :model="pwdForm"
-            :rules="pwdRules"
-            ref="pwdFormRef"
-            label-width="90px"
-          >
-            <el-form-item label="旧密码" prop="oldPwd">
-              <el-input
-                v-model="pwdForm.oldPwd"
-                type="password"
-                autocomplete="off"
-              />
-            </el-form-item>
-            <el-form-item label="新密码" prop="newPwd">
-              <el-input
-                v-model="pwdForm.newPwd"
-                type="password"
-                autocomplete="off"
-              />
-            </el-form-item>
-            <el-form-item label="确认密码" prop="confirmPwd">
-              <el-input
-                v-model="pwdForm.confirmPwd"
-                type="password"
-                autocomplete="off"
-              />
-            </el-form-item>
-          </el-form>
-          <span slot="footer" class="dialog-footer">
-            <el-button @click="showChangePwd = false">取消</el-button>
-            <el-button type="primary" @click="submitPwdForm"
-              >确认修改</el-button
-            >
-          </span>
-        </el-dialog>
-      </header>
-
-      <!-- 主要内容 -->
-      <div class="content">
-        <!-- 搜索和筛选 -->
-        <el-card class="search-card" shadow="hover">
-          <div class="search-container">
-            <el-input
-              placeholder="搜索帖子标题或内容..."
-              prefix-icon="el-icon-search"
-              v-model="searchQuery"
-              class="search-input"
-            ></el-input>
-            <!-- 已移除状态和类型筛选 -->
-          </div>
-        </el-card>
-
-        <!-- 列表切换标签 -->
-        <el-tabs v-model="activeTab" @tab-click="handleTabClick">
-          <el-tab-pane label="待审核帖子" name="posts"></el-tab-pane>
-          <el-tab-pane label="待审核评论" name="comments"></el-tab-pane>
-        </el-tabs>
-
-        <!-- 帖子列表 -->
-        <el-card
-          v-if="activeTab === 'posts'"
-          class="post-list-card"
-          shadow="hover"
-        >
-          <div class="card-header">
-            <h2 class="card-title">待审核帖子列表</h2>
-            <div class="action-buttons">
-              <span class="record-count">共 {{ posts.length }} 条记录</span>
-              <el-select v-model="pageSize" class="page-size-select">
-                <el-option label="10 条/页" value="10"></el-option>
-                <el-option label="20 条/页" value="20"></el-option>
-                <el-option label="50 条/页" value="50"></el-option>
-              </el-select>
-            </div>
-          </div>
-
-          <el-table
-            :data="filteredPosts"
-            style="width: 100%"
-            @row-click="viewPost"
-          >
-            <el-table-column label="帖子标题" min-width="220">
-              <template #default="scope">
-                <p class="post-title">{{ scope.row.title }}</p>
-                <p class="post-subtitle">{{ scope.row.subtitle }}</p>
-              </template>
-            </el-table-column>
-            <el-table-column
-              prop="author"
-              label="作者"
-              min-width="100"
-            ></el-table-column>
-            <el-table-column label="提交时间" min-width="140">
-              <template #default="scope">
-                {{ formatTime(scope.row.time) }}
-              </template>
-            </el-table-column>
-            <!-- 已移除类型列 -->
-            <el-table-column label="状态" min-width="100">
-              <template #default="scope">
-                <el-tag :type="getStatusTagType(scope.row.status)" size="small">
-                  {{ getStatusText(scope.row.status) }}
-                </el-tag>
-              </template>
-            </el-table-column>
-          </el-table>
-
-          <!-- 帖子分页 -->
-          <div class="pagination-container">
-            <span class="pagination-info">
-              显示 {{ currentPageStart }} 到 {{ currentPageEnd }} 条，共
-              {{ posts.length }} 条
-            </span>
-            <el-pagination
-              layout="prev, pager, next"
-              :total="posts.length"
-              :page-size="pageSize"
-              @current-change="handleCurrentChange"
-            ></el-pagination>
-          </div>
-        </el-card>
-
-        <!-- 评论列表 -->
-        <el-card
-          v-if="activeTab === 'comments'"
-          class="post-list-card"
-          shadow="hover"
-        >
-          <div class="card-header">
-            <h2 class="card-title">待审核评论列表</h2>
-            <div class="action-buttons">
-              <span class="record-count">共 {{ comments.length }} 条记录</span>
-              <el-select v-model="commentPageSize" class="page-size-select">
-                <el-option label="10 条/页" value="10"></el-option>
-                <el-option label="20 条/页" value="20"></el-option>
-                <el-option label="50 条/页" value="50"></el-option>
-              </el-select>
-            </div>
-          </div>
-
-          <el-table
-            :data="filteredComments"
-            style="width: 100%"
-            @row-click="viewComment"
-          >
-            <el-table-column label="评论内容" min-width="220">
-              <template #default="scope">
-                <p class="post-title">{{ scope.row.commentContent }}</p>
-                <p class="post-subtitle">{{ scope.row.reportReason }}</p>
-              </template>
-            </el-table-column>
-            <el-table-column
-              prop="reporterName"
-              label="举报人"
-              min-width="100"
-            ></el-table-column>
-            <el-table-column label="举报时间" min-width="140">
-              <template #default="scope">
-                {{ formatTime(scope.row.createdAt) }}
-              </template>
-            </el-table-column>
-            <el-table-column label="状态" min-width="100">
-              <template #default="scope">
-                <el-tag :type="getStatusTagType(scope.row.status)" size="small">
-                  {{ scope.row.statusText }}
-                </el-tag>
-              </template>
-            </el-table-column>
-          </el-table>
-
-          <!-- 分页 -->
-          <div class="pagination-container">
-            <span class="pagination-info">
-              显示 {{ commentCurrentPageStart }} 到
-              {{ commentCurrentPageEnd }} 条，共 {{ comments.length }} 条
-            </span>
-            <el-pagination
-              layout="prev, pager, next"
-              :total="comments.length"
-              :page-size="commentPageSize"
-              @current-change="handleCommentCurrentChange"
-            ></el-pagination>
-          </div>
-        </el-card>
+      <!-- 帖子分页 -->
+      <div class="pagination-container">
+        <span class="pagination-info">
+          显示 {{ currentPageStart }} 到 {{ currentPageEnd }} 条，共
+          {{ posts.length }} 条
+        </span>
+        <el-pagination
+          layout="prev, pager, next"
+          :total="posts.length"
+          :page-size="pageSize"
+          @current-change="handleCurrentChange"
+        ></el-pagination>
       </div>
-    </main>
+    </el-card>
+
+    <!-- 评论列表 -->
+    <el-card
+      v-if="activeTab === 'comments'"
+      class="post-list-card"
+      shadow="hover"
+    >
+      <div class="card-header">
+        <h2 class="card-title">待审核评论列表</h2>
+        <div class="action-buttons">
+          <span class="record-count">共 {{ comments.length }} 条记录</span>
+          <el-select v-model="commentPageSize" class="page-size-select">
+            <el-option label="10 条/页" value="10"></el-option>
+            <el-option label="20 条/页" value="20"></el-option>
+            <el-option label="50 条/页" value="50"></el-option>
+          </el-select>
+        </div>
+      </div>
+
+      <el-table
+        :data="filteredComments"
+        style="width: 100%"
+        @row-click="viewComment"
+      >
+        <el-table-column label="评论内容" min-width="220">
+          <template #default="scope">
+            <p class="post-title">{{ scope.row.commentContent }}</p>
+            <p class="post-subtitle">{{ scope.row.reportReason }}</p>
+          </template>
+        </el-table-column>
+        <el-table-column
+          prop="reporterName"
+          label="举报人"
+          min-width="100"
+        ></el-table-column>
+        <el-table-column label="举报时间" min-width="140">
+          <template #default="scope">
+            {{ formatTime(scope.row.createdAt) }}
+          </template>
+        </el-table-column>
+        <el-table-column label="状态" min-width="100">
+          <template #default="scope">
+            <el-tag :type="getStatusTagType(scope.row.status)" size="small">
+              {{ scope.row.statusText }}
+            </el-tag>
+          </template>
+        </el-table-column>
+      </el-table>
+
+      <!-- 分页 -->
+      <div class="pagination-container">
+        <span class="pagination-info">
+          显示 {{ commentCurrentPageStart }} 到
+          {{ commentCurrentPageEnd }} 条，共 {{ comments.length }} 条
+        </span>
+        <el-pagination
+          layout="prev, pager, next"
+          :total="comments.length"
+          :page-size="commentPageSize"
+          @current-change="handleCommentCurrentChange"
+        ></el-pagination>
+      </div>
+    </el-card>
   </div>
 </template>
 
 <script>
-import {
-  changeAdminPassword,
-  adminLogout,
-  getAdminInfo,
-  getPostReportList,
-  getCommentReportList,
-} from '@/utils/api';
+import { getPostReportList, getCommentReportList } from '@/utils/api';
 export default {
   name: 'AdminPostReviewPage',
   data() {
     return {
-      isSidebarCollapsed:
-        localStorage.getItem('admin_sidebar_collapsed') === 'true',
-      showChangePwd: false,
-      adminName: '',
       activeTab: 'posts', // 默认显示帖子tab
-      pwdForm: {
-        oldPwd: '',
-        newPwd: '',
-        confirmPwd: '',
-      },
-      pwdRules: {
-        oldPwd: [{ required: true, message: '请输入旧密码', trigger: 'blur' }],
-        newPwd: [
-          { required: true, message: '请输入新密码', trigger: 'blur' },
-          { min: 6, message: '新密码至少6位', trigger: 'blur' },
-        ],
-        confirmPwd: [
-          { required: true, message: '请确认新密码', trigger: 'blur' },
-          {
-            validator: (rule, value, callback) => {
-              if (value !== this.pwdForm.newPwd) {
-                callback(new Error('两次输入的新密码不一致'));
-              } else {
-                callback();
-              }
-            },
-            trigger: 'blur',
-          },
-        ],
-      },
       searchQuery: '',
       // 已移除状态和类型筛选相关变量
       pageSize: 10,
@@ -534,91 +393,8 @@ export default {
     handleCommentCurrentChange(page) {
       this.commentCurrentPage = page;
     },
-    async fetchAdminInfo() {
-      try {
-        const res = await getAdminInfo();
-        if (res.data && res.data.success) {
-          this.adminName = res.data.adminInfo.adminName;
-        } else {
-          this.$message.error(res.data.message || '获取管理员信息失败');
-        }
-      } catch (err) {
-        this.$message.error(err.message || '获取管理员信息失败');
-      }
-    },
-    toggleSidebar() {
-      this.isSidebarCollapsed = !this.isSidebarCollapsed;
-      localStorage.setItem('admin_sidebar_collapsed', this.isSidebarCollapsed);
-    },
-    logout() {
-      this.$confirm('确定要退出登录吗？', '提示', {
-        confirmButtonText: '确定',
-        cancelButtonText: '取消',
-        type: 'warning',
-      })
-        .then(async () => {
-          try {
-            const res = await adminLogout();
-            if (res.data && res.data.success) {
-              this.$message.success(res.data.message || '登出成功');
-              if (window.localStorage) {
-                localStorage.removeItem('admin_token');
-              }
-            } else {
-              if (window.localStorage) {
-                localStorage.removeItem('admin_token');
-              }
-            }
-          } catch (err) {
-            if (window.localStorage) {
-              localStorage.removeItem('admin_token');
-            }
-          } finally {
-            this.$router.push('/');
-          }
-        })
-        .catch(() => {
-          // 用户取消
-        });
-    },
-    async submitPwdForm() {
-      this.$refs.pwdFormRef.validate(async (valid) => {
-        if (!valid) return;
-        try {
-          const res = await changeAdminPassword({
-            oldPassword: this.pwdForm.oldPwd,
-            newPassword: this.pwdForm.newPwd,
-          });
-          if (res.data && res.data.success) {
-            this.$message({
-              type: 'success',
-              message: res.data.message || '密码修改成功',
-            });
-            this.showChangePwd = false;
-            this.resetPwdForm();
-          } else {
-            this.$message({
-              type: 'error',
-              message: res.data.message || '密码修改失败',
-            });
-          }
-        } catch (err) {
-          this.$message({
-            type: 'error',
-            message: err.response?.data?.message || '密码修改失败，请重试',
-          });
-        }
-      });
-    },
-    resetPwdForm() {
-      this.pwdForm.oldPwd = '';
-      this.pwdForm.newPwd = '';
-      this.pwdForm.confirmPwd = '';
-      if (this.$refs.pwdFormRef) this.$refs.pwdFormRef.clearValidate();
-    },
   },
   mounted() {
-    this.fetchAdminInfo();
     this.fetchPendingPosts();
     this.fetchPendingComments();
   },
@@ -626,11 +402,17 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-@import '@/assets/styles/admin-home.scss';
+// 全局卡片圆角统一
+:deep(.el-card) {
+  border-radius: 12px !important;
+}
+
+// 按钮圆角统一
+:deep(.el-button) {
+  border-radius: 12px !important;
+}
 
 .admin-post-review {
-  @extend .admin-home;
-
   // 内容区自定义样式
   .search-card {
     margin-bottom: 24px;

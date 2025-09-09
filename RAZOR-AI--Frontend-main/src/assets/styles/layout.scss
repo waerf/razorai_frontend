@@ -72,15 +72,24 @@
       }
    }   
    
-   .header-name-empty {
+   .header-name-empty-left {
       flex: 1;
-      width: 4vw;
+      min-width: 8.25vw;
+      max-width: 8.25vw;
+      width: auto;
       height: 5vh;
       padding: 2vh 2vw;
       margin: 0;
-      font-size: 2.8vh;
-      color: vars.$text-color;
-      text-align: center;
+   }
+
+   .header-name-empty-right {
+      flex: 1;
+      min-width: 1.75vw;
+      max-width: 1.75vw;
+      width: auto;
+      height: 15vh;
+      padding: 2vh 2vw;
+      margin: 0;
    }
 
    .user-info {

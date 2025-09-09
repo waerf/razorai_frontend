@@ -697,6 +697,7 @@ export default {
           width: 25%;
           border-radius: 12px;
           height: 100%;
+          font-size: 1.1vw;
 
           &.has-input {
             background-color: $selected-background-color;

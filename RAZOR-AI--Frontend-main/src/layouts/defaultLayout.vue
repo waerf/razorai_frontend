@@ -13,7 +13,7 @@
       </div>
 
       <!-- 通过占位实现位置的偏移 -->
-      <h2 class="header-name-empty">{{ ' ' }}</h2>
+      <h2 class="header-name-empty-left">{{ '' }}</h2>
       <h2
         class="header-name"
         :class="{ active: currentActiveTab === 'RAZOR-AI' }"
@@ -28,7 +28,7 @@
       >
         {{ headername_withCommunity }}
       </h2>
-      <h2 class="header-name-empty">{{ ' ' }}</h2>
+      <h2 class="header-name-empty-right">{{ ' ' }}</h2>
       <div class="header-actions">
         <!-- 反馈和登录容器 -->
         <div class="action-container">
@@ -502,6 +502,7 @@ export default {
 .header-actions {
   display: flex;
   align-items: center;
+  width: 20vw;
 
   .action-container {
     display: flex;
