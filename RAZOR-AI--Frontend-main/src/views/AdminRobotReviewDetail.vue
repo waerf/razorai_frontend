@@ -21,8 +21,8 @@
             <img
               v-if="robot.avatarUrl"
               :src="robot.avatarUrl"
-              class="robot-avatar"
               :alt="robot.name"
+              class="robot-avatar"
               @error="handleImageError"
             />
             <div v-else class="avatar-placeholder">
@@ -130,11 +130,10 @@ export default {
     getPendingAgentDetail,
     // 处理头像图片加载错误
     handleImageError(event) {
-      // 图片加载失败时隐藏图片，显示占位符
+      // 图片加载失败时隐藏img元素，显示默认头像
       event.target.style.display = 'none';
-      if (this.robot) {
-        this.robot.avatarUrl = null;
-      }
+      // 可以通过设置robot.avatarUrl为null来切换到默认头像显示
+      this.$set(this.robot, 'avatarUrl', null);
     },
     // 获取type的中文显示名称
     getTypeDisplayName(type) {
@@ -180,7 +179,7 @@ export default {
             creatorName: data.creatorName,
             createdAt: data.createdAt,
             reviewRemarks: data.reviewRemarks,
-            avatarUrl: data.avatarUrl,
+            avatarUrl: data.avatarUrl, // 新增头像URL字段
           };
         } else {
           this.$message.error(res.data?.message || '获取机器人详情失败');
@@ -226,7 +225,7 @@ export default {
           Description: this.robot.description,
           CreatorId: parseInt(creatorId),
           Price: this.robot.price || 0,
-          AvatarUrl: this.robot.avatarUrl || null,
+          AvatarUrl: this.robot.avatarUrl, // 新增头像URL字段
           Remarks: '', // 审核备注
         };
         const approveRes = await fetch(
@@ -304,7 +303,7 @@ export default {
         Description: this.robot.description,
         CreatorId: parseInt(creatorId),
         Price: this.robot.price || 0,
-        AvatarUrl: this.robot.avatarUrl || null,
+        AvatarUrl: this.robot.avatarUrl, // 新增头像URL字段
         Remarks: this.rejectReason,
       };
       try {
@@ -386,10 +385,8 @@ export default {
   }
 
   .avatar-container {
-    width: 48px;
-    height: 48px;
-    margin-right: 16px;
     position: relative;
+    margin-right: 16px;
   }
 
   .robot-avatar {
@@ -398,12 +395,6 @@ export default {
     border-radius: 50%;
     object-fit: cover;
     border: 2px solid #e4e7ed;
-    transition: all 0.3s ease;
-  }
-
-  .robot-avatar:hover {
-    border-color: #165dff;
-    transform: scale(1.05);
   }
 
   .avatar-placeholder {
@@ -416,7 +407,6 @@ export default {
     justify-content: center;
     font-size: 22px;
     color: white;
-    margin-right: 16px;
   }
 
   .robot-user-info {

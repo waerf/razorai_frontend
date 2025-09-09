@@ -42,8 +42,24 @@
       >
         <el-table-column label="机器人信息" min-width="220">
           <template #default="scope">
-            <p class="robot-name">{{ scope.row.name }}</p>
-            <p class="robot-description">{{ scope.row.description }}</p>
+            <div class="robot-info-container">
+              <div class="robot-avatar-container">
+                <img
+                  v-if="scope.row.avatarUrl"
+                  :src="scope.row.avatarUrl"
+                  :alt="scope.row.name"
+                  class="robot-avatar-list"
+                  @error="handleAvatarError(scope.row)"
+                />
+                <div v-else class="avatar-placeholder-list">
+                  {{ scope.row.name ? scope.row.name.charAt(0) : 'AI' }}
+                </div>
+              </div>
+              <div class="robot-text-info">
+                <p class="robot-name">{{ scope.row.name }}</p>
+                <p class="robot-description">{{ scope.row.description }}</p>
+              </div>
+            </div>
           </template>
         </el-table-column>
         <el-table-column
@@ -98,6 +114,11 @@ export default {
     };
   },
   methods: {
+    // 处理头像图片加载错误
+    handleAvatarError(robot) {
+      // 图片加载失败时设置avatarUrl为null，显示默认头像
+      this.$set(robot, 'avatarUrl', null);
+    },
     formatTime(time) {
       if (!time) return '';
       const d = new Date(time);
@@ -157,6 +178,7 @@ export default {
             description: robot.description,
             creatorId: robot.creatorId,
             creatorName: robot.creatorName || robot.userName || '未知',
+            avatarUrl: robot.avatarUrl, // 新增头像URL字段
             status: 'pending', // 默认待审核状态
           }));
           this.totalCount =
@@ -275,16 +297,58 @@ export default {
       }
     }
 
+    .robot-info-container {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .robot-avatar-container {
+      flex-shrink: 0;
+    }
+
+    .robot-avatar-list {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 2px solid #e4e7ed;
+    }
+
+    .avatar-placeholder-list {
+      width: 40px;
+      height: 40px;
+      background: #165dff;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      color: white;
+      font-weight: 600;
+    }
+
+    .robot-text-info {
+      flex: 1;
+      min-width: 0;
+    }
+
     .robot-name {
       font-weight: 500;
+      margin: 0 0 4px 0;
     }
 
     .robot-description {
       font-size: 12px;
       color: #999;
-      margin-top: 4px;
+      margin: 0;
+      line-height: 1.4;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
     }
-
     .pagination-container {
       display: flex;
       justify-content: space-between;
