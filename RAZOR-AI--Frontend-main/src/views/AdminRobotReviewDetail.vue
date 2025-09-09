@@ -17,8 +17,17 @@
       </div>
       <div v-else-if="robot">
         <div class="robot-header">
-          <div class="avatar-placeholder">
-            {{ robot.name ? robot.name.charAt(0) : 'AI' }}
+          <div class="avatar-container">
+            <img
+              v-if="robot.avatarUrl"
+              :src="robot.avatarUrl"
+              class="robot-avatar"
+              :alt="robot.name"
+              @error="handleImageError"
+            />
+            <div v-else class="avatar-placeholder">
+              {{ robot.name ? robot.name.charAt(0) : 'AI' }}
+            </div>
           </div>
           <div class="robot-user-info">
             <div class="robot-name">
@@ -119,6 +128,14 @@ export default {
   },
   methods: {
     getPendingAgentDetail,
+    // 处理头像图片加载错误
+    handleImageError(event) {
+      // 图片加载失败时隐藏图片，显示占位符
+      event.target.style.display = 'none';
+      if (this.robot) {
+        this.robot.avatarUrl = null;
+      }
+    },
     // 获取type的中文显示名称
     getTypeDisplayName(type) {
       switch (parseInt(type)) {
@@ -163,6 +180,7 @@ export default {
             creatorName: data.creatorName,
             createdAt: data.createdAt,
             reviewRemarks: data.reviewRemarks,
+            avatarUrl: data.avatarUrl,
           };
         } else {
           this.$message.error(res.data?.message || '获取机器人详情失败');
@@ -208,6 +226,7 @@ export default {
           Description: this.robot.description,
           CreatorId: parseInt(creatorId),
           Price: this.robot.price || 0,
+          AvatarUrl: this.robot.avatarUrl || null,
           Remarks: '', // 审核备注
         };
         const approveRes = await fetch(
@@ -285,6 +304,7 @@ export default {
         Description: this.robot.description,
         CreatorId: parseInt(creatorId),
         Price: this.robot.price || 0,
+        AvatarUrl: this.robot.avatarUrl || null,
         Remarks: this.rejectReason,
       };
       try {
@@ -363,6 +383,27 @@ export default {
     display: flex;
     align-items: center;
     margin-bottom: 16px;
+  }
+
+  .avatar-container {
+    width: 48px;
+    height: 48px;
+    margin-right: 16px;
+    position: relative;
+  }
+
+  .robot-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid #e4e7ed;
+    transition: all 0.3s ease;
+  }
+
+  .robot-avatar:hover {
+    border-color: #165dff;
+    transform: scale(1.05);
   }
 
   .avatar-placeholder {

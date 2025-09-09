@@ -42,8 +42,24 @@
       >
         <el-table-column label="机器人信息" min-width="220">
           <template #default="scope">
-            <p class="robot-name">{{ scope.row.name }}</p>
-            <p class="robot-description">{{ scope.row.description }}</p>
+            <div class="robot-info-cell">
+              <div class="robot-avatar-container">
+                <img
+                  v-if="scope.row.avatarUrl"
+                  :src="scope.row.avatarUrl"
+                  class="robot-avatar-small"
+                  :alt="scope.row.name"
+                  @error="handleImageError(scope.row)"
+                />
+                <div v-else class="avatar-placeholder-small">
+                  {{ scope.row.name ? scope.row.name.charAt(0) : 'AI' }}
+                </div>
+              </div>
+              <div class="robot-text-info">
+                <p class="robot-name">{{ scope.row.name }}</p>
+                <p class="robot-description">{{ scope.row.description }}</p>
+              </div>
+            </div>
           </template>
         </el-table-column>
         <el-table-column
@@ -98,6 +114,11 @@ export default {
     };
   },
   methods: {
+    // 处理头像图片加载错误
+    handleImageError(robot) {
+      // 图片加载失败时清除头像URL
+      robot.avatarUrl = null;
+    },
     formatTime(time) {
       if (!time) return '';
       const d = new Date(time);
@@ -157,6 +178,7 @@ export default {
             description: robot.description,
             creatorId: robot.creatorId,
             creatorName: robot.creatorName || robot.userName || '未知',
+            avatarUrl: robot.avatarUrl,
             status: 'pending', // 默认待审核状态
           }));
           this.totalCount =
@@ -275,14 +297,57 @@ export default {
       }
     }
 
+    .robot-info-cell {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .robot-avatar-container {
+      flex-shrink: 0;
+    }
+
+    .robot-avatar-small {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 1px solid #e4e7ed;
+    }
+
+    .avatar-placeholder-small {
+      width: 36px;
+      height: 36px;
+      background: #165dff;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      color: white;
+      font-weight: 600;
+    }
+
+    .robot-text-info {
+      flex: 1;
+      min-width: 0; // 确保文本可以正确截断
+    }
+
     .robot-name {
       font-weight: 500;
+      margin: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
 
     .robot-description {
       font-size: 12px;
       color: #999;
-      margin-top: 4px;
+      margin: 4px 0 0 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
 
     .pagination-container {
