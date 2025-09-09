@@ -53,7 +53,7 @@
         <el-form :model="reviewForm" ref="reviewFormRef" label-width="100px">
           <el-form-item label="审核决定" prop="status">
             <el-radio-group v-model="reviewForm.status">
-              <el-radio :label="1">通过举报（隐藏评论）</el-radio>
+              <el-radio :label="1">通过举报（删除评论）</el-radio>
               <el-radio :label="2">拒绝举报（保留评论）</el-radio>
             </el-radio-group>
           </el-form-item>
