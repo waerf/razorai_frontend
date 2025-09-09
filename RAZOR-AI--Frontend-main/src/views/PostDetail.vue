@@ -137,6 +137,20 @@
               :src="comment.avatar || defaultAvatar"
               :alt="comment.author"
               class="comment-avatar"
+              @load="
+                debugAvatarLoad(
+                  '评论',
+                  comment.id,
+                  comment.avatar || defaultAvatar
+                )
+              "
+              @error="
+                debugAvatarError(
+                  '评论',
+                  comment.id,
+                  comment.avatar || defaultAvatar
+                )
+              "
               style="
                 width: 40px;
                 height: 40px;
@@ -293,6 +307,20 @@
                       :src="reply.avatar || defaultAvatar"
                       :alt="reply.author"
                       class="comment-avatar"
+                      @load="
+                        debugAvatarLoad(
+                          '回复',
+                          reply.id,
+                          reply.avatar || defaultAvatar
+                        )
+                      "
+                      @error="
+                        debugAvatarError(
+                          '回复',
+                          reply.id,
+                          reply.avatar || defaultAvatar
+                        )
+                      "
                       style="
                         width: 32px;
                         height: 32px;
@@ -597,6 +625,7 @@ import {
   cancelLikeCommunityComment,
   getCommentLikeCount,
   checkUserLikedComment,
+  getUserAvatar,
 } from '@/utils/api'; // 你的api文件路径
 import { mapState } from 'vuex';
 import { marked } from 'marked';
@@ -712,6 +741,11 @@ export default {
     };
   },
   created() {
+    console.log('[PostDetail调试] 页面初始化');
+    console.log('[PostDetail调试] 默认头像路径:', this.defaultAvatar);
+    console.log('[PostDetail调试] 当前用户ID:', this.currentUserId);
+    console.log('[PostDetail调试] 当前用户名:', this.userName);
+
     if (this.id) {
       this.loadPostData(this.id);
       this.loadComments(this.id);
@@ -742,6 +776,14 @@ export default {
   },
 
   methods: {
+    // 调试方法
+    debugAvatarLoad(type, id, avatar) {
+      console.log(`[${type}头像显示] ${type}${id}头像加载成功:`, avatar);
+    },
+    debugAvatarError(type, id, avatar) {
+      console.log(`[${type}头像显示] ${type}${id}头像加载失败:`, avatar);
+    },
+
     renderMarkdown(mdText) {
       if (!mdText) return '';
       return marked(mdText, { breaks: true });
@@ -953,6 +995,7 @@ export default {
         const commentsWithLike = await Promise.all(
           commentsArr.map(async (comment) => {
             let author = '';
+            let avatar = this.defaultAvatar;
             let likeCount = 0;
             let likedByMe = false;
             try {
@@ -960,6 +1003,44 @@ export default {
               author = nameRes.data?.authorName || `用户${comment.userId}`;
             } catch (e) {
               author = `用户${comment.userId}`;
+            }
+            try {
+              console.log(`[头像调试] 正在获取用户${comment.userId}的头像`);
+              const avatarRes = await getUserAvatar(comment.userId);
+              console.log(
+                `[头像调试] 用户${comment.userId}头像完整响应:`,
+                JSON.stringify(avatarRes, null, 2)
+              );
+              console.log(
+                `[头像调试] 用户${comment.userId}头像响应的data:`,
+                avatarRes.data
+              );
+              console.log(
+                `[头像调试] 用户${comment.userId}头像响应的avatarUrl:`,
+                avatarRes.data?.avatarUrl
+              );
+              console.log(
+                `[头像调试] 用户${comment.userId}头像响应的avatar_url:`,
+                avatarRes.data?.avatar_url
+              );
+
+              if (avatarRes.data?.avatar_url) {
+                avatar = avatarRes.data.avatar_url;
+                console.log(
+                  `[头像调试] 用户${comment.userId}头像设置为:`,
+                  avatar
+                );
+              } else {
+                console.log(
+                  `[头像调试] 用户${comment.userId}没有头像数据，使用默认头像`
+                );
+                console.log(`[头像调试] avatarRes.data结构:`, avatarRes.data);
+              }
+            } catch (e) {
+              console.log(`[头像调试] 用户${comment.userId}头像获取失败:`, e);
+              console.log(`[头像调试] 错误详情:`, e.response || e.message);
+              // 使用默认头像
+              avatar = this.defaultAvatar;
             }
             try {
               const likeRes = await getCommentLikeCount(comment.id);
@@ -978,7 +1059,7 @@ export default {
             } catch (e) {
               likedByMe = false;
             }
-            return { ...comment, author, likeCount, likedByMe };
+            return { ...comment, author, avatar, likeCount, likedByMe };
           })
         );
         this.comments = commentsWithLike;
@@ -1005,6 +1086,7 @@ export default {
                 res.data.replies.map(async (reply) => {
                   let repliedAuthor = null;
                   let author = '';
+                  let avatar = this.defaultAvatar;
                   let likeCount = 0;
                   let likedByMe = false;
                   try {
@@ -1012,6 +1094,34 @@ export default {
                     author = nameRes.data?.authorName || `用户${reply.userId}`;
                   } catch (e) {
                     author = `用户${reply.userId}`;
+                  }
+                  try {
+                    console.log(
+                      `[回复头像调试] 正在获取回复用户${reply.userId}的头像`
+                    );
+                    const avatarRes = await getUserAvatar(reply.userId);
+                    console.log(
+                      `[回复头像调试] 回复用户${reply.userId}头像响应:`,
+                      avatarRes
+                    );
+                    if (avatarRes.data?.avatar_url) {
+                      avatar = avatarRes.data.avatar_url;
+                      console.log(
+                        `[回复头像调试] 回复用户${reply.userId}头像设置为:`,
+                        avatar
+                      );
+                    } else {
+                      console.log(
+                        `[回复头像调试] 回复用户${reply.userId}没有头像数据，使用默认头像`
+                      );
+                    }
+                  } catch (e) {
+                    console.log(
+                      `[回复头像调试] 回复用户${reply.userId}头像获取失败:`,
+                      e
+                    );
+                    // 使用默认头像
+                    avatar = this.defaultAvatar;
                   }
                   try {
                     const likeRes = await getCommentLikeCount(reply.id);
@@ -1042,6 +1152,7 @@ export default {
                     ...reply,
                     repliedAuthor,
                     author,
+                    avatar,
                     likeCount,
                     likedByMe,
                   };
@@ -1103,16 +1214,40 @@ export default {
         if (response.data && response.data.comment) {
           // 获取新评论的完整信息
           let author = this.userName || `用户${this.currentUserId}`;
+          let avatar = this.defaultAvatar;
           let likeCount = 0;
           let likedByMe = false;
 
-          // 获取新评论的评论者名字
+          // 获取新评论的评论者名字和头像
           try {
             const nameRes = await getCommentAuthorName(
               response.data.comment.id
             );
             author = nameRes.data?.authorName || author;
+
+            // 获取评论者头像
+            console.log(
+              `[新评论头像调试] 正在获取新评论用户${response.data.comment.userId}的头像`
+            );
+            const avatarRes = await getUserAvatar(response.data.comment.userId);
+            console.log(
+              `[新评论头像调试] 新评论用户${response.data.comment.userId}头像响应:`,
+              avatarRes
+            );
+            if (avatarRes.data?.avatar_url) {
+              avatar = avatarRes.data.avatar_url;
+              console.log(
+                `[新评论头像调试] 新评论用户${response.data.comment.userId}头像设置为:`,
+                avatar
+              );
+            } else {
+              avatar = this.defaultAvatar;
+              console.log(
+                `[新评论头像调试] 新评论用户${response.data.comment.userId}没有头像数据，使用默认头像`
+              );
+            }
           } catch (e) {
+            console.log(`[新评论头像调试] 新评论头像获取失败:`, e);
             // 使用默认值
           }
 
@@ -1120,7 +1255,7 @@ export default {
           const newComment = {
             ...response.data.comment,
             author,
-            avatar: this.defaultAvatar,
+            avatar,
             likeCount,
             likedByMe,
           };
@@ -1375,13 +1510,18 @@ export default {
         if (res.data && res.data.comment) {
           // 获取当前用户信息和新回复的完整数据
           let author = this.userName || `用户${this.currentUserId}`;
+          let avatar = this.defaultAvatar;
           let likeCount = 0;
           let likedByMe = false;
 
-          // 获取新回复的评论者名字
+          // 获取新回复的评论者名字和头像
           try {
             const nameRes = await getCommentAuthorName(res.data.comment.id);
             author = nameRes.data?.authorName || author;
+
+            // 获取回复者头像
+            const avatarRes = await getUserAvatar(res.data.comment.userId);
+            avatar = avatarRes.data?.avatar_url || this.defaultAvatar;
           } catch (e) {
             // 使用默认值
           }
@@ -1390,7 +1530,7 @@ export default {
             ...res.data.comment,
             repliedAuthor,
             author,
-            avatar: this.defaultAvatar,
+            avatar,
             likeCount,
             likedByMe,
           };
@@ -1432,10 +1572,19 @@ export default {
         // 发送回复评论
         const res = await createCommunityComment(this.id, payload);
         if (res.data && res.data.comment) {
-          // 获取新回复的评论者名字
+          // 获取新回复的评论者名字和头像
           try {
             const nameRes = await getCommentAuthorName(res.data.comment.id);
             author = nameRes.data?.authorName || author;
+          } catch (e) {
+            // 使用默认值
+          }
+
+          let avatar = this.defaultAvatar;
+          try {
+            // 获取回复者头像
+            const avatarRes = await getUserAvatar(res.data.comment.userId);
+            avatar = avatarRes.data?.avatar_url || this.defaultAvatar;
           } catch (e) {
             // 使用默认值
           }
@@ -1444,7 +1593,7 @@ export default {
             ...res.data.comment,
             repliedAuthor,
             author,
-            avatar: this.defaultAvatar,
+            avatar,
             likeCount: 0,
             likedByMe: false,
           };

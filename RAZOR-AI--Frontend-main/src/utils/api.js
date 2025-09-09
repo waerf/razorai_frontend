@@ -140,6 +140,22 @@ export const updateUserInfo = (userId, payload) =>
     },
   });
 
+// 头像相关API
+// 上传用户头像
+export const uploadUserAvatar = (userId, avatarUrl) =>
+  api.post(`/user/${userId}/avatar`, { AvatarUrl: avatarUrl });
+
+// 获取用户头像
+export const getUserAvatar = (userId) => api.get(`/user/${userId}/avatar`);
+
+// 更新用户头像
+export const updateUserAvatar = (userId, avatarUrl) =>
+  api.put(`/user/${userId}/avatar`, { AvatarUrl: avatarUrl });
+
+// 删除用户头像
+export const deleteUserAvatar = (userId) =>
+  api.delete(`/user/${userId}/avatar`);
+
 // 获取用户积分余额
 export const getUserPoints = () => api.get('/points/balance');
 

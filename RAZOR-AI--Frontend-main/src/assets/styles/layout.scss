@@ -27,6 +27,9 @@
       min-width: 15vw;
       max-width: 25vw;
       width: auto;
+      min-width: 15vw;
+      max-width: 25vw;
+      width: auto;
       height: 5vh;
       padding: 2vh 2vw;
       margin: 0;
@@ -44,6 +47,9 @@
       justify-content: center;
       
       &:hover {
+         min-width: 15vw;
+         max-width: 25vw;
+         width: auto;
          min-width: 15vw;
          max-width: 25vw;
          width: auto;
@@ -95,6 +101,8 @@
    .user-info {
       min-width: 8vw;
       width: auto;
+      min-width: 8vw;
+      width: auto;
       display: flex;
       align-items: center;
       gap: 0.8vw;
@@ -107,9 +115,12 @@
    .logo-button-container {
       min-width: 15vw;
       width: auto;
+      min-width: 15vw;
+      width: auto;
       height: auto;
       display: flex;
       align-items: center;
+      justify-content: flex-start;
       justify-content: flex-start;
       // background-color: vars.$hover-background-color;
       border-bottom: 0.1vh solid #dcdcdc;
@@ -132,6 +143,8 @@
          text-align: left;
          white-space: nowrap;
          margin-left: 1vw;
+         white-space: nowrap;
+         margin-left: 1vw;
       }
    }
 }
@@ -145,6 +158,7 @@
 
 /* 左侧菜单栏 */
 .sidebar {
+   width: 20vw;
    width: 20vw;
    height: 100%;
    background-color: vars.$primary-color;
@@ -167,6 +181,8 @@
       flex-shrink: 0;
       padding: 2vh 2vw;
       width: 100%;
+      max-height: 40vh;
+      min-height: 40vh;
       max-height: 40vh;
       min-height: 40vh;
       background-color: color.adjust(
@@ -277,6 +293,7 @@
       font-size: 2vh;
       border-bottom: 0.1vh solid vars.$divider-color;
       .sidebar-button-icon {
+         margin-left: 15vw; 
          margin-left: 15vw; 
          font-size: vars.$menu-icon-size;
          margin-right: vars.$menu-icon-margin;

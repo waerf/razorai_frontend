@@ -4,6 +4,8 @@
   "private": true,
   "scripts": {
     "serve": "vue-cli-service serve",
+    "dev": "npm run serve",
+    "python-service": "python image_upload_service.py",
     "build": "vue-cli-service build",
     "test:unit": "vue-cli-service test:unit",
     "lint": "vue-cli-service lint",
@@ -17,6 +19,7 @@
     "mavon-editor": "^2.10.4",
     "uuid": "^11.0.3",
     "vue": "2",
+    "vue-cropper": "^0.6.5",
     "vue-infinite-loading": "^2.4.5",
     "vue-router": "3",
     "vuex": "3"
@@ -31,6 +34,7 @@
     "@vue/test-utils": "^1.1.3",
     "@vue/vue2-jest": "^27.0.0-alpha.2",
     "babel-jest": "^27.0.6",
+    "concurrently": "^9.2.1",
     "eslint": "^8.27.0",
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-prettier": "^5.2.1",
