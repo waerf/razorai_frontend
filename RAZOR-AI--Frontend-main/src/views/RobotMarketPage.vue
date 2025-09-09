@@ -664,7 +664,7 @@ export default {
     // 初始化搜索类型
     this.searchType = this.currentSearchMode === 'name' ? 1 : 2;
 
-    this.loadInitialData();
+    // 先获取用户订阅信息，但延迟加载数据到mounted阶段
     this.getUserSubscriptions();
   },
   mounted() {
@@ -678,8 +678,8 @@ export default {
       5 * 60 * 1000
     ); // 5分钟
 
-    // 初始化响应式布局
-    this.initializeResponsiveLayout();
+    // 初始化响应式布局并加载数据
+    this.initializeResponsiveLayoutAndLoadData();
   },
   beforeDestroy() {
     // 组件销毁前清理定时器
@@ -713,7 +713,7 @@ export default {
           promises.unshift(this.loadRecommendedRobots());
           const [recommendedData, rolePlayData, codingData, paperData] =
             await Promise.all(promises);
-          this.recommendedRobots = recommendedData;
+          this.recommendedRobots = recommendedData.slice(0, this.robotsPerRow);
           this.rolePlayRobots = rolePlayData.slice(0, this.robotsPerRow);
           this.codingRobots = codingData.slice(0, this.robotsPerRow);
           this.paperRobots = paperData.slice(0, this.robotsPerRow);
@@ -743,16 +743,10 @@ export default {
           firstIndex: firstIndex,
         };
         const response = await apiGetRobotsByType(agentload);
+        console.log(response);
 
         if (response.status === 200 && response.data) {
           const robots = response.data.data;
-          // 为每个机器人添加robotImage属性（预留对接）
-          robots.forEach((robot) => {
-            if (!robot.robotImage) {
-              robot.robotImage =
-                'https://origin.picgo.net/2025/09/08/cosplayRobot3bb23bae18d485a8.png';
-            }
-          });
           return robots;
         } else {
           console.error('加载机器人数据失败:', response);
@@ -784,14 +778,6 @@ export default {
           // 只返回请求数量的机器人
           const limitedRobots = allRobots.slice(0, requestedCount);
 
-          // 为每个机器人添加robotImage属性（预留对接）
-          limitedRobots.forEach((robot) => {
-            if (!robot.robotImage) {
-              robot.robotImage =
-                'https://origin.picgo.net/2025/09/08/paperRobot7d4d306fce039302.png';
-            }
-          });
-
           console.log(
             `请求数量: ${requestedCount}, 后端返回: ${allRobots.length}, 实际使用: ${limitedRobots.length}`
           );
@@ -817,13 +803,6 @@ export default {
 
         if (response.status === 200 && response.data) {
           const robots = response.data.agents;
-          // 为每个机器人添加robotImage属性（预留对接）
-          robots.forEach((robot) => {
-            if (!robot.robotImage) {
-              robot.robotImage =
-                'https://origin.picgo.net/2025/09/08/paperRobot7d4d306fce039302.png';
-            }
-          });
           return robots;
         } else {
           console.error('加载推荐机器人失败:', response);
@@ -906,14 +885,6 @@ export default {
           const robots = Array.isArray(response.data)
             ? response.data
             : response.data.data || [];
-
-          // 为每个机器人添加robotImage属性（预留对接）
-          robots.forEach((robot) => {
-            if (!robot.robotImage) {
-              robot.robotImage =
-                'https://origin.picgo.net/2025/09/08/paperRobot7d4d306fce039302.png';
-            }
-          });
 
           this.searchResults = robots;
 
@@ -1231,6 +1202,26 @@ export default {
       return `${points} 积分`;
     },
 
+    // 初始化响应式布局并加载数据（确保正确的初始化顺序）
+    initializeResponsiveLayoutAndLoadData() {
+      this.$nextTick(() => {
+        const container = this.$el.querySelector('.robots-grid');
+        if (container) {
+          // 先计算响应式布局
+          this.calculateRobotsPerRow();
+          this.setupResizeObserver(container);
+
+          // 然后加载数据
+          this.loadInitialData();
+        } else {
+          // 如果容器还没有渲染，延迟执行
+          setTimeout(() => {
+            this.initializeResponsiveLayoutAndLoadData();
+          }, 100);
+        }
+      });
+    },
+
     // 响应式布局方法
     initializeResponsiveLayout() {
       this.$nextTick(() => {
@@ -1323,7 +1314,9 @@ export default {
 
     // 获取带空白占位的机器人列表
     getPaddedRobots(robots) {
-      const paddedRobots = [...robots];
+      // 首先确保不超过当前行的显示数量
+      const limitedRobots = robots.slice(0, this.robotsPerRow);
+      const paddedRobots = [...limitedRobots];
 
       // 如果机器人数量不足一行，添加空白占位符
       while (

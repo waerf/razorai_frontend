@@ -836,11 +836,6 @@ export default {
         if (this.robot.price === undefined || this.robot.price === null) {
           this.robot.price = 1;
         }
-        // 为机器人添加robotImage属性（预留对接）
-        if (!this.robot.robotImage) {
-          this.robot.robotImage =
-            'https://origin.picgo.net/2025/09/08/paperRobot7d4d306fce039302.png';
-        }
       } catch (error) {
         console.error('获取机器人详情失败:', error);
         this.$message.error('无法加载机器人详情');
