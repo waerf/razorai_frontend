@@ -45,18 +45,6 @@
           <!-- 帖子列表 -->
           <div class="post-list" id="postList">
             <article class="post-card" v-for="post in posts" :key="post.id">
-              <div class="post-header">
-                <div class="author-info">
-                  <div class="author-name-wrap">
-                    <p class="author-name">{{ post.authorName }}</p>
-                  </div>
-                  <p class="post-time">
-                    发布于{{ post.createTime | formatToMinute }}
-                    {{ post.category }}
-                  </p>
-                </div>
-              </div>
-
               <!-- 帖子标题 -->
               <router-link
                 :to="`/community/post/${post.id}`"
@@ -64,6 +52,15 @@
               >
                 <h2 class="post-title-title">{{ post.title }}</h2>
               </router-link>
+
+              <div class="post-header">
+                <div class="author-info">
+                  <span class="author-name">{{ post.authorName }}</span>
+                  <span class="post-time">
+                    · 发布于 {{ post.createTime | formatToMinute }}</span
+                  >
+                </div>
+              </div>
 
               <div
                 class="post-excerpt markdown-body"
@@ -126,6 +123,7 @@
 <script>
 import {
   getRecommendedPosts,
+  getHottestPosts,
   getCommunityLikeCount,
   getCommunityCommentCount,
 } from '@/utils/api';
@@ -154,7 +152,7 @@ export default {
       hasMore: true,
       activeTab: 'latest',
       page: 1,
-      pageSize: 10,
+      pageSize: 100,
     };
   },
   created() {
@@ -174,7 +172,12 @@ export default {
       }
       this.loading = true;
       try {
-        const res = await getRecommendedPosts(this.pageSize * this.page);
+        let res;
+        if (this.activeTab === 'latest') {
+          res = await getRecommendedPosts(this.pageSize * this.page);
+        } else if (this.activeTab === 'hottest') {
+          res = await getHottestPosts(this.pageSize * this.page);
+        }
         const data = res.data;
 
         const records = data.posts || data || [];
@@ -199,9 +202,9 @@ export default {
                 '匿名用户',
               createTime: p.createdAt || p.createTime || '',
               title: contentObj.title || p.title || '未命名帖子',
-              excerpt: contentObj.content?.slice(0, 50) || p.excerpt || '',
-              likeCount: 0, // 默认值
-              commentCount: 0, // 默认值
+              excerpt: contentObj.content?.slice(0, 175) || p.excerpt || '',
+              likeCount: p.likeCount ?? 0,
+              commentCount: p.commentCount ?? 0,
               views: p.views || 0,
               tags: contentObj.tags || p.tags || [],
             };
@@ -357,13 +360,9 @@ export default {
 
 /* 帖子列表 */
 .post-list {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr); /* 两列等分 */
-  gap: 50px;
-  justify-content: center;
-  width: fit-content;
-  margin: 0 auto;
-  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
 }
 
 .post-card {
@@ -374,9 +373,10 @@ export default {
   transition: all 0.3s ease;
   word-wrap: break-word;
   overflow-wrap: break-word;
-  width: 430px;
+  max-width: 100%;
   box-sizing: border-box;
 }
+
 .post-card:hover {
   transform: translateY(-5px);
   box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
@@ -401,7 +401,7 @@ export default {
 }
 
 .author-info {
-  margin-left: 12px;
+  margin-left: 5px;
 }
 
 .author-name-wrap {
@@ -425,7 +425,9 @@ export default {
 
 .post-time {
   color: #666;
-  margin-top: 4px;
+  font-size: 13px; /* 稍小 */
+  margin-top: 2px; /* 缩小间距*/
+  line-height: 1.2; /* 紧凑显示 */
 }
 
 .more-btn {
@@ -438,17 +440,6 @@ export default {
 
 .more-btn:hover {
   color: #333;
-}
-
-.post-title {
-  font-size: 18px;
-  font-weight: 600;
-  color: #1a1a1a;
-  margin-bottom: 12px;
-  transition: color 0.2s ease;
-  word-wrap: break-word;
-  overflow-wrap: break-word;
-  max-width: 100%;
 }
 
 .post-title:hover {
@@ -466,7 +457,7 @@ export default {
 }
 
 .post-title-title {
-  font-size: 18px;
+  font-size: 25px;
   font-weight: 600;
   color: #1a1a1a;
   margin-bottom: 12px;
