@@ -159,7 +159,6 @@
 /* 左侧菜单栏 */
 .sidebar {
    width: 20vw;
-   width: 20vw;
    height: 100%;
    background-color: vars.$primary-color;
    padding-left: 2vw;
@@ -293,7 +292,6 @@
       font-size: 2vh;
       border-bottom: 0.1vh solid vars.$divider-color;
       .sidebar-button-icon {
-         margin-left: 15vw; 
          margin-left: 15vw; 
          font-size: vars.$menu-icon-size;
          margin-right: vars.$menu-icon-margin;

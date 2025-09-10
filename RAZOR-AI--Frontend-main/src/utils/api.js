@@ -410,6 +410,7 @@ export const fetchUserSubscriptions = async (userId) => {
   return response;
 };
 
+// 获取聊天详细记录
 export const fetchChatDetailedHistory = async (chat_id) => {
   console.log('chat_id in fetchChatDetailedHistory api.js:', chat_id);
   const response = await api.get(`/agent/user/chat/${chat_id}`, {
@@ -418,11 +419,13 @@ export const fetchChatDetailedHistory = async (chat_id) => {
   return response;
 };
 
+// 获取用户的所有会话
 export const fetchAllChats = (user_id) =>
   api.post('/agent/user/chat/all', user_id, {
     headers: { skipAuth: false },
   });
 
+// 订阅机器人
 export const subscribeAgent = (payload) =>
   api.post('/market/user/agent/subscribe', payload, {
     headers: { skipAuth: false },
@@ -532,6 +535,25 @@ export const getAgentVersion = (agentId, versionNumber) =>
   api.get(`/agent/${agentId}/versions/${versionNumber}`, {
     headers: { skipAuth: false },
   });
+
+// 设置机器人头像
+export const setAgentAvatar = (agentId, avatarUrl) =>
+  api.post(`/agent/${agentId}/avatar`, { avatarUrl });
+
+// 获取机器人头像
+export const getAgentAvatar = (agentId) => api.get(`/agent/${agentId}/avatar`);
+
+// 更新机器人头像
+export const updateAgentAvatar = (agentId, avatarUrl) =>
+  api.put(`/agent/${agentId}/avatar`, { avatarUrl });
+
+// 删除机器人头像
+export const deleteAgentAvatar = (agentId) =>
+  api.delete(`/agent/${agentId}/avatar`);
+
+// 搜索聊天内容
+export const searchChat = (payload) =>
+  api.post('/agent/user/chat/search', payload);
 
 // 获取管理员信息
 export const getAdminInfo = () => {
@@ -755,6 +777,16 @@ export const getRecommendedPosts = (count) =>
     }
   );
 
+//获取最热帖子
+export const getHottestPosts = (count) =>
+  api.post(
+    '/community/posts/recommend/hot',
+    { Count: count },
+    {
+      headers: { skipAuth: true },
+    }
+  );
+
 // 获取某个评论的所有回复
 export const getCommentReplies = (commentId) =>
   api.get(`/community/comments/${commentId}/replies`, {
@@ -787,6 +819,14 @@ export const getCommentAuthorName = (commentId) =>
 // 返回：{ commentId, userId, isLiked, likeId }
 export const checkUserLikedComment = (commentId, userId) =>
   api.get(`/community/comments/${commentId}/like/status/${userId}`, {
+    headers: {
+      Accept: 'application/json',
+    },
+  });
+
+// 检查用户是否点赞了指定帖子
+export const checkUserLikedPost = (postId, userId) =>
+  api.get(`/community/posts/${postId}/like/status/${userId}`, {
     headers: {
       Accept: 'application/json',
     },

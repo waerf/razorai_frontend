@@ -91,6 +91,7 @@ import {
   getPostReportDetail,
   reviewPostReport,
   //sendReviewNotification,
+  //sendReviewNotification,
 } from '@/utils/api';
 export default {
   name: 'AdminPostReviewDetail',
@@ -197,8 +198,22 @@ export default {
             }).catch(() => {}); // 忽略通知失败
           }
           */
+          /*
+          // 审核通过时向举报人发送通知，内容为“您举报的帖子已被处理，感谢您的反馈”
+          if (this.reviewForm.status === 1 && this.report.reporterId) {
+            const notifyMsg = `您举报的帖子已被处理，感谢您的反馈。`;
+            sendReviewNotification({
+              userId: this.report.reporterId,
+              notificationType: 0,
+              message: notifyMsg,
+            }).catch(() => {}); // 忽略通知失败
+          }
+          */
           this.$message.success(res.data.message || '审核成功');
           this.fetchReportDetail();
+
+          // 审核提交成功后，返回列表页
+          this.$router.push('/admin/posts');
 
           // 审核提交成功后，返回列表页
           this.$router.push('/admin/posts');

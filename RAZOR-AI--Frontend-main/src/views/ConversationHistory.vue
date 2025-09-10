@@ -179,6 +179,7 @@
 import { mapState, mapActions } from 'vuex';
 import { fetchAllChats as apiFetchAllChats } from '../utils/api';
 import { deleteChat as apiDeleteChat } from '../utils/api';
+import { searchChat as apiSearchChat } from '../utils/api';
 
 export default {
   name: 'ConversationHistory',
@@ -188,6 +189,8 @@ export default {
       selectedConversations: [],
       deleteDialogVisible: false,
       searchQuery: '',
+      searchResults: [],
+      searchLoading: false,
       filters: [
         { id: 'all', name: '全部对话' },
         { id: 'today', name: '今日' },
@@ -229,56 +232,7 @@ export default {
     },
 
     filteredConversations() {
-      let result = [...this.filteredByRobot];
-
-      if (this.searchQuery) {
-        const query = this.searchQuery.toLowerCase();
-        result = result.filter((conv) => {
-          const title = (conv.title || '').toLowerCase();
-          const content = (conv.content || '').toLowerCase();
-          const agentIdStr = conv.agent_id ? String(conv.agent_id) : '';
-          return (
-            title.includes(query) ||
-            content.includes(query) ||
-            agentIdStr.includes(query)
-          );
-        });
-      }
-
-      // 时间过滤
-      if (this.activeFilter !== 'all') {
-        const now = new Date();
-        const today = new Date(
-          now.getFullYear(),
-          now.getMonth(),
-          now.getDate()
-        );
-        const weekStart = new Date(today);
-        weekStart.setDate(today.getDate() - today.getDay());
-        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-
-        result = result.filter((conv) => {
-          // 确保 timestamp 存在
-          if (!conv.created_at) return false;
-          const convDate = new Date(conv.created_at);
-
-          switch (this.activeFilter) {
-            case 'today':
-              return convDate >= today;
-            case 'thisWeek':
-              return convDate >= weekStart && convDate < today;
-            case 'thisMonth':
-              return convDate >= monthStart && convDate < weekStart;
-            case 'earlier':
-              return convDate < monthStart;
-            default:
-              return true;
-          }
-        });
-      }
-
-      // 倒序，让最新的在前
-      return result.reverse();
+      return this.searchResults;
     },
 
     paginatedConversations() {
@@ -301,6 +255,12 @@ export default {
         this.filteredConversations.length
       );
     },
+  },
+
+  watch: {
+    searchQuery: { handler: 'fetchFilteredConversations', immediate: true },
+    activeFilter: { handler: 'fetchFilteredConversations', immediate: true },
+    filteredByRobot: { handler: 'fetchFilteredConversations', immediate: true },
   },
 
   methods: {
@@ -444,6 +404,116 @@ export default {
         this.selectedConversations = [];
         loadingInstance.close();
       }
+    },
+
+    async fetchFilteredConversations() {
+      this.searchLoading = true;
+      try {
+        const { searchQuery, filteredByRobot, activeFilter } = this;
+        let chatList = [];
+
+        if (searchQuery.trim()) {
+          const payload = {
+            searchTerm: searchQuery.toLowerCase(),
+            limit: 100,
+            userId: this.$store.state.user?.userId,
+          };
+
+          const response = await apiSearchChat(payload);
+          console.log('搜索API响应:', response);
+          chatList = response.data.results || [];
+          console.log('搜索结果:', chatList);
+        } else {
+          chatList = [...filteredByRobot];
+        }
+
+        // 应用时间过滤
+        let result = [...chatList];
+        if (activeFilter !== 'all') {
+          const now = new Date();
+          const today = new Date(
+            now.getFullYear(),
+            now.getMonth(),
+            now.getDate()
+          );
+          const weekStart = new Date(today);
+          weekStart.setDate(today.getDate() - today.getDay());
+          const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+
+          result = result.filter((conv) => {
+            if (!conv.created_at) return false;
+            const convDate = new Date(conv.created_at);
+
+            switch (activeFilter) {
+              case 'today':
+                return convDate >= today;
+              case 'thisWeek':
+                return convDate >= weekStart && convDate < today;
+              case 'thisMonth':
+                return convDate >= monthStart && convDate < weekStart;
+              case 'earlier':
+                return convDate < monthStart;
+              default:
+                return true;
+            }
+          });
+        }
+
+        this.searchResults = result.reverse();
+      } catch (error) {
+        console.error('对话搜索接口调用失败:', error);
+        this.$message.error('搜索失败，已切换至本地筛选');
+        this.searchResults = this.handleLocalFallback();
+      } finally {
+        this.searchLoading = false;
+      }
+    },
+
+    handleLocalFallback() {
+      let result = [...this.filteredByRobot];
+      if (this.searchQuery.trim()) {
+        const query = this.searchQuery.toLowerCase();
+        result = result.filter((conv) => {
+          const title = (conv.title || '').toLowerCase();
+          const content = (conv.content || '').toLowerCase();
+          const agentIdStr = conv.agent_id ? String(conv.agent_id) : '';
+          return (
+            title.includes(query) ||
+            content.includes(query) ||
+            agentIdStr.includes(query)
+          );
+        });
+      }
+      // 原有时间过滤逻辑
+      if (this.activeFilter !== 'all') {
+        const now = new Date();
+        const today = new Date(
+          now.getFullYear(),
+          now.getMonth(),
+          now.getDate()
+        );
+        const weekStart = new Date(today);
+        weekStart.setDate(today.getDate() - today.getDay());
+        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+
+        result = result.filter((conv) => {
+          if (!conv.created_at) return false;
+          const convDate = new Date(conv.created_at);
+          switch (this.activeFilter) {
+            case 'today':
+              return convDate >= today;
+            case 'thisWeek':
+              return convDate >= weekStart && convDate < today;
+            case 'thisMonth':
+              return convDate >= monthStart && convDate < weekStart;
+            case 'earlier':
+              return convDate < monthStart;
+            default:
+              return true;
+          }
+        });
+      }
+      return result.reverse();
     },
 
     formatDate(timestamp) {

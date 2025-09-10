@@ -172,7 +172,7 @@
             class="chat-item"
             v-for="chat in chatlists"
             :key="chat.id"
-            @click="navigateToChat(chat.id)"
+            @click="navigateToChat(chat)"
           >
             <el-icon name="chat-dot-square" class="chat-icon"></el-icon>
 
@@ -484,13 +484,24 @@ export default {
         this.submittingFeedback = false;
       }
     },
-    // 跳转到聊天详情页
-    navigateToChat(chatId) {
-      // 如果当前页面的id和chatId相同，则不跳转
-      if (this.$route.params.id === chatId) {
+
+    navigateToChat(chat) {
+      if (!chat || !chat.id) {
+        this.$message.error('无效的对话数据');
         return;
       }
-      this.$router.push({ name: 'ChatRobot', params: { chatId } });
+
+      if (this.$route.params.chatId === String(chat.id)) {
+        return;
+      }
+
+      this.$router.push({
+        name: 'ChatRobot',
+        params: {
+          chatId: String(chat.id),
+          chatTitle: chat.title || '未命名对话',
+        },
+      });
     },
   },
 };
@@ -669,50 +680,60 @@ export default {
 }
 
 .chat-history {
-  padding: 4px 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-start;
+  gap: 0;
+  padding: 0;
   margin: 0;
-  list-style: none;
+  justify-content: flex-start !important;
+  align-items: flex-start !important;
 }
 
 .chat-item {
   display: flex;
-  align-items: flex-start;
-  gap: 6px;
-  padding: 5px 12px;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 8px;
   margin: 0;
   cursor: pointer;
   transition: background-color 0.2s;
-}
-
-.chat-icon {
-  font-size: 14px;
-  color: #606266;
-  margin-top: 1px;
+  width: 100%;
+  box-sizing: border-box;
+  font-size: 12px;
+  min-height: 24px;
+  line-height: 1;
+  flex: 0 0 auto;
 }
 
 .chat-text-container {
   display: flex;
   flex-direction: column;
-  gap: 1px;
+  gap: 0;
   flex: 1;
+  padding: 0;
+  margin: 0;
+  text-align: left !important;
 }
 
-.chat-name {
-  font-size: 13px;
-  font-weight: 500;
-  color: #303133;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  line-height: 1.3;
-}
-
+.chat-name,
 .chat-title {
-  font-size: 12px;
-  color: #909399;
+  line-height: 1;
+  padding: 0;
+  margin: 0;
+  text-align: left;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  line-height: 1.3;
+}
+
+.chat-item:empty {
+  display: none;
+}
+
+.chat-history > .chat-item {
+  flex-shrink: 0;
+  flex-grow: 0;
 }
 </style>

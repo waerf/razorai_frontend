@@ -1,23 +1,47 @@
 <template>
   <div class="my-bots-container">
-    <!-- 页面标题 -->
     <div class="page-header">
-      <h1 class="page-title">我的 AI 机器人</h1>
-      <p class="page-description">
-        管理和配置你的所有AI机器人，查看它们的使用情况和统计数据
-      </p>
+      <div class="header-left">
+        <h1 class="page-title">我的 AI 机器人</h1>
+        <p class="page-description">
+          管理和配置你的所有AI机器人，查看它们的使用情况和统计数据
+        </p>
+      </div>
+
+      <button
+        class="btn primary-btn"
+        @click.prevent="$router.push('/createRobot')"
+      >
+        <i class="fa fa-plus mr-2"></i>
+        创建新机器人
+      </button>
     </div>
 
-    <!-- 主内容区 -->
-    <main class="main-content">
-      <!-- 页面右上角按钮 -->
-      <div class="absolute top-0 right-0 mt-2 mr-4 z-10">
+    <main class="main-content" style="position: relative">
+      <!-- 加载中状态 -->
+      <div
+        v-if="loading"
+        class="flex justify-center items-center fixed inset-0 bg-white bg-opacity-70 z-50"
+      >
+        <div class="flex flex-col items-center">
+          <i class="fa fa-spinner fa-spin text-3xl text-gray-600 mb-4"></i>
+          <span class="text-gray-600 text-lg">正在加载，请稍候...</span>
+        </div>
+      </div>
+
+      <!-- 空数据状态 -->
+      <div
+        v-else-if="!activeBots.length"
+        class="text-center py-20 text-gray-500"
+      >
+        <i class="fa fa-robot text-3xl mb-2"></i>
+        <p>您还没有创建任何机器人</p>
         <button
-          class="btn primary-btn flex items-center justify-center h-10 px-4"
-          @click="$router.push('/createRobot')"
+          class="btn primary-btn mt-4"
+          @click.prevent="$router.push('/createRobot')"
         >
           <i class="fa fa-plus mr-2"></i>
-          <span class="align-middle leading-none">创建新机器人</span>
+          立即创建第一个机器人
         </button>
       </div>
 
@@ -43,20 +67,16 @@
 
       <!-- 机器人列表区域 -->
       <div v-else class="bots-grid">
-        <!-- 机器人卡片 -->
         <div
           v-for="bot in activeBots"
           :key="bot.id"
           class="bot-card card-hover"
         >
           <div class="p-5">
-            <!-- 名字 & 描述 -->
             <div class="mb-4">
               <h2 class="text-lg font-semibold">{{ bot.name }}</h2>
               <p class="text-sm text-gray-500 mt-1">{{ bot.description }}</p>
             </div>
-
-            <!-- 价格 & 活跃状态 -->
             <div
               class="flex justify-between items-center text-sm text-gray-600 mb-4"
             >
@@ -66,8 +86,6 @@
               </div>
               <span class="status-active text-green-600">活跃</span>
             </div>
-
-            <!-- 按钮 -->
             <div class="border-t border-gray-100 pt-4 flex justify-between">
               <a
                 href="#"
@@ -233,30 +251,19 @@ export default {
   min-height: 100vh;
 }
 
-/* 页面标题 - 与帖子页面统一 */
+/* 页面头部样式：新增flex布局，让标题和按钮左右分布 */
 .page-header {
-  margin-bottom: 35px;
-  padding-bottom: 15px;
-  border-bottom: 1px solid #e2e8f0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px; /* 增加底部间距，与下方内容区分 */
 }
 
-.page-title {
-  font-size: 28px;
-  font-weight: 700;
-  color: #1e293b;
-  margin-bottom: 10px;
-  letter-spacing: -0.02em;
-}
-
-.page-description {
-  color: #64748b;
-  font-size: 16px;
-  max-width: 700px;
-}
-
-/* 主内容区 */
-.main-content {
-  flex: 1;
+/* 头部左侧标题区域：避免挤压 */
+.header-left {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 /* 表单卡片样式 - 与帖子页面统一 */
@@ -320,7 +327,7 @@ export default {
 /* 按钮样式 - 与帖子页面统一 */
 .btn {
   height: 40px;
-  padding: 3px 3px;
+  padding: 0 16px; /* 修正原padding值，原3px过窄导致文字挤压 */
   border-radius: 8px;
   font-size: 15px;
   font-weight: 500;
@@ -383,11 +390,11 @@ a {
   flex-wrap: wrap;
 }
 
-.flex justify-between {
+.justify-between {
   justify-content: space-between;
 }
 
-.flex items-center {
+.items-center {
   align-items: center;
 }
 
@@ -409,6 +416,10 @@ a {
 
 .mr-4 {
   margin-right: 16px;
+}
+
+.mt-4 {
+  margin-top: 16px; /* 新增：空状态按钮顶部间距 */
 }
 
 .pt-4 {
@@ -453,13 +464,21 @@ a {
     padding: 20px 15px;
   }
 
+  /* 移动端头部改为垂直布局，按钮在标题下方 */
+  .page-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
   .form-card {
     padding: 25px 20px;
   }
 
   .btn {
-    padding: 9px 18px;
+    padding: 0 14px;
     font-size: 14px;
+    width: 100%; /* 移动端按钮全屏宽度，更易点击 */
   }
 
   .bots-grid {
