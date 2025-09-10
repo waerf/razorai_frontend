@@ -117,7 +117,7 @@ export default {
     // 处理头像图片加载错误
     handleAvatarError(robot) {
       // 图片加载失败时设置avatarUrl为null，显示默认头像
-      this.$set(robot, 'avatarUrl', null);
+      this.$set(robot, 'robotImage', null);
     },
     formatTime(time) {
       if (!time) return '';
@@ -178,7 +178,7 @@ export default {
             description: robot.description,
             creatorId: robot.creatorId,
             creatorName: robot.creatorName || robot.userName || '未知',
-            avatarUrl: robot.avatarUrl, // 新增头像URL字段
+            robotImage: robot.robotImage || null, // 新增头像URL字段
             status: 'pending', // 默认待审核状态
           }));
           this.totalCount =

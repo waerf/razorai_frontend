@@ -225,7 +225,7 @@ export default {
           Description: this.robot.description,
           CreatorId: parseInt(creatorId),
           Price: this.robot.price || 0,
-          AvatarUrl: this.robot.avatarUrl, // 新增头像URL字段
+          RobotImage: this.robot.robotImage, // 新增头像URL字段
           Remarks: '', // 审核备注
         };
         const approveRes = await fetch(
