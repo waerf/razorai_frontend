@@ -27,6 +27,9 @@
       min-width: 15vw;
       max-width: 25vw;
       width: auto;
+      min-width: 15vw;
+      max-width: 25vw;
+      width: auto;
       height: 5vh;
       padding: 2vh 2vw;
       margin: 0;
@@ -35,7 +38,7 @@
       text-align: center;
       cursor: pointer;
       transition: all 0.3s ease;
-      border-radius: 0.5vh;
+      border-radius: 12px;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
@@ -44,6 +47,9 @@
       justify-content: center;
       
       &:hover {
+         min-width: 15vw;
+         max-width: 25vw;
+         width: auto;
          min-width: 15vw;
          max-width: 25vw;
          width: auto;
@@ -72,35 +78,49 @@
       }
    }   
    
-   .header-name-empty {
+   .header-name-empty-left {
       flex: 1;
-      width: 4vw;
+      min-width: 8.25vw;
+      max-width: 8.25vw;
+      width: auto;
       height: 5vh;
       padding: 2vh 2vw;
       margin: 0;
-      font-size: 2.8vh;
-      color: vars.$text-color;
-      text-align: center;
+   }
+
+   .header-name-empty-right {
+      flex: 1;
+      min-width: 1.75vw;
+      max-width: 1.75vw;
+      width: auto;
+      height: 15vh;
+      padding: 2vh 2vw;
+      margin: 0;
    }
 
    .user-info {
       min-width: 8vw;
       width: auto;
+      min-width: 8vw;
+      width: auto;
       display: flex;
       align-items: center;
       gap: 0.8vw;
-      color: vars.$text-color;
+      color: #606266;
       cursor: pointer;
-      font-size: 2.25vh;
+      font-size: 1vh;
       white-space: nowrap;
    }
    /* Logo 和名称区域 */
    .logo-button-container {
       min-width: 15vw;
       width: auto;
+      min-width: 15vw;
+      width: auto;
       height: auto;
       display: flex;
       align-items: center;
+      justify-content: flex-start;
       justify-content: flex-start;
       // background-color: vars.$hover-background-color;
       border-bottom: 0.1vh solid #dcdcdc;
@@ -121,6 +141,8 @@
          font-weight: bold;
          flex-grow: 1;
          text-align: left;
+         white-space: nowrap;
+         margin-left: 1vw;
          white-space: nowrap;
          margin-left: 1vw;
       }
@@ -160,6 +182,8 @@
       width: 100%;
       max-height: 40vh;
       min-height: 40vh;
+      max-height: 40vh;
+      min-height: 40vh;
       background-color: color.adjust(
          vars.$primary-color,
          $lightness: 10%
@@ -190,7 +214,7 @@
          font-size: 1.8vh;
          margin-bottom: 0.8vh;
          background-color: vars.$background-color;
-         border-radius: 1vh;
+         border-radius: 12px;
          box-shadow: 0 0.1vh 0.4vh rgba(0, 0, 0, 0.1);
          color: vars.$text-color;
          cursor: pointer;
@@ -242,6 +266,8 @@
       }
 
       &.active {
+         font-weight: bold;
+         font-size: 2.25vh;
          background-color: vars.$selected-background-color;
          color: vars.$selected-text-color;
          border-left: 0.4vh solid vars.$accent-color;
@@ -344,8 +370,8 @@
       }
       
       .header-name-empty {
-         width: 4vw;
-         padding: 2vh 1vw;
+         width: 2vw;
+         padding: 2vh 0vw;
       }
       
       .logo-button-container {
@@ -358,8 +384,7 @@
       }
       
       .user-info {
-         font-size: 2vh;
-         min-width: 6vw;
+         font-size: 1vh;
       }
    }
 }
@@ -392,8 +417,7 @@
       }
       
       .user-info {
-         font-size: 1.8vh;
-         min-width: 5vw;
+         font-size: 1vh;
       }
    }
 }

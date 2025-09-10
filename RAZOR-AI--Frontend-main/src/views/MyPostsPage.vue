@@ -10,20 +10,21 @@
         </p>
       </div>
 
+      <!-- 页面右上角按钮 -->
+      <div class="action-bar">
+        <button
+          class="primary-btn"
+          @click="$router.push('/community/CreatePost')"
+        >
+          <i class="fa fa-plus mr-2"></i>
+          <span>发布帖子</span>
+        </button>
+      </div>
+
       <!-- 帖子列表区域 -->
       <div class="form-card">
         <div class="filter-header">
           <h2 class="feed-title">帖子列表</h2>
-        </div>
-        <div class="action-bar">
-          <button
-            class="primary-btn"
-            @click="$router.push('/community/CreatePost')"
-            style="float: right; margin-top: -80px"
-          >
-            <i class="fa fa-plus-circle mr-2"></i>
-            <span>发布帖子</span>
-          </button>
         </div>
 
         <!-- 帖子列表 - 改为网格布局，每行两个 -->
@@ -120,17 +121,14 @@ export default {
   computed: {
     ...mapState('user', ['isLoggedIn', 'userId', 'userName']),
   },
-
   created() {
-    if (!this.isLoggedIn) {
-      // 只在未登录时跳转
-      this.$message.warning('请先登录后查看帖子');
-      this.$router.replace('/community'); // 用 replace 避免历史记录里留下一条无效记录
-    } else {
+    if (this.isLoggedIn && this.userId) {
       this.fetchMyPosts();
+    } else {
+      this.$router.push('/community');
+      this.$message.warning('请先登录后查看帖子');
     }
   },
-
   methods: {
     async fetchMyPosts() {
       try {
@@ -289,7 +287,7 @@ export default {
 }
 
 .feed-title {
-  font-size: 22px;
+  font-size: 18px;
   font-weight: 600;
   color: #1a1a1a;
   margin-bottom: 4px;

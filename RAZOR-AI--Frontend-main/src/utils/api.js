@@ -9,6 +9,7 @@ const api = axios.create({
 });
 
 const adminApi = axios.create({
+  //baseURL: '/api',
   baseURL: '/api',
   timeout: 10000,
 });

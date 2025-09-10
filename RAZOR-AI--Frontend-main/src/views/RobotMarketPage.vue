@@ -41,7 +41,7 @@
             searchResults.length
           }}个)
         </h2>
-        <div class="robots-grid">
+        <div class="robots-grid" :style="mainGridStyle">
           <el-card
             v-for="robot in searchResults"
             :key="robot.id"
@@ -50,7 +50,7 @@
           >
             <div class="robot-header">
               <img
-                :src="getRobotImage(robot.type)"
+                :src="getRobotImage(robot.robotImage)"
                 alt="robot"
                 class="robot-logo"
               />
@@ -122,46 +122,53 @@
             换一批
           </el-button>
         </div>
-        <div class="robots-grid">
+        <div class="robots-grid" :style="mainGridStyle">
           <el-card
-            v-for="robot in recommendedRobots"
+            v-for="robot in displayRecommendedRobots"
             :key="robot.id"
-            class="robot-card"
-            @click.native="showRobotDetail(robot.id)"
+            :class="[
+              'robot-card',
+              { 'placeholder-card': isPlaceholder(robot) },
+            ]"
+            @click.native="
+              isPlaceholder(robot) ? null : showRobotDetail(robot.id)
+            "
           >
-            <div class="robot-header">
-              <img
-                :src="getRobotImage(robot.type)"
-                alt="robot"
-                class="robot-logo"
-              />
-              <div class="robot-name">{{ robot.name }}</div>
-            </div>
-            <div class="robot-description">
-              {{ truncate(robot.description, 80) }}
-            </div>
-            <div class="robot-rating-price">
-              <div class="robot-subscription">
-                <i class="el-icon-user" style="color: #409eff"></i>
-                {{ robot.subscriptionCnt || 0 }} 人订阅
+            <template v-if="!isPlaceholder(robot)">
+              <div class="robot-header">
+                <img
+                  :src="getRobotImage(robot.robotImage)"
+                  alt="robot"
+                  class="robot-logo"
+                />
+                <div class="robot-name">{{ robot.name }}</div>
               </div>
-              <div class="robot-price">
-                {{ formatprice(robot.price) }}
+              <div class="robot-description">
+                {{ truncate(robot.description, 80) }}
               </div>
-            </div>
-            <div class="robot-actions">
-              <el-button size="mini" @click.stop="showRobotDetail(robot.id)">
-                查看详情
-              </el-button>
-              <el-button
-                type="primary"
-                size="mini"
-                :class="{ subscribed: isSubscribed(robot.id) }"
-                @click.stop="subscribeRobot(robot.id)"
-              >
-                {{ isSubscribed(robot.id) ? '开始对话' : '订阅' }}
-              </el-button>
-            </div>
+              <div class="robot-rating-price">
+                <div class="robot-subscription">
+                  <i class="el-icon-user" style="color: #409eff"></i>
+                  {{ robot.subscriptionCnt || 0 }} 人订阅
+                </div>
+                <div class="robot-price">
+                  {{ formatprice(robot.price) }}
+                </div>
+              </div>
+              <div class="robot-actions">
+                <el-button size="mini" @click.stop="showRobotDetail(robot.id)">
+                  查看详情
+                </el-button>
+                <el-button
+                  type="primary"
+                  size="mini"
+                  :class="{ subscribed: isSubscribed(robot.id) }"
+                  @click.stop="subscribeRobot(robot.id)"
+                >
+                  {{ isSubscribed(robot.id) ? '开始对话' : '订阅' }}
+                </el-button>
+              </div>
+            </template>
           </el-card>
         </div>
       </div>
@@ -180,46 +187,53 @@
             查看更多
           </el-button>
         </div>
-        <div class="robots-grid">
+        <div class="robots-grid" :style="mainGridStyle">
           <el-card
-            v-for="robot in rolePlayRobots"
+            v-for="robot in displayRolePlayRobots"
             :key="robot.id"
-            class="robot-card"
-            @click.native="showRobotDetail(robot.id)"
+            :class="[
+              'robot-card',
+              { 'placeholder-card': isPlaceholder(robot) },
+            ]"
+            @click.native="
+              isPlaceholder(robot) ? null : showRobotDetail(robot.id)
+            "
           >
-            <div class="robot-header">
-              <img
-                :src="getRobotImage(robot.type)"
-                alt="robot"
-                class="robot-logo"
-              />
-              <div class="robot-name">{{ robot.name }}</div>
-            </div>
-            <div class="robot-description">
-              {{ truncate(robot.description, 80) }}
-            </div>
-            <div class="robot-rating-price">
-              <div class="robot-subscription">
-                <i class="el-icon-user" style="color: #409eff"></i>
-                {{ robot.subscriptionCnt || 0 }} 人订阅
+            <template v-if="!isPlaceholder(robot)">
+              <div class="robot-header">
+                <img
+                  :src="getRobotImage(robot.robotImage)"
+                  alt="robot"
+                  class="robot-logo"
+                />
+                <div class="robot-name">{{ robot.name }}</div>
               </div>
-              <div class="robot-price">
-                {{ formatprice(robot.price) }}
+              <div class="robot-description">
+                {{ truncate(robot.description, 80) }}
               </div>
-            </div>
-            <div class="robot-actions">
-              <el-button size="mini" @click.stop="showRobotDetail(robot.id)">
-                查看详情
-              </el-button>
-              <el-button
-                type="primary"
-                size="mini"
-                :class="{ subscribed: isSubscribed(robot.id) }"
-                @click.stop="subscribeRobot(robot.id)"
-              >
-                {{ isSubscribed(robot.id) ? '开始对话' : '订阅' }}
-              </el-button>
-            </div>
+              <div class="robot-rating-price">
+                <div class="robot-subscription">
+                  <i class="el-icon-user" style="color: #409eff"></i>
+                  {{ robot.subscriptionCnt || 0 }} 人订阅
+                </div>
+                <div class="robot-price">
+                  {{ formatprice(robot.price) }}
+                </div>
+              </div>
+              <div class="robot-actions">
+                <el-button size="mini" @click.stop="showRobotDetail(robot.id)">
+                  查看详情
+                </el-button>
+                <el-button
+                  type="primary"
+                  size="mini"
+                  :class="{ subscribed: isSubscribed(robot.id) }"
+                  @click.stop="subscribeRobot(robot.id)"
+                >
+                  {{ isSubscribed(robot.id) ? '开始对话' : '订阅' }}
+                </el-button>
+              </div>
+            </template>
           </el-card>
         </div>
       </div>
@@ -238,46 +252,53 @@
             查看更多
           </el-button>
         </div>
-        <div class="robots-grid">
+        <div class="robots-grid" :style="mainGridStyle">
           <el-card
-            v-for="robot in codingRobots"
+            v-for="robot in displayCodingRobots"
             :key="robot.id"
-            class="robot-card"
-            @click.native="showRobotDetail(robot.id)"
+            :class="[
+              'robot-card',
+              { 'placeholder-card': isPlaceholder(robot) },
+            ]"
+            @click.native="
+              isPlaceholder(robot) ? null : showRobotDetail(robot.id)
+            "
           >
-            <div class="robot-header">
-              <img
-                :src="getRobotImage(robot.type)"
-                alt="robot"
-                class="robot-logo"
-              />
-              <div class="robot-name">{{ robot.name }}</div>
-            </div>
-            <div class="robot-description">
-              {{ truncate(robot.description, 80) }}
-            </div>
-            <div class="robot-rating-price">
-              <div class="robot-subscription">
-                <i class="el-icon-user" style="color: #409eff"></i>
-                {{ robot.subscriptionCnt || 0 }} 人订阅
+            <template v-if="!isPlaceholder(robot)">
+              <div class="robot-header">
+                <img
+                  :src="getRobotImage(robot.robotImage)"
+                  alt="robot"
+                  class="robot-logo"
+                />
+                <div class="robot-name">{{ robot.name }}</div>
               </div>
-              <div class="robot-price">
-                {{ formatprice(robot.price) }}
+              <div class="robot-description">
+                {{ truncate(robot.description, 80) }}
               </div>
-            </div>
-            <div class="robot-actions">
-              <el-button size="mini" @click.stop="showRobotDetail(robot.id)">
-                查看详情
-              </el-button>
-              <el-button
-                type="primary"
-                size="mini"
-                :class="{ subscribed: isSubscribed(robot.id) }"
-                @click.stop="subscribeRobot(robot.id)"
-              >
-                {{ isSubscribed(robot.id) ? '开始对话' : '订阅' }}
-              </el-button>
-            </div>
+              <div class="robot-rating-price">
+                <div class="robot-subscription">
+                  <i class="el-icon-user" style="color: #409eff"></i>
+                  {{ robot.subscriptionCnt || 0 }} 人订阅
+                </div>
+                <div class="robot-price">
+                  {{ formatprice(robot.price) }}
+                </div>
+              </div>
+              <div class="robot-actions">
+                <el-button size="mini" @click.stop="showRobotDetail(robot.id)">
+                  查看详情
+                </el-button>
+                <el-button
+                  type="primary"
+                  size="mini"
+                  :class="{ subscribed: isSubscribed(robot.id) }"
+                  @click.stop="subscribeRobot(robot.id)"
+                >
+                  {{ isSubscribed(robot.id) ? '开始对话' : '订阅' }}
+                </el-button>
+              </div>
+            </template>
           </el-card>
         </div>
       </div>
@@ -293,46 +314,53 @@
             查看更多
           </el-button>
         </div>
-        <div class="robots-grid">
+        <div class="robots-grid" :style="mainGridStyle">
           <el-card
-            v-for="robot in paperRobots"
+            v-for="robot in displayPaperRobots"
             :key="robot.id"
-            class="robot-card"
-            @click.native="showRobotDetail(robot.id)"
+            :class="[
+              'robot-card',
+              { 'placeholder-card': isPlaceholder(robot) },
+            ]"
+            @click.native="
+              isPlaceholder(robot) ? null : showRobotDetail(robot.id)
+            "
           >
-            <div class="robot-header">
-              <img
-                :src="getRobotImage(robot.type)"
-                alt="robot"
-                class="robot-logo"
-              />
-              <div class="robot-name">{{ robot.name }}</div>
-            </div>
-            <div class="robot-description">
-              {{ truncate(robot.description, 80) }}
-            </div>
-            <div class="robot-rating-price">
-              <div class="robot-subscription">
-                <i class="el-icon-user" style="color: #409eff"></i>
-                {{ robot.subscriptionCnt || 0 }} 人订阅
+            <template v-if="!isPlaceholder(robot)">
+              <div class="robot-header">
+                <img
+                  :src="getRobotImage(robot.robotImage)"
+                  alt="robot"
+                  class="robot-logo"
+                />
+                <div class="robot-name">{{ robot.name }}</div>
               </div>
-              <div class="robot-price">
-                {{ formatprice(robot.price) }}
+              <div class="robot-description">
+                {{ truncate(robot.description, 80) }}
               </div>
-            </div>
-            <div class="robot-actions">
-              <el-button size="mini" @click.stop="showRobotDetail(robot.id)">
-                查看详情
-              </el-button>
-              <el-button
-                type="primary"
-                size="mini"
-                :class="{ subscribed: isSubscribed(robot.id) }"
-                @click.stop="subscribeRobot(robot.id)"
-              >
-                {{ isSubscribed(robot.id) ? '开始对话' : '订阅' }}
-              </el-button>
-            </div>
+              <div class="robot-rating-price">
+                <div class="robot-subscription">
+                  <i class="el-icon-user" style="color: #409eff"></i>
+                  {{ robot.subscriptionCnt || 0 }} 人订阅
+                </div>
+                <div class="robot-price">
+                  {{ formatprice(robot.price) }}
+                </div>
+              </div>
+              <div class="robot-actions">
+                <el-button size="mini" @click.stop="showRobotDetail(robot.id)">
+                  查看详情
+                </el-button>
+                <el-button
+                  type="primary"
+                  size="mini"
+                  :class="{ subscribed: isSubscribed(robot.id) }"
+                  @click.stop="subscribeRobot(robot.id)"
+                >
+                  {{ isSubscribed(robot.id) ? '开始对话' : '订阅' }}
+                </el-button>
+              </div>
+            </template>
           </el-card>
         </div>
       </div>
@@ -342,52 +370,55 @@
     <el-dialog
       :title="categoryDialogTitle"
       :visible.sync="categoryDialogVisible"
-      width="80%"
-      top="8.5vh"
+      width="95vw"
+      top="5vh"
       :close-on-click-modal="false"
       :close-on-press-escape="false"
     >
       <div v-loading="paginationLoading" class="category-detail-container">
-        <div class="category-detail-grid">
+        <div class="category-detail-grid" :style="categoryDetailGridStyle">
           <el-card
-            v-for="robot in categoryDetailRobots"
+            v-for="robot in displayCategoryDetailRobots"
             :key="robot.id"
             class="robot-card"
-            @click.native="showRobotDetail(robot.id)"
+            :class="{ 'placeholder-card': isPlaceholder(robot) }"
+            @click.native="!isPlaceholder(robot) && showRobotDetail(robot.id)"
           >
-            <div class="robot-header">
-              <img
-                :src="getRobotImage(robot.type)"
-                alt="robot"
-                class="robot-logo"
-              />
-              <div class="robot-name">{{ robot.name }}</div>
-            </div>
-            <div class="robot-description">
-              {{ truncate(robot.description, 80) }}
-            </div>
-            <div class="robot-rating-price">
-              <div class="robot-subscription">
-                <i class="el-icon-user" style="color: #409eff"></i>
-                {{ robot.subscriptionCnt || 0 }} 人订阅
+            <template v-if="!isPlaceholder(robot)">
+              <div class="robot-header">
+                <img
+                  :src="getRobotImage(robot.robotImage)"
+                  alt="robot"
+                  class="robot-logo"
+                />
+                <div class="robot-name">{{ robot.name }}</div>
               </div>
-              <div class="robot-price">
-                {{ formatprice(robot.price) }}
+              <div class="robot-description">
+                {{ truncate(robot.description, 80) }}
               </div>
-            </div>
-            <div class="robot-actions">
-              <el-button size="mini" @click.stop="showRobotDetail(robot.id)">
-                查看详情
-              </el-button>
-              <el-button
-                type="primary"
-                size="mini"
-                :class="{ subscribed: isSubscribed(robot.id) }"
-                @click.stop="subscribeRobot(robot.id)"
-              >
-                {{ isSubscribed(robot.id) ? '开始对话' : '订阅' }}
-              </el-button>
-            </div>
+              <div class="robot-rating-price">
+                <div class="robot-subscription">
+                  <i class="el-icon-user" style="color: #409eff"></i>
+                  {{ robot.subscriptionCnt || 0 }} 人订阅
+                </div>
+                <div class="robot-price">
+                  {{ formatprice(robot.price) }}
+                </div>
+              </div>
+              <div class="robot-actions">
+                <el-button size="mini" @click.stop="showRobotDetail(robot.id)">
+                  查看详情
+                </el-button>
+                <el-button
+                  type="primary"
+                  size="mini"
+                  :class="{ subscribed: isSubscribed(robot.id) }"
+                  @click.stop="subscribeRobot(robot.id)"
+                >
+                  {{ isSubscribed(robot.id) ? '开始对话' : '订阅' }}
+                </el-button>
+              </div>
+            </template>
           </el-card>
         </div>
 
@@ -484,10 +515,10 @@ export default {
       robotDetailVisible: false,
       currentRobotId: null,
       // 新增的分页相关数据
-      recommendedRobots: [], // 推荐机器人前4个
-      rolePlayRobots: [], // 角色扮演机器人前4个
-      codingRobots: [], // 代码编程机器人前4个
-      paperRobots: [], // 论文修改机器人前4个
+      recommendedRobots: [], // 推荐机器人
+      rolePlayRobots: [], // 角色扮演机器人
+      codingRobots: [], // 代码编程机器人
+      paperRobots: [], // 论文修改机器人
       currentCategoryType: null, // 当前查看的分类类型
       currentFirstIndex: 0, // 当前分页的起始索引
       paginationLoading: false, // 分页加载状态
@@ -499,6 +530,14 @@ export default {
       searchLoading: false, // 搜索加载状态
       hasNextSearchPage: true, // 是否有下一页搜索结果
       subscriptionCheckInterval: null, // 订阅状态检查定时器
+      // 响应式布局相关
+      containerWidth: 0, // 容器宽度
+      robotsPerRow: 4, // 每行显示的机器人数量
+      resizeObserver: null, // 用于监听容器尺寸变化
+      resizeTimeout: null, // 防抖超时ID
+      // Category detail 相关
+      categoryDetailRows: 2, // category detail 显示行数
+      categoryDetailPageSize: 8, // 每页显示的机器人数量
     };
   },
   computed: {
@@ -514,15 +553,18 @@ export default {
       return modes[this.currentSearchMode];
     },
     allRobots() {
-      return [
-        ...this.recommendedRobots,
-        ...this.rolePlayRobots,
-        ...this.codingRobots,
-        ...this.paperRobots,
+      // 过滤掉占位符，只返回真实的机器人数据
+      const realRobots = [
+        ...this.recommendedRobots.filter((robot) => !robot.isPlaceholder),
+        ...this.rolePlayRobots.filter((robot) => !robot.isPlaceholder),
+        ...this.codingRobots.filter((robot) => !robot.isPlaceholder),
+        ...this.paperRobots.filter((robot) => !robot.isPlaceholder),
       ];
+      return realRobots;
     },
     currentPageNumber() {
-      return Math.floor(this.currentFirstIndex / 8) + 1;
+      const pageSize = this.dynamicCategoryDetailPageSize;
+      return Math.floor(this.currentFirstIndex / pageSize) + 1;
     },
     isFirstPage() {
       return this.currentFirstIndex === 0;
@@ -534,6 +576,71 @@ export default {
     isFirstSearchPage() {
       return this.searchIndex === 0;
     },
+    // 响应式布局计算属性
+    displayRecommendedRobots() {
+      return this.getPaddedRobots(this.recommendedRobots);
+    },
+    displayRolePlayRobots() {
+      return this.getPaddedRobots(this.rolePlayRobots);
+    },
+    displayCodingRobots() {
+      return this.getPaddedRobots(this.codingRobots);
+    },
+    displayPaperRobots() {
+      return this.getPaddedRobots(this.paperRobots);
+    },
+    // Category detail页面的显示数据
+    displayCategoryDetailRobots() {
+      return this.getCategoryDetailPaddedRobots(this.categoryDetailRobots);
+    },
+    // 动态计算category detail网格样式
+    categoryDetailGridStyle() {
+      const categoryRobotsPerRow = Math.max(4, Math.min(6, this.robotsPerRow));
+      return {
+        gridTemplateColumns: `repeat(${categoryRobotsPerRow}, 1fr)`,
+        width: '100%',
+        margin: '0 0 20px 0',
+      };
+    },
+    // 动态计算主页面网格样式
+    mainGridStyle() {
+      return {
+        gridTemplateColumns: `repeat(${this.robotsPerRow}, 1fr)`,
+        gap: '20px',
+        justifyItems: 'stretch',
+      };
+    },
+    // 计算category detail每行机器人数量
+    categoryDetailRobotsPerRow() {
+      return Math.max(4, Math.min(6, this.robotsPerRow));
+    },
+    // 计算category detail行数（根据机器人数量动态决定）
+    dynamicCategoryDetailRows() {
+      const perRow = this.categoryDetailRobotsPerRow;
+      let rows;
+      if (perRow === 4) {
+        rows = 2; // 2*4 = 8
+      } else if (perRow === 5) {
+        rows = 2; // 2*5 = 10
+      } else if (perRow === 6) {
+        rows = 3; // 3*6 = 18
+      } else {
+        rows = 2; // 默认2行
+      }
+      console.log(
+        `布局计算: ${perRow}列 × ${rows}行 = ${perRow * rows}个机器人`
+      );
+      return rows;
+    },
+    // 计算每页应该显示的机器人数量
+    dynamicCategoryDetailPageSize() {
+      const size =
+        this.dynamicCategoryDetailRows * this.categoryDetailRobotsPerRow;
+      console.log(
+        `计算页面大小: ${this.dynamicCategoryDetailRows} × ${this.categoryDetailRobotsPerRow} = ${size}`
+      );
+      return size;
+    },
   },
   watch: {
     // 监听搜索框内容变化
@@ -542,12 +649,22 @@ export default {
         this.handleSearchClear();
       }
     },
+    // 监听robotsPerRow变化，重置分页
+    robotsPerRow(newVal, oldVal) {
+      if (newVal !== oldVal && this.categoryDialogVisible) {
+        console.log(`机器人每行数量变化: ${oldVal} -> ${newVal}, 重置分页`);
+        this.currentFirstIndex = 0;
+        this.hasNextPage = true;
+        // 重新加载分类数据
+        this.loadCategoryPageData();
+      }
+    },
   },
   created() {
     // 初始化搜索类型
     this.searchType = this.currentSearchMode === 'name' ? 1 : 2;
 
-    this.loadInitialData();
+    // 先获取用户订阅信息，但延迟加载数据到mounted阶段
     this.getUserSubscriptions();
   },
   mounted() {
@@ -560,11 +677,22 @@ export default {
       },
       5 * 60 * 1000
     ); // 5分钟
+
+    // 初始化响应式布局并加载数据
+    this.initializeResponsiveLayoutAndLoadData();
   },
   beforeDestroy() {
     // 组件销毁前清理定时器
     if (this.subscriptionCheckInterval) {
       clearInterval(this.subscriptionCheckInterval);
+    }
+    // 清理ResizeObserver
+    if (this.resizeObserver) {
+      this.resizeObserver.disconnect();
+    }
+    // 清理防抖定时器
+    if (this.resizeTimeout) {
+      clearTimeout(this.resizeTimeout);
     }
   },
   methods: {
@@ -585,17 +713,17 @@ export default {
           promises.unshift(this.loadRecommendedRobots());
           const [recommendedData, rolePlayData, codingData, paperData] =
             await Promise.all(promises);
-          this.recommendedRobots = recommendedData;
-          this.rolePlayRobots = rolePlayData.slice(0, 4);
-          this.codingRobots = codingData.slice(0, 4);
-          this.paperRobots = paperData.slice(0, 4);
+          this.recommendedRobots = recommendedData.slice(0, this.robotsPerRow);
+          this.rolePlayRobots = rolePlayData.slice(0, this.robotsPerRow);
+          this.codingRobots = codingData.slice(0, this.robotsPerRow);
+          this.paperRobots = paperData.slice(0, this.robotsPerRow);
         } else {
           const [rolePlayData, codingData, paperData] =
             await Promise.all(promises);
           this.recommendedRobots = [];
-          this.rolePlayRobots = rolePlayData.slice(0, 4);
-          this.codingRobots = codingData.slice(0, 4);
-          this.paperRobots = paperData.slice(0, 4);
+          this.rolePlayRobots = rolePlayData.slice(0, this.robotsPerRow);
+          this.codingRobots = codingData.slice(0, this.robotsPerRow);
+          this.paperRobots = paperData.slice(0, this.robotsPerRow);
         }
 
         console.log('初始数据加载成功');
@@ -615,6 +743,7 @@ export default {
           firstIndex: firstIndex,
         };
         const response = await apiGetRobotsByType(agentload);
+        console.log(response);
 
         if (response.status === 200 && response.data) {
           const robots = response.data.data;
@@ -627,6 +756,40 @@ export default {
       } catch (error) {
         console.error(
           `加载机器人数据失败 (type: ${type}, firstIndex: ${firstIndex}):`,
+          error
+        );
+        throw error;
+      }
+    },
+
+    // 专门用于category detail的加载方法，限制数量
+    async loadCategoryDetailRobots(type, firstIndex) {
+      try {
+        const agentload = {
+          type: type,
+          firstIndex: firstIndex,
+        };
+        const response = await apiGetRobotsByType(agentload);
+
+        if (response.status === 200 && response.data) {
+          const allRobots = response.data.data;
+          const requestedCount = this.dynamicCategoryDetailPageSize;
+
+          // 只返回请求数量的机器人
+          const limitedRobots = allRobots.slice(0, requestedCount);
+
+          console.log(
+            `请求数量: ${requestedCount}, 后端返回: ${allRobots.length}, 实际使用: ${limitedRobots.length}`
+          );
+          return limitedRobots;
+        } else {
+          console.error('加载机器人数据失败:', response);
+          this.$message.error('加载机器人数据失败，请稍后重试');
+        }
+        return [];
+      } catch (error) {
+        console.error(
+          `加载分类详情机器人数据失败 (type: ${type}, firstIndex: ${firstIndex}):`,
           error
         );
         throw error;
@@ -657,7 +820,10 @@ export default {
 
       try {
         const newRecommendedRobots = await this.loadRecommendedRobots();
-        this.recommendedRobots = newRecommendedRobots;
+        this.recommendedRobots = newRecommendedRobots.slice(
+          0,
+          this.robotsPerRow
+        );
         console.log('推荐机器人已刷新');
       } catch (error) {
         console.error('刷新推荐机器人失败:', error);
@@ -719,6 +885,7 @@ export default {
           const robots = Array.isArray(response.data)
             ? response.data
             : response.data.data || [];
+
           this.searchResults = robots;
 
           // 判断是否有下一页（如果返回的数据少于16个，说明没有下一页）
@@ -781,17 +948,18 @@ export default {
     async loadCategoryPageData() {
       this.paginationLoading = true;
       try {
-        const robots = await this.loadRobotsByType(
+        const robots = await this.loadCategoryDetailRobots(
           this.currentCategoryType,
           this.currentFirstIndex
         );
         this.categoryDetailRobots = robots;
 
-        // 判断是否有下一页（如果返回的数据少于8个，说明没有下一页）
-        this.hasNextPage = robots.length === 8;
+        // 使用动态计算的页面大小判断是否有下一页
+        const expectedPageSize = this.dynamicCategoryDetailPageSize;
+        this.hasNextPage = robots.length === expectedPageSize;
 
         console.log(
-          `加载分类数据成功 (type: ${this.currentCategoryType}, firstIndex: ${this.currentFirstIndex})`
+          `加载分类数据成功 (type: ${this.currentCategoryType}, firstIndex: ${this.currentFirstIndex}, 预期数量: ${expectedPageSize}, 实际数量: ${robots.length})`
         );
       } catch (error) {
         console.error('加载分类数据失败:', error);
@@ -805,7 +973,8 @@ export default {
     async goToPreviousPage() {
       if (this.isFirstPage || this.paginationLoading) return;
 
-      this.currentFirstIndex -= 8;
+      const pageSize = this.dynamicCategoryDetailPageSize;
+      this.currentFirstIndex -= pageSize;
       await this.loadCategoryPageData();
     },
 
@@ -813,7 +982,8 @@ export default {
     async goToNextPage() {
       if (!this.hasNextPage || this.paginationLoading) return;
 
-      this.currentFirstIndex += 8;
+      const pageSize = this.dynamicCategoryDetailPageSize;
+      this.currentFirstIndex += pageSize;
       await this.loadCategoryPageData();
     },
     showRobotDetail(robotId) {
@@ -1012,17 +1182,13 @@ export default {
           return [];
       }
     },
-    getRobotImage(type) {
-      switch (type) {
-        case 1:
-          return require('@/assets/images/Agents/textAgent.png');
-        case 2:
-          return require('@/assets/images/Agents/imageAgent.png');
-        case 3:
-          return require('@/assets/images/Agents/videoAgent.png');
-        default:
-          return require('@/assets/images/Agents/baseAgent.png');
+    getRobotImage(robotImageUrl) {
+      // 优先使用后端返回的图片URL
+      if (robotImageUrl && robotImageUrl.trim()) {
+        return robotImageUrl;
       }
+      // 如果没有图片URL，返回默认图片
+      return require('@/assets/images/Agents/baseAgent.png');
     },
     truncate(text, length = 50) {
       if (!text) return '';
@@ -1034,6 +1200,159 @@ export default {
         return '免费';
       }
       return `${points} 积分`;
+    },
+
+    // 初始化响应式布局并加载数据（确保正确的初始化顺序）
+    initializeResponsiveLayoutAndLoadData() {
+      this.$nextTick(() => {
+        const container = this.$el.querySelector('.robots-grid');
+        if (container) {
+          // 先计算响应式布局
+          this.calculateRobotsPerRow();
+          this.setupResizeObserver(container);
+
+          // 然后加载数据
+          this.loadInitialData();
+        } else {
+          // 如果容器还没有渲染，延迟执行
+          setTimeout(() => {
+            this.initializeResponsiveLayoutAndLoadData();
+          }, 100);
+        }
+      });
+    },
+
+    // 响应式布局方法
+    initializeResponsiveLayout() {
+      this.$nextTick(() => {
+        const container = this.$el.querySelector('.robots-grid');
+        if (container) {
+          this.calculateRobotsPerRow();
+          this.setupResizeObserver(container);
+        }
+      });
+    },
+
+    calculateRobotsPerRow() {
+      const container = this.$el.querySelector('.robots-grid');
+      if (!container) return;
+
+      const containerWidth = container.clientWidth;
+      const minCardWidth = 250; // 与CSS中的minmax(250px, 1fr)保持一致
+      const gap = 20; // 与CSS中的gap保持一致
+
+      // 计算每行可以容纳的卡片数量
+      const robotsPerRow = Math.floor(
+        (containerWidth + gap) / (minCardWidth + gap)
+      );
+
+      // 最少显示4个，最多显示6个
+      const newRobotsPerRow = Math.max(4, Math.min(6, robotsPerRow));
+
+      // 只有当数量发生变化时才更新
+      if (this.robotsPerRow !== newRobotsPerRow) {
+        this.robotsPerRow = newRobotsPerRow;
+
+        // 使用 nextTick 确保 DOM 更新完成后再重新加载数据
+        this.$nextTick(() => {
+          this.updateRobotDisplayCount();
+        });
+      }
+    },
+
+    setupResizeObserver(container) {
+      if (this.resizeObserver) {
+        this.resizeObserver.disconnect();
+      }
+
+      // 清理之前的防抖定时器
+      if (this.resizeTimeout) {
+        clearTimeout(this.resizeTimeout);
+        this.resizeTimeout = null;
+      }
+
+      // 使用防抖和 requestAnimationFrame 避免无限循环
+      this.resizeObserver = new ResizeObserver(() => {
+        if (this.resizeTimeout) {
+          clearTimeout(this.resizeTimeout);
+        }
+        this.resizeTimeout = setTimeout(() => {
+          requestAnimationFrame(() => {
+            this.calculateRobotsPerRow();
+          });
+        }, 100); // 100ms 防抖延迟
+      });
+
+      this.resizeObserver.observe(container);
+    },
+
+    async updateRobotDisplayCount() {
+      // 重新加载数据以匹配新的每行数量
+      try {
+        const promises = [
+          this.loadRobotsByType(1, 0), // 角色扮演机器人 type=1
+          this.loadRobotsByType(2, 0), // 代码编程机器人 type=2
+          this.loadRobotsByType(3, 0), // 论文修改机器人 type=3
+        ];
+
+        const [rolePlayData, codingData, paperData] =
+          await Promise.all(promises);
+
+        this.rolePlayRobots = rolePlayData.slice(0, this.robotsPerRow);
+        this.codingRobots = codingData.slice(0, this.robotsPerRow);
+        this.paperRobots = paperData.slice(0, this.robotsPerRow);
+
+        // 如果用户已登录，更新推荐机器人
+        if (this.isLoggedIn && this.userId) {
+          const recommendedData = await this.loadRecommendedRobots();
+          this.recommendedRobots = recommendedData.slice(0, this.robotsPerRow);
+        }
+      } catch (error) {
+        console.error('更新机器人显示数量失败:', error);
+      }
+    },
+
+    // 获取带空白占位的机器人列表
+    getPaddedRobots(robots) {
+      // 首先确保不超过当前行的显示数量
+      const limitedRobots = robots.slice(0, this.robotsPerRow);
+      const paddedRobots = [...limitedRobots];
+
+      // 如果机器人数量不足一行，添加空白占位符
+      while (
+        paddedRobots.length < this.robotsPerRow &&
+        paddedRobots.length > 0
+      ) {
+        paddedRobots.push({
+          id: `placeholder-${paddedRobots.length}`,
+          isPlaceholder: true,
+        });
+      }
+
+      return paddedRobots;
+    },
+
+    // 获取category detail页面带空白占位的机器人列表
+    getCategoryDetailPaddedRobots(robots) {
+      const paddedRobots = [...robots];
+
+      // 使用动态计算的总数量（行数 * 列数）
+      const totalSlots = this.dynamicCategoryDetailPageSize;
+
+      // 如果机器人数量不足总槽位数，添加空白占位符
+      while (paddedRobots.length < totalSlots && paddedRobots.length > 0) {
+        paddedRobots.push({
+          id: `category-placeholder-${paddedRobots.length}`,
+          isPlaceholder: true,
+        });
+      }
+
+      return paddedRobots;
+    },
+
+    // 检查是否为空白占位符
+    isPlaceholder(robot) {
+      return robot && robot.isPlaceholder;
     },
   },
 };
@@ -1047,10 +1366,11 @@ export default {
   min-height: 100vh;
 
   .search-container {
+    justify-content: center; /* 水平居中 */
     background: white;
     padding: 20px;
     margin-bottom: 20px;
-    border-radius: 8px;
+    border-radius: 12px;
     box-shadow: $box-shadow-light;
 
     .search-wrapper {
@@ -1063,7 +1383,7 @@ export default {
         min-width: 120px;
 
         .search-mode-btn {
-          border-radius: 6px 0 0 6px;
+          border-radius: 12px 0 0 12px;
           background: $accent-color;
           color: white;
           border-color: $accent-color;
@@ -1079,12 +1399,13 @@ export default {
         flex: 1;
 
         :deep(.el-input__inner) {
-          border-radius: 0;
-          border-left: none;
+          width: 60vw;
+          border-radius: 0px;
+          border-left: 10vw;
         }
 
         :deep(.el-input-group__append) {
-          border-radius: 0 6px 6px 0;
+          border-radius: 0 12px 12px 0;
           background: $accent-color;
           color: white;
           border-color: $accent-color;
@@ -1136,7 +1457,7 @@ export default {
           background: white;
           color: $text-color;
           border: 1px solid $border-color;
-          border-radius: 20px;
+          border-radius: 12px;
           padding: 8px 16px;
 
           &:hover {
@@ -1150,8 +1471,16 @@ export default {
 
     .robots-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
       gap: 20px;
+      justify-items: center;
+
+      /* 让网格项比网格单元小一点 */
+      & > .robot-card {
+        width: calc(100% - 17px);
+        min-width: 233px;
+        max-width: 320px;
+        border-radius: 12px;
+      }
     }
   }
   .robot-card {
@@ -1164,6 +1493,19 @@ export default {
       box-shadow: $box-shadow-medium;
     }
 
+    &.placeholder-card {
+      opacity: 0;
+      cursor: default;
+      border: none;
+      box-shadow: none;
+      pointer-events: none;
+
+      &:hover {
+        transform: none;
+        box-shadow: none;
+      }
+    }
+
     .robot-header {
       display: flex;
       align-items: center;
@@ -1173,7 +1515,7 @@ export default {
       .robot-logo {
         width: 40px;
         height: 40px;
-        border-radius: 50%;
+        border-radius: 12px;
         object-fit: cover;
       }
 
@@ -1235,17 +1577,42 @@ export default {
   }
 
   .category-detail-container {
-    height: 70vh;
+    height: 75vh;
+    display: flex;
+    flex-direction: column;
   }
 
   .category-detail-grid {
     top: 0vh;
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-    gap: 15px;
-    max-height: 62.5vh;
+    gap: 10px;
+    max-height: calc(75vh - 80px);
     overflow-y: auto;
-    margin-bottom: 20px;
+    margin-bottom: 15px;
+    justify-content: start;
+    justify-items: center;
+    flex: 1;
+
+    /* 让网格项比网格单元小一点 */
+    & > .robot-card {
+      width: calc(100% - 17px);
+      min-width: 183px;
+      max-width: 280px;
+    }
+  }
+
+  /* Category detail 占位符卡片样式 */
+  .category-detail-grid .placeholder-card {
+    border: none !important;
+    box-shadow: none !important;
+    background: transparent !important;
+    cursor: default !important;
+    pointer-events: none;
+  }
+
+  .category-detail-grid .placeholder-card:hover {
+    transform: none !important;
+    box-shadow: none !important;
   }
 
   .pagination-controls {
@@ -1255,6 +1622,9 @@ export default {
     gap: 20px;
     padding: 15px 0;
     border-top: 1px solid $border-color;
+    background: white;
+    flex-shrink: 0;
+    margin-top: auto;
 
     .pagination-btn {
       display: flex;
@@ -1262,7 +1632,7 @@ export default {
       gap: 5px;
       padding: 8px 16px;
       border: 1px solid $border-color;
-      border-radius: 6px;
+      border-radius: 12px;
       background: white;
       color: $text-color;
       cursor: pointer;
@@ -1311,7 +1681,7 @@ export default {
           width: 100%;
 
           .search-mode-btn {
-            border-radius: 6px;
+            border-radius: 12px;
           }
         }
 
@@ -1319,20 +1689,48 @@ export default {
           width: 100%;
 
           :deep(.el-input__inner) {
-            border-radius: 6px 0 0 6px;
+            border-radius: 12px;
             border: 1px solid $border-color;
           }
 
           :deep(.el-input-group__append) {
-            border-radius: 0 6px 6px 0;
+            border-radius: 12px;
           }
         }
       }
     }
 
     .robots-grid {
-      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
       gap: 15px;
+
+      & > .robot-card {
+        width: 200px;
+      }
+    }
+  }
+}
+
+@media (min-width: 769px) and (max-width: 1200px) {
+  .robot-market {
+    .robots-grid {
+      grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+
+      & > .robot-card {
+        width: 230px;
+      }
+    }
+  }
+}
+
+@media (min-width: 1201px) {
+  .robot-market {
+    .robots-grid {
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+
+      & > .robot-card {
+        width: 250px;
+      }
     }
   }
 }

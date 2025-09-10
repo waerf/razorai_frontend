@@ -13,7 +13,7 @@
       </div>
 
       <!-- 通过占位实现位置的偏移 -->
-      <h2 class="header-name-empty">{{ ' ' }}</h2>
+      <h2 class="header-name-empty-left">{{ '' }}</h2>
       <h2
         class="header-name"
         :class="{ active: currentActiveTab === 'RAZOR-AI' }"
@@ -28,26 +28,44 @@
       >
         {{ headername_withCommunity }}
       </h2>
-      <h2 class="header-name-empty">{{ ' ' }}</h2>
+      <h2 class="header-name-empty-right">{{ ' ' }}</h2>
       <div class="header-actions">
-        <!-- 向平台反馈按钮 -->
-        <el-button
-          type="text"
-          class="feedback-btn"
-          @click="openFeedbackDialog"
-          title="向平台反馈"
-        >
-          <el-icon name="box"></el-icon>
-          向平台反馈
-        </el-button>
-
-        <!-- 用户信息 -->
-        <div class="user-info">
-          <el-icon name="user"></el-icon>
-          <span v-if="!isLoggedIn" @click="openLoginDialog">用户登录</span>
-          <span v-else @click="navigateTo('PersonalHome')"
-            >你好，<br />{{ userName }}</span
+        <!-- 反馈和登录容器 -->
+        <div class="action-container">
+          <!-- 向平台反馈按钮 -->
+          <el-button
+            type="text"
+            class="header-action-btn"
+            @click="openFeedbackDialog"
+            title="向平台反馈"
           >
+            <el-icon name="box"></el-icon>
+            向平台反馈
+          </el-button>
+
+          <!-- 用户信息 -->
+          <div class="user-info">
+            <el-button
+              type="text"
+              class="header-action-btn"
+              v-if="!isLoggedIn"
+              @click="openLoginDialog"
+              title="用户登录"
+            >
+              <el-icon name="user"></el-icon>
+              用户登录
+            </el-button>
+            <el-button
+              type="text"
+              class="header-action-btn user-welcome-btn"
+              v-if="isLoggedIn"
+              @click="navigateTo('PersonalHome')"
+              title="用户"
+            >
+              <el-icon name="user"></el-icon>
+              <span class="username">👋你好，{{ userName }}</span>
+            </el-button>
+          </div>
         </div>
       </div>
     </el-header>
@@ -149,6 +167,7 @@
           <el-icon name="loading" class="menu-item-icon"></el-icon>测试页面
         </div> -->
         <div class="chat-history">
+          <!-- 对话项：增加文字容器，让图标与文字紧密对齐 -->
           <div
             class="chat-item"
             v-for="chat in chatlists"
@@ -338,14 +357,14 @@ export default {
       if (this.navigation != 'RAZOR-AI') return 'RAZOR-AI';
       // 从当前路由的 meta 信息中获取标题
       // console.log('当前路由：', this.$route);
-      this.$message('当前路由：' + this.$route.path);
+      // this.$message('当前路由：' + this.$route.path);
       return this.$route.meta.title;
     },
     headername_withCommunity() {
       if (this.navigation != 'Community') return '社区';
       // 从当前路由的 meta 信息中获取标题并修改前缀
       // console.log('当前路由：', this.$route);
-      this.$message('当前路由：' + this.$route.path);
+      // this.$message('当前路由：' + this.$route.path);
       const fullTitle = this.$route.meta.title || '默认标题';
       return '社区-' + fullTitle.replace(/^(RazorAI-|RAZOR-AI-)/i, '');
     },
@@ -494,33 +513,51 @@ export default {
 .header-actions {
   display: flex;
   align-items: center;
-  gap: 15px;
+  width: 20vw;
 
-  .feedback-btn {
+  .action-container {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    height: auto; // 允许高度自适应
+  }
+
+  // 统一的头部按钮样式
+  .header-action-btn {
     color: #606266;
-    font-size: 16px; // 调整为与用户信息字体大小一致
-    padding: 8px;
-    transition: color 0.3s ease;
+    font-size: 1vw;
+    padding: 2px 12px;
+    transition: all 0.3s ease;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    border: none;
+    background: transparent;
 
     &:hover {
       color: #409eff;
+    }
+
+    // 用户名自动换行样式
+    &.user-welcome-btn {
+      .username {
+        word-wrap: break-word;
+        word-break: break-all;
+        max-width: 120px; // 限制最大宽度
+        line-height: 1.2;
+        text-align: left;
+      }
+    }
+
+    .el-icon {
+      color: inherit;
     }
   }
 
   .user-info {
     display: flex;
     align-items: center;
-    gap: 8px;
-
-    span {
-      cursor: pointer;
-      color: #606266;
-      transition: color 0.3s ease;
-
-      &:hover {
-        color: #409eff;
-      }
-    }
   }
 }
 
@@ -540,7 +577,7 @@ export default {
 
 .feedback-dialog {
   background: white;
-  border-radius: 8px;
+  border-radius: 12px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
   width: 400px;
   max-width: 90vw;
@@ -562,7 +599,7 @@ export default {
     }
 
     .feedback-title {
-      font-size: 16px;
+      font-size: 1.2vw;
       font-weight: 600;
       color: #303133;
       margin: 0;
@@ -570,7 +607,7 @@ export default {
 
     .close-btn {
       color: #909399;
-      font-size: 16px;
+      font-size: 1.2vw;
       padding: 4px;
 
       &:hover {
@@ -628,9 +665,16 @@ export default {
   .header-actions {
     gap: 10px;
 
-    .feedback-btn {
-      font-size: 16px;
-      padding: 6px;
+    .header-action-btn {
+      font-size: 1.2vw;
+      padding: 6px 8px;
+
+      &.user-welcome-btn {
+        .username {
+          max-width: 100px;
+          font-size: 1.1vw;
+        }
+      }
     }
   }
 }

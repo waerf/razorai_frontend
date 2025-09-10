@@ -37,6 +37,12 @@ const mutations = {
     Storage.set('user_id', userId, TTL);
     Storage.set('userName', username, TTL);
   },
+  UPDATE_USER_NAME(state, username) {
+    state.userName = username;
+    // 设置过期时间为 7 天（与后端一致）（单位：毫秒）
+    const TTL = 7 * 24 * 60 * 60 * 1000;
+    Storage.set('userName', username, TTL);
+  },
   LOGOUT(state) {
     state.token = null;
     state.userId = null;

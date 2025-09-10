@@ -4,14 +4,33 @@
     <el-card class="profile-card" v-loading="loading">
       <div class="profile-header">
         <div class="avatar-section">
-          <img
-            :src="avatar"
-            alt="用户头像"
-            class="user-avatar"
-            @error="avatar = 'https://via.placeholder.com/150'"
+          <div class="avatar-container">
+            <img
+              :src="avatar"
+              alt="用户头像"
+              class="user-avatar"
+              @error="handleImageError"
+            />
+            <div class="avatar-overlay" @click="triggerFileInput">
+              <i class="el-icon-camera"></i>
+              <span>更换头像</span>
+            </div>
+          </div>
+          <input
+            ref="avatarInput"
+            type="file"
+            accept="image/*"
+            style="display: none"
+            @change="handleAvatarChange"
           />
-          <el-button size="mini" type="text" class="change-avatar-btn">
-            更换头像
+          <el-button
+            size="mini"
+            type="text"
+            class="change-avatar-btn"
+            @click="triggerFileInput"
+            :loading="avatarUploading"
+          >
+            {{ avatarUploading ? '上传中...' : '更换头像' }}
           </el-button>
         </div>
 
@@ -91,22 +110,56 @@
     <!-- 订阅记录 -->
     <el-card class="subscription-card">
       <div slot="header" class="clearfix">
-        <span class="card-title">我的订阅记录</span>
-        <el-button
-          style="float: right; padding: 3px 0"
-          type="text"
-          @click="refreshSubscriptions"
-          :loading="subscriptionsLoading"
-        >
-          刷新
-        </el-button>
+        <span class="card-title">
+          我的订阅记录
+          <el-badge
+            v-if="expiredSubscriptionsCount > 0"
+            :value="expiredSubscriptionsCount"
+            type="warning"
+            style="margin-left: 10px"
+          >
+            <span style="color: #e6a23c; font-size: 12px">过期</span>
+          </el-badge>
+        </span>
+        <div style="float: right">
+          <el-select
+            v-model="subscriptionFilter"
+            placeholder="筛选状态"
+            size="mini"
+            style="width: 120px; margin-right: 10px"
+          >
+            <el-option label="全部" value="all"></el-option>
+            <el-option label="活跃" value="1"></el-option>
+            <el-option label="已过期" value="2"></el-option>
+          </el-select>
+          <el-button
+            size="mini"
+            type="text"
+            @click="refreshSubscriptions"
+            :loading="subscriptionsLoading"
+          >
+            刷新
+          </el-button>
+        </div>
       </div>
       <div class="subscription-content" v-loading="subscriptionsLoading">
-        <div v-if="subscriptions.length === 0" class="no-subscriptions">
-          <el-empty description="暂无订阅记录" />
+        <div v-if="filteredSubscriptions.length === 0" class="no-subscriptions">
+          <el-empty
+            :description="
+              subscriptions.length === 0
+                ? '暂无订阅记录'
+                : '当前筛选条件下无记录'
+            "
+          />
         </div>
         <div v-else>
-          <el-table :data="subscriptions" style="width: 100%" stripe border>
+          <el-table
+            :data="filteredSubscriptions"
+            style="width: 100%"
+            stripe
+            border
+            :row-class-name="getRowClassName"
+          >
             <el-table-column prop="agent_name" label="机器人名称" width="180" />
             <el-table-column
               prop="subscription_type"
@@ -132,6 +185,13 @@
             <el-table-column prop="end_time" label="结束时间" width="160">
               <template slot-scope="scope">
                 {{ formatDate(scope.row.end_time) }}
+              </template>
+            </el-table-column>
+            <el-table-column label="剩余时间" width="120">
+              <template slot-scope="scope">
+                <span :class="getRemainingTimeClass(scope.row)">
+                  {{ getRemainingTimeText(scope.row) }}
+                </span>
               </template>
             </el-table-column>
             <el-table-column prop="status" label="状态" width="100">
@@ -327,6 +387,7 @@
     </el-dialog>
 
     <!-- 充值积分对话框 -->
+    <!-- 充值积分对话框 -->
     <el-dialog
       title="充值积分"
       :visible.sync="rechargeDialogVisible"
@@ -343,28 +404,13 @@
         <div class="recharge-info">
           <div class="current-balance">
             <span class="label">当前积分：</span>
-            <span class="balance">{{ userInfo.points || 0 }}</span>
           </div>
 
-          <div class="recharge-rates">
-            <h4>充值说明</h4>
-            <ul>
-              <li>• 最低充值10积分，最高单次充值10000积分</li>
-              <li>• 充值的积分立即到账，可用于购买各种服务</li>
-              <li>• 充值记录可在积分明细中查看</li>
-            </ul>
-          </div>
+          <div class="recharge-rates"></div>
         </div>
 
         <el-form-item label="充值数量" prop="points">
-          <el-input-number
-            v-model="rechargeForm.points"
-            :min="10"
-            :max="10000"
-            :step="10"
-            style="width: 100%"
-            placeholder="请输入充值积分数量"
-          />
+          <el-input-number placeholder="请输入充值积分数量" />
         </el-form-item>
 
         <div class="quick-amounts">
@@ -376,12 +422,7 @@
         </div>
 
         <div class="recharge-preview" v-if="rechargeForm.points > 0">
-          <div class="preview-item">
-            <span>充值后积分：</span>
-            <span class="new-balance">{{
-              (userInfo.points || 0) + rechargeForm.points
-            }}</span>
-          </div>
+          <div class="preview-item"></div>
         </div>
       </el-form>
 
@@ -396,11 +437,97 @@
         </el-button>
       </div>
     </el-dialog>
+
+    <!-- 头像裁剪对话框 -->
+    <el-dialog
+      title="头像裁剪"
+      :visible.sync="avatarPreviewVisible"
+      width="600px"
+      @close="resetAvatarPreview"
+    >
+      <div class="avatar-cropper-content" v-loading="avatarUploading">
+        <div class="cropper-section">
+          <div class="cropper-container">
+            <vue-cropper
+              ref="cropper"
+              :img="cropperOption.img"
+              :outputSize="cropperOption.outputSize"
+              :outputType="cropperOption.outputType"
+              :info="cropperOption.info"
+              :canScale="cropperOption.canScale"
+              :autoCrop="cropperOption.autoCrop"
+              :autoCropWidth="cropperOption.autoCropWidth"
+              :autoCropHeight="cropperOption.autoCropHeight"
+              :fixedBox="cropperOption.fixedBox"
+              :fixed="cropperOption.fixed"
+              :fixedNumber="cropperOption.fixedNumber"
+              :full="cropperOption.full"
+              :canMoveBox="cropperOption.canMoveBox"
+              :original="cropperOption.original"
+              :centerBox="cropperOption.centerBox"
+              :height="cropperOption.height"
+              :infoTrue="cropperOption.infoTrue"
+              :maxImgSize="cropperOption.maxImgSize"
+              :enlarge="cropperOption.enlarge"
+              :mode="cropperOption.mode"
+              :canMove="cropperOption.canMove"
+              :canChangeScale="cropperOption.canChangeScale"
+              :limitMinSize="cropperOption.limitMinSize"
+              :high="cropperOption.high"
+              @crop-moving="updateCirclePreview"
+              @real-time="updateCirclePreview"
+            ></vue-cropper>
+          </div>
+
+          <div class="preview-section">
+            <h4>圆形头像预览</h4>
+            <div class="circle-preview" ref="circlePreview">
+              <!-- 圆形预览将通过JavaScript动态生成 -->
+            </div>
+          </div>
+        </div>
+
+        <div class="cropper-controls">
+          <el-button-group>
+            <el-button size="mini" @click="rotateLeft">
+              <i class="el-icon-refresh-left"></i> 左转
+            </el-button>
+            <el-button size="mini" @click="rotateRight">
+              <i class="el-icon-refresh-right"></i> 右转
+            </el-button>
+            <el-button size="mini" @click="scaleUp">
+              <i class="el-icon-zoom-in"></i> 放大
+            </el-button>
+            <el-button size="mini" @click="scaleDown">
+              <i class="el-icon-zoom-out"></i> 缩小
+            </el-button>
+          </el-button-group>
+        </div>
+
+        <div class="upload-tip">
+          <p>• 拖动图片调整位置，拖动边框调整大小</p>
+          <p>• 滚轮缩放，双击重置</p>
+          <p>• 头像将被裁剪为圆形</p>
+        </div>
+      </div>
+
+      <div slot="footer" class="dialog-footer">
+        <el-button @click="avatarPreviewVisible = false">取消</el-button>
+        <el-button
+          type="primary"
+          @click="confirmAvatarUpload"
+          :loading="avatarUploading"
+        >
+          {{ avatarUploading ? '上传中...' : '确认更换' }}
+        </el-button>
+      </div>
+    </el-dialog>
   </div>
 </template>
 
 <script>
-import { mapActions, mapState } from 'vuex';
+import { mapActions, mapState, mapMutations } from 'vuex';
+import { VueCropper } from 'vue-cropper';
 import {
   getUserInfo,
   updateUserInfo,
@@ -408,14 +535,19 @@ import {
   getPointsHistory,
   rechargePoints,
   fetchUserSubscriptions,
+  updateUserAvatar,
 } from '@/utils/api';
 
 export default {
   name: 'UserProfile',
+  components: {
+    VueCropper,
+  },
   data() {
     return {
-      avatar: 'https://via.placeholder.com/150',
+      avatar: 'https://picsum.photos/id/1000/40/40',
       loading: true,
+      avatarUploading: false, // 头像上传状态
       userInfo: {
         user_id: null,
         user_name: '',
@@ -423,7 +555,7 @@ export default {
         phone: '',
         gender: null,
         age: null,
-
+        avatar_url: '', // 添加头像URL字段
         points: 0,
         created_at: null,
         updated_at: null,
@@ -432,6 +564,7 @@ export default {
       // 订阅记录相关
       subscriptions: [],
       subscriptionsLoading: false,
+      subscriptionFilter: 'all', // 订阅筛选条件
 
       friends: ['何雯宏', '许昕格', '王加添'],
       favoriteRobots: ['R2-D2', 'C-3PO', 'Optimus Prime'],
@@ -495,6 +628,39 @@ export default {
           },
         ],
       },
+
+      // 头像裁剪相关
+      avatarPreviewVisible: false,
+      previewAvatarUrl: '',
+      currentAvatarFile: null,
+
+      // 裁剪器配置
+      cropperOption: {
+        img: '', // 裁剪图片的地址
+        outputSize: 1, // 裁剪生成图片的质量
+        outputType: 'png', // 裁剪生成图片的格式
+        info: true, // 图片大小信息
+        canScale: true, // 图片是否允许滚轮缩放
+        autoCrop: true, // 是否默认生成截图框
+        autoCropWidth: 200, // 默认生成截图框宽度
+        autoCropHeight: 200, // 默认生成截图框高度
+        fixedBox: false, // 固定截图框大小
+        fixed: true, // 是否开启截图框宽高固定比例
+        fixedNumber: [1, 1], // 截图框的宽高比例
+        full: false, // 是否输出原图比例的截图
+        canMoveBox: true, // 截图框能否拖动
+        original: false, // 上传图片按照原始比例渲染
+        centerBox: true, // 截图框是否被限制在图片里面
+        height: true, // 是否按照设备的dpr 输出等比例图片
+        infoTrue: true, // true 为展示真实输出图片宽高 false 展示看到的截图框宽高
+        maxImgSize: 3000, // 限制图片最大宽度和高度
+        enlarge: 1, // 图片根据截图框输出比例倍数
+        mode: 'contain', // 图片默认渲染方式
+        canMove: true, // 上传图片是否可以移动
+        canChangeScale: true, // 是否可以改变截图框大小
+        limitMinSize: 50, // 截图框最小尺寸
+        high: true, // 是否按照设备的dpr 输出等比例图片
+      },
     };
   },
 
@@ -522,6 +688,21 @@ export default {
     totalPointsPages() {
       return Math.ceil(this.filteredPointsData.length / this.pointsPageSize);
     },
+
+    // 过滤后的订阅记录
+    filteredSubscriptions() {
+      if (this.subscriptionFilter === 'all') {
+        return this.subscriptions;
+      }
+      return this.subscriptions.filter(
+        (sub) => sub.status == this.subscriptionFilter
+      );
+    },
+
+    // 过期订阅数量
+    expiredSubscriptionsCount() {
+      return this.subscriptions.filter((sub) => sub.status === 2).length;
+    },
   },
 
   async created() {
@@ -531,6 +712,7 @@ export default {
 
   methods: {
     ...mapActions('user', ['logout']),
+    ...mapMutations('user', ['UPDATE_USER_NAME']),
 
     // 登出功能
     handleLogout() {
@@ -562,6 +744,230 @@ export default {
         });
     },
 
+    // 头像上传相关方法
+    handleImageError() {
+      this.avatar = 'https://picsum.photos/id/1000/40/40';
+    },
+
+    triggerFileInput() {
+      if (this.avatarUploading) return;
+      this.$refs.avatarInput.click();
+    },
+
+    async handleAvatarChange(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      // 基本文件验证
+      if (!file.type.startsWith('image/')) {
+        this.$message.error('请选择图片文件');
+        return;
+      }
+
+      // 文件大小限制 (5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        this.$message.error('图片大小不能超过 5MB');
+        return;
+      }
+
+      try {
+        // 创建图片URL供裁剪器使用
+        const imageUrl = URL.createObjectURL(file);
+        this.cropperOption.img = imageUrl;
+        this.currentAvatarFile = file;
+
+        // 显示裁剪对话框
+        this.avatarPreviewVisible = true;
+
+        // 延迟一下确保对话框完全打开后再初始化预览
+        this.$nextTick(() => {
+          this.updateCirclePreview();
+        });
+      } catch (error) {
+        console.error('头像预览失败:', error);
+        this.$message.error('头像预览失败：' + error.message);
+      } finally {
+        // 清空文件输入框
+        this.$refs.avatarInput.value = '';
+      }
+    },
+
+    // 裁剪器控制方法
+    rotateLeft() {
+      this.$refs.cropper.rotateLeft();
+      this.updateCirclePreview();
+    },
+
+    rotateRight() {
+      this.$refs.cropper.rotateRight();
+      this.updateCirclePreview();
+    },
+
+    scaleUp() {
+      this.$refs.cropper.changeScale(1);
+      this.updateCirclePreview();
+    },
+
+    scaleDown() {
+      this.$refs.cropper.changeScale(-1);
+      this.updateCirclePreview();
+    },
+
+    // 更新圆形预览
+    updateCirclePreview() {
+      this.$nextTick(() => {
+        if (this.$refs.cropper) {
+          this.$refs.cropper.getCropData((data) => {
+            if (this.$refs.circlePreview) {
+              this.$refs.circlePreview.innerHTML = `
+                <div style="
+                  width: 100px;
+                  height: 100px;
+                  border-radius: 50%;
+                  overflow: hidden;
+                  margin: 0 auto;
+                  background: #f5f5f5;
+                ">
+                  <img src="${data}" style="
+                    width: 100%;
+                    height: 100%;
+                    object-fit: cover;
+                  " />
+                </div>
+              `;
+            }
+          });
+        }
+      });
+    },
+
+    async confirmAvatarUpload() {
+      if (!this.$refs.cropper) return;
+
+      try {
+        this.avatarUploading = true;
+        this.$message.info('正在生成裁剪图片...');
+
+        // 获取裁剪后的blob数据
+        this.$refs.cropper.getCropBlob((blob) => {
+          this.uploadCroppedImage(blob);
+        });
+      } catch (error) {
+        console.error('头像上传失败:', error);
+        this.$message.error('头像上传失败：' + error.message);
+        this.avatarUploading = false;
+      }
+    },
+
+    async uploadCroppedImage(blob) {
+      try {
+        this.$message.info('正在上传头像...');
+
+        // 创建FormData
+        const formData = new FormData();
+        formData.append('file', blob, 'avatar.png');
+
+        // 调用Python服务上传图片
+        const response = await fetch('http://localhost:5000/api/upload-image', {
+          method: 'POST',
+          body: formData,
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+          // 上传成功，更新头像显示
+          this.avatar = result.url;
+
+          // 调用后端API更新用户头像
+          await this.updateUserAvatar(result.url);
+
+          this.$message.success('头像更新成功！');
+          this.avatarPreviewVisible = false;
+        } else {
+          throw new Error(result.error || '上传失败');
+        }
+      } catch (error) {
+        console.error('头像上传失败:', error);
+        this.$message.error('头像上传失败：' + error.message);
+      } finally {
+        this.avatarUploading = false;
+      }
+    },
+
+    resetAvatarPreview() {
+      if (this.cropperOption.img) {
+        URL.revokeObjectURL(this.cropperOption.img);
+      }
+      this.cropperOption.img = '';
+      this.currentAvatarFile = null;
+
+      // 清空圆形预览
+      if (this.$refs.circlePreview) {
+        this.$refs.circlePreview.innerHTML = '';
+      }
+    },
+
+    async updateUserAvatar(avatarUrl) {
+      try {
+        console.log('准备更新头像URL到后端:', avatarUrl);
+
+        // 直接使用头像更新API，不进行额外的删除操作
+        // 旧头像的清理应该由后端统一管理，或者通过定时任务处理
+        const response = await updateUserAvatar(this.userId, avatarUrl);
+        console.log('头像更新API响应:', response);
+
+        // 检查响应结果
+        if (response && response.data) {
+          // 更新本地用户信息
+          this.userInfo.avatar_url = avatarUrl;
+          console.log('头像URL已成功保存到后端');
+
+          // 更新页面显示的头像
+          this.avatar = avatarUrl;
+
+          return true;
+        } else {
+          throw new Error('后端更新失败');
+        }
+      } catch (error) {
+        console.error('更新用户头像到后端失败:', error);
+
+        // 处理不同类型的错误
+        if (error.response) {
+          const errorMsg =
+            error.response.data?.message || `HTTP ${error.response.status}`;
+          throw new Error('保存到服务器失败: ' + errorMsg);
+        } else {
+          throw new Error('保存到服务器失败: ' + (error.message || '网络错误'));
+        }
+      }
+    },
+
+    async getPasswordForAvatarUpdate() {
+      // 简化的密码获取方式，实际项目中可能需要更安全的方式
+      return new Promise((resolve, reject) => {
+        this.$prompt('请输入当前密码以验证身份：', '更新头像', {
+          confirmButtonText: '确定',
+          cancelButtonText: '取消',
+          inputType: 'password',
+          inputValidator: (value) => {
+            if (!value) {
+              return '请输入密码';
+            }
+            return true;
+          },
+          inputErrorMessage: '密码不能为空',
+        })
+          .then(({ value }) => {
+            resolve(value);
+          })
+          .catch(() => {
+            reject(new Error('用户取消了密码验证'));
+          });
+      });
+    },
+
     async loadUserInfo() {
       try {
         this.loading = true;
@@ -576,6 +982,13 @@ export default {
           const response = await getUserInfo(this.userId);
           this.userInfo = response.data;
           console.log('用户信息加载成功:', this.userInfo);
+
+          // 设置头像
+          if (this.userInfo.avatar_url) {
+            this.avatar = this.userInfo.avatar_url;
+          } else {
+            this.avatar = 'https://picsum.photos/id/1000/40/40';
+          }
 
           // 单独加载积分信息（根据后端文档，积分需要单独获取）
           try {
@@ -638,7 +1051,8 @@ export default {
             <ul>
               <li>🎁 新用户注册</li>
               <li>🤖 创建AI代理</li>
-              <li>� 充值购买</li>
+              <li>🤖 更新机器人</li>
+              <li>💰 充值购买</li>
             </ul>
             <br>
             <p style="color: #909399; font-size: 12px;">
@@ -705,6 +1119,8 @@ export default {
           if (response.data.success !== false) {
             this.$message.success('个人信息更新成功！');
             this.editDialogVisible = false;
+            // 更新 Vuex store 中的用户名
+            this.UPDATE_USER_NAME(this.editForm.UserName);
             await this.loadUserInfo(); // 重新加载用户信息
             return;
           } else {
@@ -720,6 +1136,8 @@ export default {
           // 直接检查响应对象
           this.$message.success('个人信息更新成功！');
           this.editDialogVisible = false;
+          // 更新 Vuex store 中的用户名
+          this.UPDATE_USER_NAME(this.editForm.UserName);
           await this.loadUserInfo();
           return;
         } else {
@@ -1061,22 +1479,67 @@ export default {
 
     getStatusText(status) {
       const statusMap = {
-        0: '已取消',
         1: '活跃',
         2: '已过期',
-        3: '暂停',
       };
       return statusMap[status] || '未知状态';
     },
 
     getStatusTagType(status) {
       const tagTypeMap = {
-        0: 'danger',
         1: 'success',
         2: 'warning',
-        3: 'info',
       };
       return tagTypeMap[status] || 'info';
+    },
+
+    // 获取表格行的样式类名
+    getRowClassName({ row }) {
+      if (row.status === 2) {
+        return 'expired-row';
+      }
+      return '';
+    },
+
+    // 获取剩余时间文本
+    getRemainingTimeText(subscription) {
+      if (subscription.status === 2) return '已过期';
+
+      if (!subscription.end_time) return '无期限';
+
+      const endDate = new Date(subscription.end_time);
+      const currentDate = new Date();
+      const diffTime = endDate - currentDate;
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+      if (diffDays < 0) {
+        return `已过期${Math.abs(diffDays)}天`;
+      } else if (diffDays === 0) {
+        return '今日到期';
+      } else if (diffDays <= 7) {
+        return `${diffDays}天后到期`;
+      } else {
+        return `${diffDays}天`;
+      }
+    }, // 获取剩余时间的样式类名
+    getRemainingTimeClass(subscription) {
+      if (subscription.status !== 1) return '';
+
+      if (!subscription.end_time) return '';
+
+      const endDate = new Date(subscription.end_time);
+      const currentDate = new Date();
+      const diffTime = endDate - currentDate;
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+      if (diffDays <= 0) {
+        return 'text-danger';
+      } else if (diffDays <= 7) {
+        return 'text-warning';
+      } else if (diffDays <= 30) {
+        return 'text-info';
+      }
+      return 'text-success';
     },
   },
 };
@@ -1115,6 +1578,15 @@ export default {
   gap: 10px;
 }
 
+.avatar-container {
+  position: relative;
+  display: inline-block;
+
+  &:hover .avatar-overlay {
+    opacity: 1;
+  }
+}
+
 .user-avatar {
   width: 120px;
   height: 120px;
@@ -1122,11 +1594,126 @@ export default {
   object-fit: cover;
   border: 4px solid #409eff;
   box-shadow: 0 2px 8px rgba(64, 158, 255, 0.3);
+  transition: all 0.3s ease;
+
+  &:hover {
+    transform: scale(1.05);
+  }
+}
+
+.avatar-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  border-radius: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  cursor: pointer;
+  color: white;
+  font-size: 12px;
+
+  .el-icon-camera {
+    font-size: 20px;
+    margin-bottom: 4px;
+  }
+
+  span {
+    font-size: 10px;
+    text-align: center;
+  }
 }
 
 .change-avatar-btn {
   color: #409eff;
   font-size: 12px;
+}
+
+// 头像裁剪器样式
+.avatar-cropper-content {
+  .cropper-section {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 20px;
+
+    .cropper-container {
+      flex: 1;
+      height: 300px;
+      border: 1px solid #dcdfe6;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .preview-section {
+      width: 150px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+
+      h4 {
+        margin: 0;
+        font-size: 14px;
+        color: #606266;
+      }
+
+      .circle-preview {
+        width: 100px;
+        height: 100px;
+        border: 2px dashed #dcdfe6;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #fafafa;
+
+        &:empty::before {
+          content: '预览';
+          color: #c0c4cc;
+          font-size: 12px;
+        }
+      }
+    }
+  }
+
+  .cropper-controls {
+    text-align: center;
+    margin-bottom: 15px;
+
+    .el-button-group {
+      .el-button {
+        padding: 5px 8px;
+        font-size: 12px;
+      }
+    }
+  }
+
+  .upload-tip {
+    background: #f4f4f5;
+    padding: 10px;
+    border-radius: 4px;
+    margin-top: 10px;
+
+    p {
+      margin: 5px 0;
+      font-size: 12px;
+      color: #909399;
+
+      &:first-child {
+        margin-top: 0;
+      }
+
+      &:last-child {
+        margin-bottom: 0;
+      }
+    }
+  }
 }
 
 .user-info {
@@ -1491,5 +2078,75 @@ export default {
     color: #909399;
     cursor: not-allowed;
   }
+}
+
+// 头像预览对话框样式
+.avatar-preview-content {
+  text-align: center;
+
+  .preview-section {
+    margin-bottom: 20px;
+
+    .preview-avatar {
+      display: inline-block;
+      margin-bottom: 10px;
+
+      img {
+        width: 150px;
+        height: 150px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 3px solid #409eff;
+        box-shadow: 0 2px 12px rgba(64, 158, 255, 0.3);
+      }
+    }
+
+    .preview-tip {
+      color: #606266;
+      font-size: 14px;
+      margin: 0;
+    }
+  }
+
+  .upload-tip {
+    background: #f5f7fa;
+    border-radius: 6px;
+    padding: 15px;
+    text-align: left;
+
+    p {
+      margin: 5px 0;
+      color: #909399;
+      font-size: 13px;
+    }
+  }
+}
+
+// 订阅记录表格样式
+::v-deep .expired-row {
+  background-color: #fef0f0 !important;
+
+  td {
+    color: #909399 !important;
+  }
+}
+
+// 剩余时间文本颜色
+.text-danger {
+  color: #f56c6c !important;
+  font-weight: bold;
+}
+
+.text-warning {
+  color: #e6a23c !important;
+  font-weight: bold;
+}
+
+.text-info {
+  color: #409eff !important;
+}
+
+.text-success {
+  color: #67c23a !important;
 }
 </style>

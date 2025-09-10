@@ -96,7 +96,7 @@ process.on('SIGTERM', () => {
 });
 
 module.exports = defineConfig({
-  transpileDependencies: true, //是否使用 babel-loader 对 node_modules 中的依赖进行转译
+  transpileDependencies: [], //是否使用 babel-loader 对 node_modules 中的依赖进行转译
   devServer: {
     // 开发服务器配置
     setupMiddlewares: (middlewares) => {
@@ -108,8 +108,8 @@ module.exports = defineConfig({
     proxy: {
       '/api': {
         // 代理的路径规则
-        //target: 'http://47.99.66.142:5253', // 代理的目标服务器地址
-        target: 'http://localhost:5253', // 代理的目标服务器地址
+        target: 'http://47.99.66.142:5253', // 代理的目标服务器地址
+        // target: 'http://localhost:5253', // 代理的目标服务器地址
         changeOrigin: true, // 是否改变请求头中的来源
         pathRewrite: {
           '^/api': '', // 重写路径，将/api开头的请求路径去掉/api部分
