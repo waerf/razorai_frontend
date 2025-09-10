@@ -19,8 +19,8 @@
         <div class="robot-header">
           <div class="avatar-container">
             <img
-              v-if="robot.avatarUrl"
-              :src="robot.avatarUrl"
+              v-if="robot.robotImage"
+              :src="robot.robotImage"
               :alt="robot.name"
               class="robot-avatar"
               @error="handleImageError"
@@ -132,8 +132,8 @@ export default {
     handleImageError(event) {
       // 图片加载失败时隐藏img元素，显示默认头像
       event.target.style.display = 'none';
-      // 可以通过设置robot.avatarUrl为null来切换到默认头像显示
-      this.$set(this.robot, 'avatarUrl', null);
+      // 可以通过设置robot.robotImage为null来切换到默认头像显示
+      this.$set(this.robot, 'robotImage', null);
     },
     // 获取type的中文显示名称
     getTypeDisplayName(type) {
@@ -179,7 +179,7 @@ export default {
             creatorName: data.creatorName,
             createdAt: data.createdAt,
             reviewRemarks: data.reviewRemarks,
-            avatarUrl: data.avatarUrl, // 新增头像URL字段
+            robotImage: data.robotImage, // 新增头像URL字段
           };
         } else {
           this.$message.error(res.data?.message || '获取机器人详情失败');
@@ -303,7 +303,7 @@ export default {
         Description: this.robot.description,
         CreatorId: parseInt(creatorId),
         Price: this.robot.price || 0,
-        AvatarUrl: this.robot.avatarUrl, // 新增头像URL字段
+        RobotImage: this.robot.robotImage, // 新增头像URL字段
         Remarks: this.rejectReason,
       };
       try {

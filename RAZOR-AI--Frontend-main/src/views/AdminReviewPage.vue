@@ -45,8 +45,8 @@
             <div class="robot-info-container">
               <div class="robot-avatar-container">
                 <img
-                  v-if="scope.row.avatarUrl"
-                  :src="scope.row.avatarUrl"
+                  v-if="scope.row.robotImage"
+                  :src="scope.row.robotImage"
                   :alt="scope.row.name"
                   class="robot-avatar-list"
                   @error="handleAvatarError(scope.row)"
