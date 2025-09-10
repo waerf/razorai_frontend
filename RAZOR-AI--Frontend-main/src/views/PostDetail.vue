@@ -1,22 +1,5 @@
 <template>
-  <div class="community-container">
-    <!-- 调试信息 -->
-    <div style="padding: 20px; background: #f0f0f0; margin: 10px">
-      <h3>调试信息:</h3>
-      <p>路由参数ID: {{ $route.params.id }}</p>
-      <p>Props ID: {{ id }}</p>
-      <p>帖子标题: {{ post.title || '未加载' }}</p>
-      <p>组件状态: {{ post.title ? '已加载' : '未加载' }}</p>
-    </div>
-
-    <!-- 加载状态 -->
-    <div
-      v-if="!post.title"
-      style="padding: 20px; text-align: center; color: #666"
-    >
-      正在加载帖子详情... (ID: {{ $route.params.id || id || '未知' }})
-    </div>
-
+  <div>
     <!-- 主内容区 -->
     <main class="main-content container">
       <div class="content-layout">
@@ -627,6 +610,7 @@ import {
   getCommentLikeCount,
   checkUserLikedComment,
   getUserAvatar,
+  checkUserLikedPost,
 } from '@/utils/api'; // 你的api文件路径
 import { mapState } from 'vuex';
 import { marked } from 'marked';
@@ -742,7 +726,7 @@ export default {
       },
     };
   },
-  created() {
+  async created() {
     console.log('[PostDetail调试] 页面初始化');
     console.log('[PostDetail调试] 默认头像路径:', this.defaultAvatar);
     console.log('[PostDetail调试] 当前用户ID:', this.currentUserId);
@@ -751,8 +735,8 @@ export default {
     if (this.id) {
       this.loadPostData(this.id);
       this.loadComments(this.id);
-      this.loadCommentCount(this.id);
-      this.loadLikeCount(this.id);
+      await this.loadCommentCount(this.id);
+      await this.loadLikeCount(this.id);
       // 新增：自动加载每条主评论的回复
       this.$nextTick(() => {
         this.loadAllCommentReplies();
@@ -882,6 +866,7 @@ export default {
       });
       this.$set(this.replyBoxVisible, replyId, !this.replyBoxVisible[replyId]);
     },
+    //加载帖子
     async loadPostData(postId) {
       if (!postId) {
         console.warn('loadPostData: 无效的帖子ID:', postId);
@@ -907,53 +892,52 @@ export default {
         } catch (e) {
           console.error('解析 postContent 失败:', e, p.postContent);
         }
+        // 默认头像占位
+        let authorAvatar = '';
+
+        // 调用新的用户头像接口
+        try {
+          const avatarRes = await getUserAvatar(p.userId);
+          authorAvatar = avatarRes.data['avatar_url'] || this.defaultAvatar;
+        } catch (err) {
+          authorAvatar = this.defaultAvatar;
+        }
 
         this.post = {
           authorId: p.userId,
-          authorAvatar: '', // 将在下面异步获取
+          authorAvatar,
           authorName: contentObj.author || `用户${p.userId}` || '匿名用户',
           isAuthor: false,
           postTime: p.createdAt || '',
           category: contentObj.category || '',
           title: contentObj.title || '未命名帖子',
           tags: contentObj.tags || [],
-          likes: 0,
+          likes: p.likeCount ?? 0,
+          likedByMe: false,
           comments: this.totalComments, // 使用实际的评论数
           bookmarks: 0,
           views: 0,
           content: contentObj.content || '', // 详情页显示正文
         };
 
-        // 异步获取作者头像
-        if (p.userId) {
-          try {
-            const avatarRes = await getUserAvatar(p.userId);
-            console.log(`[帖子作者头像] 用户${p.userId}头像响应:`, avatarRes);
-
-            let authorAvatar = this.defaultAvatar;
-            if (avatarRes && avatarRes.data) {
-              authorAvatar =
-                avatarRes.data.avatarUrl ||
-                avatarRes.data.avatar_url ||
-                this.defaultAvatar;
-            }
-
-            console.log(
-              `[帖子作者头像] 用户${p.userId}最终头像:`,
-              authorAvatar
-            );
-            this.post.authorAvatar = authorAvatar;
-          } catch (error) {
-            console.error(`获取帖子作者${p.userId}头像失败:`, error);
-            this.post.authorAvatar = this.defaultAvatar;
-          }
-        } else {
-          this.post.authorAvatar = this.defaultAvatar;
+        if (this.isLoggedIn) {
+          await this.loadUserLikeStatus(postId);
         }
-
         console.log('帖子详情加载完成:', this.post);
       } catch (err) {
         console.error('加载帖子失败:', err);
+      }
+    },
+
+    async loadUserLikeStatus(postId) {
+      try {
+        const res = await checkUserLikedPost(postId, this.currentUserId);
+        this.post.likedByMe = !!res.data?.isLiked;
+        this.post.likeId = res.data?.likeId || null;
+      } catch (err) {
+        console.error('加载用户点赞状态失败:', err);
+        this.post.likedByMe = false;
+        this.post.likeId = null;
       }
     },
 
@@ -991,6 +975,8 @@ export default {
           err.response?.data || err.message || err
         );
         this.$message?.error('操作失败，请稍后重试');
+        await this.loadUserLikeStatus(this.id);
+        await this.loadLikeCount(this.id);
       }
     },
 
