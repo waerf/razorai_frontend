@@ -545,8 +545,7 @@ export default {
   },
   data() {
     return {
-      avatar:
-        'data:image/svg+xml;charset=UTF-8,%3Csvg width="150" height="150" xmlns="http://www.w3.org/2000/svg"%3E%3Crect width="100%25" height="100%25" fill="%23ddd"/%3E%3Ctext x="50%25" y="50%25" font-size="18" fill="%23999" dy=".3em" text-anchor="middle"%3E默认头像%3C/text%3E%3C/svg%3E',
+      avatar: 'https://picsum.photos/id/1000/40/40',
       loading: true,
       avatarUploading: false, // 头像上传状态
       userInfo: {
@@ -747,8 +746,7 @@ export default {
 
     // 头像上传相关方法
     handleImageError() {
-      this.avatar =
-        'data:image/svg+xml;charset=UTF-8,%3Csvg width="150" height="150" xmlns="http://www.w3.org/2000/svg"%3E%3Crect width="100%25" height="100%25" fill="%23ddd"/%3E%3Ctext x="50%25" y="50%25" font-size="18" fill="%23999" dy=".3em" text-anchor="middle"%3E默认头像%3C/text%3E%3C/svg%3E';
+      this.avatar = 'https://picsum.photos/id/1000/40/40';
     },
 
     triggerFileInput() {
@@ -989,7 +987,7 @@ export default {
           if (this.userInfo.avatar_url) {
             this.avatar = this.userInfo.avatar_url;
           } else {
-            this.avatar = 'https://via.placeholder.com/150';
+            this.avatar = 'https://picsum.photos/id/1000/40/40';
           }
 
           // 单独加载积分信息（根据后端文档，积分需要单独获取）

@@ -26,9 +26,10 @@
           <div class="post-header">
             <div class="post-author">
               <img
-                :src="post.authorAvatar"
+                :src="post.authorAvatar || defaultAvatar"
                 alt="用户头像"
                 class="author-avatar"
+                @error="handleAuthorAvatarError"
               />
               <div class="author-info">
                 <div class="author-name-wrap">
@@ -675,6 +676,7 @@ export default {
     return {
       // 帖子数据（初始化空，等API填充）
       post: {
+        authorId: null,
         authorAvatar: '',
         authorName: '',
         isAuthor: false,
@@ -776,6 +778,12 @@ export default {
   },
 
   methods: {
+    // 头像错误处理方法
+    handleAuthorAvatarError() {
+      console.log('[帖子作者头像] 头像加载失败，使用默认头像');
+      this.post.authorAvatar = this.defaultAvatar;
+    },
+
     // 调试方法
     debugAvatarLoad(type, id, avatar) {
       console.log(`[${type}头像显示] ${type}${id}头像加载成功:`, avatar);
@@ -901,7 +909,8 @@ export default {
         }
 
         this.post = {
-          authorAvatar: '', // 目前接口没给，先占位
+          authorId: p.userId,
+          authorAvatar: '', // 将在下面异步获取
           authorName: contentObj.author || `用户${p.userId}` || '匿名用户',
           isAuthor: false,
           postTime: p.createdAt || '',
@@ -914,6 +923,33 @@ export default {
           views: 0,
           content: contentObj.content || '', // 详情页显示正文
         };
+
+        // 异步获取作者头像
+        if (p.userId) {
+          try {
+            const avatarRes = await getUserAvatar(p.userId);
+            console.log(`[帖子作者头像] 用户${p.userId}头像响应:`, avatarRes);
+
+            let authorAvatar = this.defaultAvatar;
+            if (avatarRes && avatarRes.data) {
+              authorAvatar =
+                avatarRes.data.avatarUrl ||
+                avatarRes.data.avatar_url ||
+                this.defaultAvatar;
+            }
+
+            console.log(
+              `[帖子作者头像] 用户${p.userId}最终头像:`,
+              authorAvatar
+            );
+            this.post.authorAvatar = authorAvatar;
+          } catch (error) {
+            console.error(`获取帖子作者${p.userId}头像失败:`, error);
+            this.post.authorAvatar = this.defaultAvatar;
+          }
+        } else {
+          this.post.authorAvatar = this.defaultAvatar;
+        }
 
         console.log('帖子详情加载完成:', this.post);
       } catch (err) {
