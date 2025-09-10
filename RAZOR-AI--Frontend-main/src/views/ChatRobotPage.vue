@@ -66,7 +66,7 @@
               <!-- 机器人消息头像 -->
               <img
                 v-if="msg.role === 'assistant'"
-                :src="botAvatar"
+                :src="currentAgentAvatar"
                 alt="机器人头像"
                 class="avatar"
               />
@@ -83,7 +83,7 @@
               <!-- 用户消息头像 -->
               <img
                 v-if="msg.role === 'user'"
-                :src="userAvatar"
+                :src="currentUserAvatar"
                 alt="用户头像"
                 class="avatar"
               />
@@ -94,7 +94,7 @@
             <el-input
               v-model="newMessage"
               placeholder="输入您想聊的内容..."
-              @keyup.enter.native="sendMessage"
+              @keyup.enter.native="sendMessage()"
               class="message-input"
               clearable
             >
@@ -123,6 +123,8 @@ import {
   sendMessage as apisendMessage,
   createChat as apicreateChat,
   getChatTitle as apigetChatTitle,
+  getUserAvatar as apigetUserAvatar,
+  getAgentAvatar as apigetAgentAvatar,
 } from '../utils/api';
 import { mapActions } from 'vuex';
 
@@ -134,18 +136,22 @@ export default {
       messages: [],
       userAvatar: require('@/assets/images/Avatar/User.png'),
       botAvatar: require('@/assets/images/Avatar/Assistant.png'),
+      currentUserAvatar: '',
+      currentAgentAvatar: '',
       currentChat: {},
       chatId: null,
+      agentId: null,
       isHistoryChat: false,
       isFirstmessage: false,
       chattitle: '',
+      hasHandledInitMessage: false,
     };
   },
 
   async created() {
     this.chatId = this.$route.params.chatId;
     this.chattitle = this.$route.params.chatTitle || '未命名';
-    console.log('当前对话ID和名称是', this.chatId, this.chattitle);
+    const initMessage = this.$route.query.initMessage;
 
     this.isFirstmessage = ['未命名', '', undefined, null].includes(
       this.chattitle
@@ -155,10 +161,17 @@ export default {
     this.isHistoryChat = !!this.chatId && this.chatId !== 'null';
     console.log('是否为历史对话:', this.isHistoryChat);
 
+    await this.initAvatars();
+
     await this.createNewChat();
 
     if (this.chatId && this.chatId !== 'null') {
-      this.getChatHistory();
+      await this.getChatHistory();
+    }
+
+    if (initMessage && !this.hasHandledInitMessage) {
+      this.sendMessage(initMessage);
+      this.hasHandledInitMessage = true;
     }
   },
 
@@ -200,6 +213,52 @@ export default {
 
   methods: {
     ...mapActions('chat', ['getChatByID']),
+
+    async initAvatars() {
+      // 1. 获取用户头像
+      this.targetUserId = this.$store.state.user?.userId;
+      if (this.targetUserId) {
+        this.currentUserAvatar = await this.getUserAvatar(this.targetUserId);
+        console.log('用户头像已设置:', this.currentUserAvatar);
+      } else {
+        // 无userId时，直接用默认用户头像
+        this.currentUserAvatar = this.userAvatar;
+        console.warn('未获取到用户ID，使用默认用户头像');
+      }
+
+      // 2. 获取机器人头像
+      this.targetAgentId = this.$route.query?.agentId;
+      console.log('路由参数 agentId:', this.targetAgentId);
+      if (this.targetAgentId) {
+        this.currentAgentAvatar = await this.getAgentAvatar(this.targetAgentId);
+      } else {
+        // 无agentId时，直接用默认机器人头像
+        this.currentAgentAvatar = this.botAvatar;
+        console.warn('未获取到机器人ID，使用默认机器人头像');
+      }
+    },
+
+    async getUserAvatar(userId) {
+      try {
+        const response = await apigetUserAvatar(userId);
+        const apiAvatarUrl = response?.avatar_url;
+        return apiAvatarUrl ? apiAvatarUrl : this.userAvatar;
+      } catch (error) {
+        console.error(`获取用户[${userId}]头像失败:`, error);
+        return this.userAvatar;
+      }
+    },
+
+    async getAgentAvatar(agentId) {
+      try {
+        const response = await apigetAgentAvatar(agentId);
+        const apiAvatarUrl = response?.avatar_url;
+        return apiAvatarUrl ? apiAvatarUrl : this.botAvatar;
+      } catch (error) {
+        console.error(`获取机器人[${agentId}]头像失败:`, error);
+        return this.botAvatar;
+      }
+    },
 
     async getChatTitle() {
       try {
@@ -301,23 +360,25 @@ export default {
       }
     },
 
-    async sendMessage() {
-      const content = this.newMessage.trim();
-      if (!content) return;
+    async sendMessage(content) {
+      const messageContent = content || this.newMessage.trim();
+      if (!messageContent) return;
 
       // 先显示用户消息
-      this.messages.push({ content, role: 'user' });
-      this.newMessage = '';
+      this.messages.push({ content: messageContent, role: 'user' });
+      if (!content) {
+        this.newMessage = '';
+      }
 
       this.$nextTick(() => this.scrollToBottom());
 
       try {
         const response = await apisendMessage({
           chat_id: this.chatId,
-          content,
+          content: messageContent,
         });
 
-        console.log('发送消息:', content);
+        console.log('发送消息:', messageContent);
         console.log('接口返回:', response);
 
         if (response.status === 200) {

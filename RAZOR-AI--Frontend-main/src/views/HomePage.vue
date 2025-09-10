@@ -49,6 +49,7 @@
               type="info"
               icon="el-icon-upload2"
               @click="sendMessageToRobot"
+              :disabled="!userInput.trim()"
               >发送并创建对话</el-button
             >
           </div>
@@ -254,6 +255,12 @@ export default {
         return;
       }
 
+      const inputContent = this.userInput.trim();
+      if (!inputContent) {
+        this.$message.warning('请输入您的问题后再发送');
+        return;
+      }
+
       // 定义 selectedRobotInfo 并查找对应机器人信息
       const selectedRobotInfo = this.haveSubscribed.find(
         (robot) => robot.agent_id.toString() === this.selectedRobot
@@ -285,7 +292,11 @@ export default {
             chatId: chatId,
             robotName: selectedRobotInfo?.agent_name || '未知机器人',
           },
+          query: {
+            initMessage: inputContent,
+          },
         });
+        this.userInput = '';
       } catch (err) {
         this.$message.error('创建会话失败');
         console.error(err);
