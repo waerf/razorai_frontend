@@ -526,7 +526,7 @@
 </template>
 
 <script>
-import { mapActions, mapState } from 'vuex';
+import { mapActions, mapState, mapMutations } from 'vuex';
 import { VueCropper } from 'vue-cropper';
 import {
   getUserInfo,
@@ -545,8 +545,7 @@ export default {
   },
   data() {
     return {
-      avatar:
-        'data:image/svg+xml;charset=UTF-8,%3Csvg width="150" height="150" xmlns="http://www.w3.org/2000/svg"%3E%3Crect width="100%25" height="100%25" fill="%23ddd"/%3E%3Ctext x="50%25" y="50%25" font-size="18" fill="%23999" dy=".3em" text-anchor="middle"%3E默认头像%3C/text%3E%3C/svg%3E',
+      avatar: 'https://picsum.photos/id/1000/40/40',
       loading: true,
       avatarUploading: false, // 头像上传状态
       userInfo: {
@@ -713,6 +712,7 @@ export default {
 
   methods: {
     ...mapActions('user', ['logout']),
+    ...mapMutations('user', ['UPDATE_USER_NAME']),
 
     // 登出功能
     handleLogout() {
@@ -746,8 +746,7 @@ export default {
 
     // 头像上传相关方法
     handleImageError() {
-      this.avatar =
-        'data:image/svg+xml;charset=UTF-8,%3Csvg width="150" height="150" xmlns="http://www.w3.org/2000/svg"%3E%3Crect width="100%25" height="100%25" fill="%23ddd"/%3E%3Ctext x="50%25" y="50%25" font-size="18" fill="%23999" dy=".3em" text-anchor="middle"%3E默认头像%3C/text%3E%3C/svg%3E';
+      this.avatar = 'https://picsum.photos/id/1000/40/40';
     },
 
     triggerFileInput() {
@@ -988,7 +987,7 @@ export default {
           if (this.userInfo.avatar_url) {
             this.avatar = this.userInfo.avatar_url;
           } else {
-            this.avatar = 'https://via.placeholder.com/150';
+            this.avatar = 'https://picsum.photos/id/1000/40/40';
           }
 
           // 单独加载积分信息（根据后端文档，积分需要单独获取）
@@ -1052,7 +1051,8 @@ export default {
             <ul>
               <li>🎁 新用户注册</li>
               <li>🤖 创建AI代理</li>
-              <li>� 充值购买</li>
+              <li>🤖 更新机器人</li>
+              <li>💰 充值购买</li>
             </ul>
             <br>
             <p style="color: #909399; font-size: 12px;">
@@ -1119,6 +1119,8 @@ export default {
           if (response.data.success !== false) {
             this.$message.success('个人信息更新成功！');
             this.editDialogVisible = false;
+            // 更新 Vuex store 中的用户名
+            this.UPDATE_USER_NAME(this.editForm.UserName);
             await this.loadUserInfo(); // 重新加载用户信息
             return;
           } else {
@@ -1134,6 +1136,8 @@ export default {
           // 直接检查响应对象
           this.$message.success('个人信息更新成功！');
           this.editDialogVisible = false;
+          // 更新 Vuex store 中的用户名
+          this.UPDATE_USER_NAME(this.editForm.UserName);
           await this.loadUserInfo();
           return;
         } else {
