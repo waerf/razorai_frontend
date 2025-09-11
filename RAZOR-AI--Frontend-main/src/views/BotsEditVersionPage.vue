@@ -273,8 +273,6 @@ export default {
       llmOptions: [
         { label: 'Kimi', value: 1 },
         { label: 'Deepseek', value: 2 },
-        { label: 'Claude', value: 3 },
-        { label: 'GPT-4', value: 4 },
       ],
       agentId: null,
       isLoading: false,
@@ -537,7 +535,7 @@ export default {
             chatPrompt: this.form.chatprompt,
             description: this.form.description,
             price: this.form.price,
-            avatarUrl: this.form.avatarUrl,
+            robotImage: this.form.avatarUrl,
             creatorId: userId,
           };
           console.log('更新机器人参数:', payload);

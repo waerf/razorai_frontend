@@ -233,12 +233,24 @@
                 :key="field"
               >
                 <span class="change-field">{{ formatFieldName(field) }}:</span>
-                <span class="change-from" v-if="change.from !== undefined">
-                  从「{{ change.from === '' ? '空' : change.from }}」
-                </span>
-                <span class="change-to">
-                  改为「{{ change.to === '' ? '空' : change.to }}」
-                </span>
+                <template
+                  v-if="field === 'robotImage' || field === 'avatarUrl'"
+                >
+                  <span
+                    class="change-from"
+                    v-if="change.from !== undefined || change.to !== undefined"
+                  >
+                    头像已更换
+                  </span>
+                </template>
+                <template v-else>
+                  <span class="change-from" v-if="change.from !== undefined">
+                    从「{{ change.from === '' ? '空' : change.from }}」
+                  </span>
+                  <span class="change-to">
+                    改为「{{ change.to === '' ? '空' : change.to }}」
+                  </span>
+                </template>
               </div>
             </div>
           </el-descriptions-item>
@@ -451,6 +463,7 @@ export default {
           chatPrompt: this.selectedVersion.chatPrompt,
           description: this.selectedVersion.description || '',
           price: this.selectedVersion.price,
+          robotImage: this.selectedVersion.robotImage || '',
         };
 
         console.log(
