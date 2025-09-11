@@ -1384,6 +1384,7 @@ export default {
 
         .search-mode-btn {
           border-radius: 12px 0 0 12px;
+          height: 40px;
           background: $accent-color;
           color: white;
           border-color: $accent-color;

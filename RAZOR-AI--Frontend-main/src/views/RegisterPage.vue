@@ -653,10 +653,13 @@ export default {
         formData.append('file', blob, 'avatar.png');
 
         // 调用Python服务上传图片
-        const response = await fetch('http://localhost:5000/api/upload-image', {
-          method: 'POST',
-          body: formData,
-        });
+        const response = await fetch(
+          'http://47.99.66.142:5000/api2/upload-image',
+          {
+            method: 'POST',
+            body: formData,
+          }
+        );
 
         const result = await response.json();
 

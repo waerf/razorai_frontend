@@ -113,7 +113,7 @@ def upload_file_to_picgo(file_path, **kwargs):
         files["source"].close()
 
 
-@app.route('/api/upload-image', methods=['POST'])
+@app.route('/api2/upload-image', methods=['POST'])
 def upload_image():
     """
     接收前端图片上传请求，使用PicGo API上传到图床

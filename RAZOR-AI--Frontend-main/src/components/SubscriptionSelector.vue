@@ -16,7 +16,7 @@
         <!-- 自定义输入天数 -->
         <el-form-item
           v-if="form.duration === 0"
-          label="自定义天数"
+          label="自定义"
           prop="customDays"
         >
           <el-input

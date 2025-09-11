@@ -122,7 +122,7 @@
       <subscription-selector
         v-if="currentRenewRobot"
         :robotId="currentRenewRobot.agent_id"
-        :price="currentRenewRobot.price || 1"
+        :price="currentRenewRobot.price"
         :onConfirm="handleRenewConfirm"
         :onClose="closeRenewDialog"
       />
@@ -195,18 +195,18 @@ export default {
           const subscriptions = this.subscribedRobots;
           console.log('当前订阅机器人列表:', subscriptions);
           if (subscriptions.length === 0) {
-            this.$message.info('您当前没有订阅任何机器人');
+            // this.$message.info('您当前没有订阅任何机器人');
           } else {
-            this.$message.success(
-              `成功获取${subscriptions.length}个订阅机器人`
-            );
+            // this.$message.success(
+            //   `成功获取${subscriptions.length}个订阅机器人`
+            // );
           }
         } else {
           this.$message.warning(`获取订阅列表失败: ${result.message}`);
         }
       } catch (error) {
         console.error('获取订阅列表失败:', error);
-        this.$message.error('获取订阅列表时发生网络错误，请重试');
+        // this.$message.error('获取订阅列表时发生网络错误，请重试');
       } finally {
         this.loading = false;
       }
