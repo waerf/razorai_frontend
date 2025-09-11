@@ -490,6 +490,8 @@ import {
   getRobotsByType as apiGetRobotsByType,
   searchAgent as apiSearchAgent,
   getRecommendedRobots as apiGetRecommendedRobots,
+  createChat as apicreateChat,
+  fetchAllChats as apifetchAllChats,
 } from '../utils/api';
 import RobotDetailDialog from './RobotDetailPage.vue';
 import SubscriptionSelector from '@/components/SubscriptionSelector.vue';
@@ -1079,11 +1081,28 @@ export default {
       };
       console.log('进入会话参数:', payload);
 
-      this.$router.push({
-        path: `/chatRobot/null`,
-        query: payload,
-      });
+      try {
+        // 调用接口，创建会话，返回真实 chatId
+        const res = await apicreateChat(payload);
+        const chatId = res.data.chat_id;
+        console.log('创建的聊天ID:', chatId);
+
+        const result = await apifetchAllChats({ userId: userId });
+        this.$store.commit('chat/SET_CHATS', result.data || []);
+        console.log('输入的参数:', userId);
+        console.log('列表返回结果:', result);
+
+        // 直接跳到真实的 chatId 页面
+        this.$router.push({
+          name: 'ChatRobot',
+          params: { chatId: chatId },
+        });
+      } catch (err) {
+        this.$message.error('创建会话失败');
+        console.error(err);
+      }
     },
+
     // 订阅机器人
     async handleSubscriptionConfirm(duration, points) {
       if (!this.currentRobotForSubscription) return;

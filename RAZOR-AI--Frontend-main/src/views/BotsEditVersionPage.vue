@@ -12,6 +12,58 @@
         <p class="form-subtitle">修改机器人的基本信息和参数</p>
       </div>
 
+      <!-- 机器人头像上传+裁剪模块 -->
+      <el-form-item label="机器人头像" class="avatar-form-item">
+        <div class="avatar-upload-container">
+          <!-- 1. 头像预览区 -->
+          <div class="avatar-preview">
+            <img
+              v-if="form.avatarUrl"
+              :src="form.avatarUrl"
+              alt="机器人头像"
+              class="avatar-img"
+              @error="handleAvatarError"
+            />
+            <div v-else class="avatar-placeholder">
+              <i class="el-icon-user-robot avatar-placeholder-icon"></i>
+              <span class="avatar-placeholder-text">未选择头像</span>
+            </div>
+            <button
+              v-if="form.avatarUrl"
+              class="avatar-clear-btn"
+              @click.stop="clearAvatar"
+              title="清空头像"
+            >
+              <i class="el-icon-circle-close"></i>
+            </button>
+          </div>
+
+          <!-- 2. 上传操作区 -->
+          <div class="avatar-upload-actions">
+            <input
+              type="file"
+              ref="avatarFileInput"
+              class="avatar-file-input"
+              accept="image/jpeg,image/png,image/gif"
+              @change="handleAvatarSelect"
+            />
+            <el-button
+              type="primary"
+              icon="el-icon-upload"
+              size="mini"
+              @click="$refs.avatarFileInput.click()"
+              class="avatar-upload-btn"
+              :disabled="isCropping"
+            >
+              选择图片
+            </el-button>
+            <p class="avatar-tip">
+              支持JPG、PNG、GIF，建议200x200px（裁剪后使用）
+            </p>
+          </div>
+        </div>
+      </el-form-item>
+
       <el-form-item label="机器人名字" prop="name">
         <el-input
           v-model="form.name"
@@ -71,7 +123,6 @@
       </el-form-item>
 
       <el-form-item label="价格" prop="price">
-        <!-- 补充prop，确保验证生效 -->
         <el-input-number
           v-model="form.price"
           :min="0"
@@ -80,6 +131,91 @@
           class="custom-input"
         />
       </el-form-item>
+
+      <!-- 头像裁剪对话框 -->
+      <el-dialog
+        title="头像裁剪"
+        :visible.sync="avatarPreviewVisible"
+        width="600px"
+        @close="resetAvatarPreview"
+      >
+        <div class="avatar-cropper-content" v-loading="avatarUploading">
+          <div class="cropper-section">
+            <div class="cropper-container">
+              <vue-cropper
+                ref="cropper"
+                :img="cropperOption.img"
+                :outputSize="cropperOption.outputSize"
+                :outputType="cropperOption.outputType"
+                :info="cropperOption.info"
+                :canScale="cropperOption.canScale"
+                :autoCrop="cropperOption.autoCrop"
+                :autoCropWidth="cropperOption.autoCropWidth"
+                :autoCropHeight="cropperOption.autoCropHeight"
+                :fixedBox="cropperOption.fixedBox"
+                :fixed="cropperOption.fixed"
+                :fixedNumber="cropperOption.fixedNumber"
+                :full="cropperOption.full"
+                :canMoveBox="cropperOption.canMoveBox"
+                :original="cropperOption.original"
+                :centerBox="cropperOption.centerBox"
+                :height="cropperOption.height"
+                :infoTrue="cropperOption.infoTrue"
+                :maxImgSize="cropperOption.maxImgSize"
+                :enlarge="cropperOption.enlarge"
+                :mode="cropperOption.mode"
+                :canMove="cropperOption.canMove"
+                :canChangeScale="cropperOption.canChangeScale"
+                :limitMinSize="cropperOption.limitMinSize"
+                :high="cropperOption.high"
+                @crop-moving="updateCirclePreview"
+                @real-time="updateCirclePreview"
+              ></vue-cropper>
+            </div>
+
+            <div class="preview-section">
+              <h4>圆形头像预览</h4>
+              <div class="circle-preview" ref="circlePreview">
+                <!-- 圆形预览将通过JavaScript动态生成 -->
+              </div>
+            </div>
+          </div>
+
+          <div class="cropper-controls">
+            <el-button-group>
+              <el-button size="mini" @click="rotateLeft">
+                <i class="el-icon-refresh-left"></i> 左转
+              </el-button>
+              <el-button size="mini" @click="rotateRight">
+                <i class="el-icon-refresh-right"></i> 右转
+              </el-button>
+              <el-button size="mini" @click="scaleUp">
+                <i class="el-icon-zoom-in"></i> 放大
+              </el-button>
+              <el-button size="mini" @click="scaleDown">
+                <i class="el-icon-zoom-out"></i> 缩小
+              </el-button>
+            </el-button-group>
+          </div>
+
+          <div class="upload-tip">
+            <p>• 拖动图片调整位置，拖动边框调整大小</p>
+            <p>• 滚轮缩放，双击重置</p>
+            <p>• 头像将被裁剪为圆形</p>
+          </div>
+        </div>
+
+        <div slot="footer" class="dialog-footer">
+          <el-button @click="avatarPreviewVisible = false">取消</el-button>
+          <el-button
+            type="primary"
+            @click="confirmAvatarUpload"
+            :loading="avatarUploading"
+          >
+            {{ avatarUploading ? '上传中...' : '确认更换' }}
+          </el-button>
+        </div>
+      </el-dialog>
 
       <el-form-item class="form-actions">
         <el-button class="cancel-button" @click="onCancel"> 取消 </el-button>
@@ -92,9 +228,17 @@
 </template>
 
 <script>
-import { getAgentSettings, updateAgentSettings } from '@/utils/api';
+import {
+  getAgentSettings,
+  updateAgentSettings,
+  getAgentAvatar,
+} from '@/utils/api';
+import { VueCropper } from 'vue-cropper';
 
 export default {
+  components: {
+    VueCropper,
+  },
   data() {
     return {
       form: {
@@ -104,6 +248,7 @@ export default {
         chatprompt: '',
         description: '',
         price: 0,
+        avatarUrl: '',
       },
       rules: {
         name: [
@@ -133,8 +278,41 @@ export default {
       ],
       agentId: null,
       isLoading: false,
+      // 头像裁剪相关
+      avatarPreviewVisible: false,
+      previewAvatarUrl: '',
+      currentAvatarFile: null,
+      avatarUploading: false,
+      isCropping: false,
+      cropperOption: {
+        img: '',
+        outputSize: 1,
+        outputType: 'png',
+        info: true,
+        canScale: true,
+        autoCrop: true,
+        autoCropWidth: 200,
+        autoCropHeight: 200,
+        fixedBox: false,
+        fixed: true,
+        fixedNumber: [1, 1],
+        full: false,
+        canMoveBox: true,
+        original: false,
+        centerBox: true,
+        height: true,
+        infoTrue: true,
+        maxImgSize: 3000,
+        enlarge: 1,
+        mode: 'contain',
+        canMove: true,
+        canChangeScale: true,
+        limitMinSize: 50,
+        high: true,
+      },
     };
   },
+
   async created() {
     this.agentId = this.$route.params.agentId;
     if (!this.agentId) {
@@ -143,9 +321,173 @@ export default {
       return;
     }
 
+    try {
+      const avatarRes = await getAgentAvatar(this.agentId);
+      console.log('获取机器人头像响应:', avatarRes);
+      if (avatarRes.status === 200 && avatarRes.data?.robot_image) {
+        this.form.avatarUrl = avatarRes.data.robot_image;
+        console.log('成功获取并设置机器人头像:', this.form.avatarUrl);
+      }
+    } catch (error) {
+      console.warn('获取机器人头像失败:', error);
+    }
+
     await this.loadAgentSettings();
   },
   methods: {
+    // 图片放大
+    scaleUp() {
+      this.$refs.cropper && this.$refs.cropper.changeScale(0.1);
+    },
+    // 图片缩小
+    scaleDown() {
+      this.$refs.cropper && this.$refs.cropper.changeScale(-0.1);
+    },
+    // 图片左转
+    rotateLeft() {
+      this.$refs.cropper && this.$refs.cropper.rotateLeft();
+    },
+    // 图片右转
+    rotateRight() {
+      this.$refs.cropper && this.$refs.cropper.rotateRight();
+    },
+    // 清空头像
+    clearAvatar() {
+      this.form.avatarUrl = '';
+    },
+    // 头像加载失败处理
+    handleAvatarError() {
+      this.form.avatarUrl = '';
+      this.$message.error('头像加载失败，请重新上传或检查图片链接');
+    },
+    handleAvatarSelect(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      if (!file.type.startsWith('image/')) {
+        this.$message.error('请选择图片文件');
+        return;
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        this.$message.error('图片大小不能超过 5MB');
+        return;
+      }
+      try {
+        const imageUrl = URL.createObjectURL(file);
+        this.cropperOption = { ...this.cropperOption, img: imageUrl };
+        this.currentAvatarFile = file;
+        this.avatarPreviewVisible = true;
+        this.$nextTick(() => {
+          const checkCropper = () => {
+            if (
+              this.$refs.cropper &&
+              typeof this.$refs.cropper.getCropData === 'function'
+            ) {
+              this.updateCirclePreview();
+            } else {
+              if (this.cropperRetryCount < 5) {
+                this.cropperRetryCount = (this.cropperRetryCount || 0) + 1;
+                setTimeout(checkCropper, 100);
+              } else {
+                console.error('cropper组件初始化超时');
+              }
+            }
+          };
+          checkCropper();
+        });
+      } catch (error) {
+        console.error('头像预览失败:', error);
+        this.$message.error('头像预览失败：' + error.message);
+      } finally {
+        event.target.value = '';
+      }
+    },
+    updateCirclePreview() {
+      this.$nextTick(() => {
+        if (!this.$refs.cropper) {
+          console.error('cropper组件实例不存在');
+          return;
+        }
+        if (typeof this.$refs.cropper.getCropData !== 'function') {
+          console.error('cropper组件的getCropData方法不存在');
+          setTimeout(() => this.updateCirclePreview(), 100);
+          return;
+        }
+        if (!this.cropperOption.img) {
+          console.error('裁剪图片URL为空');
+          return;
+        }
+        this.$refs.cropper.getCropData((data) => {
+          if (this.$refs.circlePreview) {
+            this.$refs.circlePreview.innerHTML = `
+          <div style="width: 100px; height: 100px; border-radius: 50%; overflow: hidden; margin: 0 auto;">
+            <img src="${data}" style="width: 100%; height: 100%; object-fit: cover;" />
+          </div>
+        `;
+          }
+        });
+      });
+    },
+    async confirmAvatarUpload() {
+      if (
+        !this.$refs.cropper ||
+        typeof this.$refs.cropper.getCropBlob !== 'function'
+      ) {
+        this.$message.error('裁剪组件未正确加载');
+        return;
+      }
+      try {
+        this.avatarUploading = true;
+        this.$message.info('正在生成裁剪图片...');
+        this.$refs.cropper.getCropBlob((blob) => {
+          this.uploadCroppedImage(blob);
+        });
+      } catch (error) {
+        console.error('头像上传失败:', error);
+        this.$message.error('头像上传失败：' + error.message);
+        this.avatarUploading = false;
+      }
+    },
+    async uploadCroppedImage(blob) {
+      try {
+        this.$message.info('正在上传头像...');
+        const formData = new FormData();
+        formData.append('file', blob, `avatar-${Date.now()}.png`);
+        const response = await fetch(
+          'http://47.99.66.142:5000/api2/upload-image',
+          {
+            method: 'POST',
+            body: formData,
+          }
+        );
+        const result = await response.json();
+        if (result.success) {
+          this.form.avatarUrl = result.url;
+          this.$message.success('头像上传成功！');
+          this.avatarPreviewVisible = false;
+        } else {
+          throw new Error(result.error || '上传失败');
+        }
+      } catch (error) {
+        console.error('头像上传失败:', error);
+        this.$message.error('头像上传失败：' + error.message);
+      } finally {
+        this.avatarUploading = false;
+        this.isCropping = false;
+      }
+    },
+    resetAvatarPreview() {
+      if (this.cropperOption.img) {
+        URL.revokeObjectURL(this.cropperOption.img);
+      }
+      this.cropperOption.img = '';
+      this.currentAvatarFile = null;
+      this.avatarPreviewVisible = false;
+      this.isCropping = false;
+      if (this.$refs.circlePreview) {
+        this.$refs.circlePreview.innerHTML = '';
+      }
+    },
+
     async loadAgentSettings() {
       this.isLoading = true;
       try {
@@ -160,6 +502,7 @@ export default {
             chatprompt: agentData.chatPrompt || '',
             description: agentData.description || '',
             price: agentData.price !== undefined ? agentData.price : 0,
+            avatarUrl: this.form.avatarUrl || '',
           };
         } else {
           this.$message.error(
@@ -194,6 +537,8 @@ export default {
             chatPrompt: this.form.chatprompt,
             description: this.form.description,
             price: this.form.price,
+            avatarUrl: this.form.avatarUrl,
+            creatorId: userId,
           };
           console.log('更新机器人参数:', payload);
           this.updateAgentSettings(this.agentId, payload);
@@ -242,6 +587,130 @@ export default {
 @use '@/assets/styles/variables.scss' as *;
 
 // 知乎风格基础样式
+
+.avatar-form-item .el-form-item__content {
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+}
+
+.avatar-upload-container {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  width: 100%;
+  max-width: 600px;
+}
+
+/* 头像预览区 */
+.avatar-preview {
+  position: relative;
+  width: 120px;
+  height: 120px;
+  border-radius: 50% !important;
+  overflow: hidden;
+  border: 2px dashed #dcdfe6;
+  background-color: #f5f7fa;
+  cursor: pointer;
+  transition: border-color 0.3s ease;
+}
+
+.avatar-preview:hover {
+  border-color: #409eff;
+}
+
+.avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.avatar-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #909399;
+}
+
+.avatar-placeholder-icon {
+  font-size: 32px;
+  margin-bottom: 8px;
+}
+
+.avatar-placeholder-text {
+  font-size: 12px;
+}
+
+.avatar-clear-btn {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background-color: rgba(0, 0, 0, 0.5);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.3s ease;
+}
+
+.avatar-clear-btn:hover {
+  background-color: #f56c6c;
+}
+
+/* 上传操作区 */
+.avatar-upload-actions {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 8px;
+}
+
+.avatar-file-input {
+  display: none;
+}
+
+.avatar-upload-btn {
+  width: 120px;
+}
+
+.avatar-tip {
+  font-size: 12px;
+  color: #909399;
+  margin: 0;
+}
+
+/* 裁剪弹窗样式 */
+.avatar-cropper-content {
+  padding: 15px 0;
+}
+
+.cropper-section {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.cropper-container {
+  width: 100%;
+  height: 300px;
+}
+
+.preview-section {
+  text-align: center;
+}
+
+.circle-preview {
+  margin-top: 10px;
+}
+
 .create-robot {
   width: 100%;
   min-height: 100vh;

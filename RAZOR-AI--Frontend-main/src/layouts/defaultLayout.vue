@@ -691,20 +691,25 @@ export default {
   align-items: flex-start !important;
 }
 
+.chat-icon {
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
 .chat-item {
   display: flex;
   align-items: center;
-  gap: 3px;
-  padding: 1px 8px;
   margin: 0;
   cursor: pointer;
   transition: background-color 0.2s;
   width: 100%;
   box-sizing: border-box;
   font-size: 12px;
-  min-height: 24px;
   line-height: 1;
   flex: 0 0 auto;
+  gap: 8px;
+  padding: 6px 10px;
+  min-height: 40px;
 }
 
 .chat-text-container {
@@ -714,18 +719,32 @@ export default {
   flex: 1;
   padding: 0;
   margin: 0;
-  text-align: left !important;
+  text-align: left;
+  width: calc(100% - 24px);
 }
 
-.chat-name,
-.chat-title {
+.chat-name {
+  font-size: 12px;
+  color: #666;
+  padding: 2px 0;
   line-height: 1;
-  padding: 0;
   margin: 0;
-  text-align: left;
+  text-align: center;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.chat-title {
+  line-height: 1;
+  margin: 0;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 16px;
+  font-weight: 500;
+  padding: 8px 0;
 }
 
 .chat-item:empty {

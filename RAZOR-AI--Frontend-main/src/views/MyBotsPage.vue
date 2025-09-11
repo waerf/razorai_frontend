@@ -45,26 +45,6 @@
         </button>
       </div>
 
-      <!-- 加载中状态 -->
-      <div
-        v-if="loading"
-        class="flex justify-center items-center fixed inset-0 bg-white bg-opacity-70 z-50"
-      >
-        <div class="flex flex-col items-center">
-          <i class="fa fa-spinner fa-spin text-3xl text-gray-600 mb-4"></i>
-          <span class="text-gray-600 text-lg">正在加载，请稍候...</span>
-        </div>
-      </div>
-
-      <!-- 空数据状态 -->
-      <div
-        v-else-if="!activeBots.length"
-        class="text-center py-20 text-gray-500"
-      >
-        <i class="fa fa-robot text-3xl mb-2"></i>
-        <p>您还没有创建任何机器人</p>
-      </div>
-
       <!-- 机器人列表区域 -->
       <div v-else class="bots-grid">
         <div

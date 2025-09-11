@@ -49,6 +49,19 @@
           class="version-card"
           :class="{ 'current-version': version.isCurrent }"
         >
+          <!-- 头像显示区 -->
+          <div class="version-avatar-preview">
+            <img
+              v-if="version.robotImage"
+              :src="version.robotImage"
+              alt="机器人头像"
+              class="version-avatar-img"
+              @error="handleVersionAvatarError($event)"
+            />
+            <div v-else class="version-avatar-placeholder">
+              <i class="el-icon-user-robot version-avatar-placeholder-icon"></i>
+            </div>
+          </div>
           <!-- 版本头部信息 -->
           <div class="version-header">
             <div class="version-info">
@@ -168,6 +181,19 @@
       :close-on-click-modal="false"
     >
       <div v-if="selectedVersion" class="version-detail-dialog">
+        <!-- 头像显示区 -->
+        <div class="version-avatar-preview" style="margin-bottom: 18px">
+          <img
+            v-if="selectedVersion.robotImage"
+            :src="selectedVersion.robotImage"
+            alt="机器人头像"
+            class="version-avatar-img"
+            @error="handleVersionAvatarError($event)"
+          />
+          <div v-else class="version-avatar-placeholder">
+            <i class="el-icon-user-robot version-avatar-placeholder-icon"></i>
+          </div>
+        </div>
         <el-descriptions :column="1" border>
           <el-descriptions-item label="版本号"
             >#{{ selectedVersion.versionNumber }}</el-descriptions-item
@@ -304,6 +330,11 @@ export default {
   },
 
   methods: {
+    // 历史卡片头像加载失败处理
+    handleVersionAvatarError(event) {
+      event.target.style.display = 'none';
+      // 可选：弹出提示或显示占位图
+    },
     async loadVersionHistory() {
       this.isLoading = true;
       try {
@@ -520,6 +551,35 @@ export default {
 </script>
 
 <style lang="scss" scoped>
+// 版本卡片头像样式
+.version-avatar-preview {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  overflow: hidden;
+  margin: 0 auto 12px auto;
+  background: #f5f7fa;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.version-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
+.version-avatar-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #909399;
+}
+.version-avatar-placeholder-icon {
+  font-size: 32px;
+}
 // 基础样式
 .version-history {
   width: 100%;

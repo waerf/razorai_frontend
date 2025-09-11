@@ -97,16 +97,22 @@
               @keyup.enter.native="sendMessage()"
               class="message-input"
               clearable
+              style="padding-right: 74px"
             >
-              <el-button
-                slot="append"
-                class="send-btn"
-                @click="sendMessage"
-                :disabled="!newMessage.trim()"
-                icon="el-icon-paper-plane"
-              >
-                发送
-              </el-button>
+              <template slot="append">
+                <button
+                  class="custom-send-btn"
+                  @click="sendMessage()"
+                  :disabled="!newMessage.trim()"
+                  :class="{ 'send-btn-disabled': !newMessage.trim() }"
+                >
+                  <!-- 图标+文字组合，hover时文字展开 -->
+                  <span class="send-icon">
+                    <i class="el-icon-paper-plane"></i>
+                  </span>
+                  <span class="send-text">发送</span>
+                </button>
+              </template>
             </el-input>
           </div>
         </div>
@@ -125,6 +131,7 @@ import {
   getChatTitle as apigetChatTitle,
   getUserAvatar as apigetUserAvatar,
   getAgentAvatar as apigetAgentAvatar,
+  fetchAllChats as apifetchAllChats,
 } from '../utils/api';
 import { mapActions } from 'vuex';
 
@@ -161,9 +168,9 @@ export default {
     this.isHistoryChat = !!this.chatId && this.chatId !== 'null';
     console.log('是否为历史对话:', this.isHistoryChat);
 
-    await this.initAvatars();
-
     await this.createNewChat();
+
+    await this.initAvatars();
 
     if (this.chatId && this.chatId !== 'null') {
       await this.getChatHistory();
@@ -227,7 +234,7 @@ export default {
       }
 
       // 2. 获取机器人头像
-      this.targetAgentId = this.$route.query?.agentId;
+      this.targetAgentId = this.agentId;
       console.log('路由参数 agentId:', this.targetAgentId);
       if (this.targetAgentId) {
         this.currentAgentAvatar = await this.getAgentAvatar(this.targetAgentId);
@@ -241,7 +248,8 @@ export default {
     async getUserAvatar(userId) {
       try {
         const response = await apigetUserAvatar(userId);
-        const apiAvatarUrl = response?.avatar_url;
+        const apiAvatarUrl = response?.data.avatar_url;
+        console.log('获取用户头像响应:', response);
         return apiAvatarUrl ? apiAvatarUrl : this.userAvatar;
       } catch (error) {
         console.error(`获取用户[${userId}]头像失败:`, error);
@@ -252,7 +260,8 @@ export default {
     async getAgentAvatar(agentId) {
       try {
         const response = await apigetAgentAvatar(agentId);
-        const apiAvatarUrl = response?.avatar_url;
+        console.log('获取机器人头像响应:', response);
+        const apiAvatarUrl = response?.data.robot_image;
         return apiAvatarUrl ? apiAvatarUrl : this.botAvatar;
       } catch (error) {
         console.error(`获取机器人[${agentId}]头像失败:`, error);
@@ -324,6 +333,7 @@ export default {
           };
           console.log('历史对话启动 - 请求体:', requestBody);
           const historyRes = await apicreateChat(requestBody);
+          this.agentId = historyRes.data.agent_id;
           console.log('历史对话启动 - API响应:', historyRes);
 
           return;
@@ -344,6 +354,7 @@ export default {
         console.log('首次创建对话 - 请求体:', requestBody);
 
         const createRes = await apicreateChat(requestBody);
+        this.agentId = createRes.data.agent_id;
         console.log('首次创建对话 - API响应:', createRes);
 
         if (createRes.data.chat_id) {
@@ -418,6 +429,10 @@ export default {
           console.log('首次发送未命名对话消息，开始获取标题...');
           await this.getChatTitle();
           this.isFirstmessage = false;
+          const result = await apifetchAllChats({
+            userId: this.$store.state.user?.userId,
+          });
+          this.$store.commit('chat/SET_CHATS', result.data || []);
         }
       }
     },
@@ -868,6 +883,71 @@ $shadow-hover: 0 6px 16px rgba(0, 0, 0, 0.08);
       margin-left: 0 !important;
       align-self: flex-end !important;
     }
+  }
+}
+
+.custom-send-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background-color: $primary-color;
+  color: white;
+  border: none;
+  border-radius: 0px;
+  padding: 8px 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 14px;
+  height: 100%;
+  min-width: 70px;
+
+  &:hover {
+    background-color: $primary-dark;
+    transform: translateY(-2px);
+  }
+
+  &.send-btn-disabled {
+    background-color: #f0f0f0;
+    color: #aaa;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  .send-icon {
+    display: flex;
+    align-items: center;
+    font-size: 16px;
+  }
+
+  .send-text {
+    white-space: nowrap;
+    transition: opacity 0.2s ease;
+  }
+
+  // 小屏幕优化
+  @media (max-width: 768px) {
+    min-width: auto;
+    padding: 6px 12px;
+
+    .send-text {
+      font-size: 12px;
+    }
+  }
+}
+
+// 调整输入框容器样式配合按钮
+.input-container {
+  :deep(.el-input-group__append) {
+    padding: 0;
+    border-left: none;
+    background: transparent;
+  }
+
+  :deep(.el-input__inner) {
+    border-right: none !important;
+    border-top-right-radius: 0 !important;
+    border-bottom-right-radius: 0 !important;
   }
 }
 </style>
