@@ -210,12 +210,8 @@ export default {
           }
           */
           this.$message.success(res.data.message || '审核成功');
-          this.fetchReportDetail();
-
-          if (this.$route.path !== '/admin/posts') {
-            // 审核提交成功后，返回列表页
-            this.$router.push('/admin/posts');
-          }
+          // 审核成功后直接跳转列表页，不再刷新举报详情，避免后端已删除导致报错
+          this.$router.push('/admin/posts');
         } else {
           this.$message.error(res.data.message || '审核失败');
         }
