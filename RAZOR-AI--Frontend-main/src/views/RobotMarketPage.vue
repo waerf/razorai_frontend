@@ -1429,6 +1429,7 @@ export default {
           background: $accent-color;
           color: white;
           border-color: $accent-color;
+          border-radius: 0 12px 12px 0;
 
           &:hover {
             background: $accent-hover-color;
