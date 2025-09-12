@@ -499,12 +499,9 @@ export default {
           return;
         }
 
-        // 逆转数组，让最早的消息在前
-        records = records.slice().reverse();
-
         // 3. 生成 TXT 内容
         console.log('currentChat:', this.currentChat);
-        let txtContent = `对话记录 - ${this.currentChat?.title || '未知会话'}\n`;
+        let txtContent = `对话记录 \n`;
         txtContent += `导出时间: ${new Date().toLocaleString()}\n\n`;
 
         records.forEach((msg) => {
