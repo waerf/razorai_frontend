@@ -137,7 +137,7 @@
             <template v-if="!isPlaceholder(robot)">
               <div class="robot-header">
                 <img
-                  :src="getRobotImage(robot.robotImage)"
+                  :src="getRobotImage(robot.avatar_url)"
                   alt="robot"
                   class="robot-logo"
                 />
@@ -149,7 +149,7 @@
               <div class="robot-rating-price">
                 <div class="robot-subscription">
                   <i class="el-icon-user" style="color: #409eff"></i>
-                  {{ robot.subscriptionCnt || 0 }} 人订阅
+                  {{ robot.subscription_count || 0 }} 人订阅
                 </div>
                 <div class="robot-price">
                   {{ formatprice(robot.price) }}
@@ -749,6 +749,7 @@ export default {
 
         if (response.status === 200 && response.data) {
           const robots = response.data.data;
+          console.log(response);
           return robots;
         } else {
           console.error('加载机器人数据失败:', response);
@@ -1535,7 +1536,7 @@ export default {
       .robot-logo {
         width: 40px;
         height: 40px;
-        border-radius: 12px;
+        border-radius: 50%;
         object-fit: cover;
       }
 

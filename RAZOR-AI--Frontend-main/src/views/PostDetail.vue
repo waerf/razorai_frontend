@@ -780,6 +780,12 @@ export default {
       if (!mdText) return '';
       return marked(mdText, { breaks: true });
     },
+    // 截断文本到指定长度并添加省略号
+    truncateText(text, maxLength = 80) {
+      if (!text || typeof text !== 'string') return '';
+      if (text.length <= maxLength) return text;
+      return text.substring(0, maxLength) + '...';
+    },
     // 跳转首页并弹出登录弹窗
     goToLoginDialog() {
       if (this.$route.path !== '/') {
@@ -1424,7 +1430,7 @@ export default {
               postAuthorName: this.post.authorName, // 帖子作者姓名
               reportTime: currentTime, // 举报时间
               reportReason: this.reportForm.reportContent, // 举报原因(至少10个字符)
-              reportContent: this.post.content, //帖子内容
+              // reportContent: this.truncateText(this.post.content, 80), //帖子内容（限制80字）
             };
 
             console.log('举报提交的reportload:', reportload);
