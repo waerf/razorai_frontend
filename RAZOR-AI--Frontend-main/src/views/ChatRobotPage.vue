@@ -790,7 +790,7 @@ $shadow-hover: 0 6px 16px rgba(0, 0, 0, 0.08);
           width: 100%;
 
           :deep(.el-input__inner) {
-            border-radius: 25px;
+            border-radius: 0;
             padding: 12px 20px;
             border-color: #e0e0e0;
             font-size: 1rem;
@@ -899,8 +899,8 @@ $shadow-hover: 0 6px 16px rgba(0, 0, 0, 0.08);
   cursor: pointer;
   transition: all 0.2s ease;
   font-size: 14px;
-  height: 100%;
-  min-width: 70px;
+  height: 38px;
+  min-width: 100px;
 
   &:hover {
     background-color: $primary-dark;

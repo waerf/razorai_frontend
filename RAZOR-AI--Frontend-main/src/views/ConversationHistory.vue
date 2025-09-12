@@ -77,7 +77,7 @@
                     {{ conversation.title || '未命名对话' }}
                   </h3>
                   <span class="timestamp">{{
-                    formatDate(conversation.created_at)
+                    formatDate(conversation.updated_at)
                   }}</span>
                 </div>
               </div>
