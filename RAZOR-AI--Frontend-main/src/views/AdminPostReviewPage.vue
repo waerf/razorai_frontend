@@ -101,7 +101,6 @@
         <el-table-column label="评论内容" min-width="220">
           <template #default="scope">
             <p class="post-title">{{ scope.row.commentContent }}</p>
-            <p class="post-subtitle">{{ scope.row.reportReason }}</p>
           </template>
         </el-table-column>
         <el-table-column
@@ -177,7 +176,6 @@ export default {
               return {
                 id: item.reportId || item.ReportId || item.id,
                 title: postObj.title || '无标题',
-                subtitle: `举报理由：${item.reportReason || postObj.content || ''}`,
                 author: postObj.author || item.reporterName || '未知',
                 time: item.createdAt || item.CreatedAt || '',
                 type: '举报内容',
