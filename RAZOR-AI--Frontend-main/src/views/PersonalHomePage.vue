@@ -160,41 +160,29 @@
             border
             :row-class-name="getRowClassName"
           >
-            <el-table-column prop="agent_name" label="机器人名称" width="180" />
             <el-table-column
-              prop="subscription_type"
-              label="订阅类型"
-              width="120"
-            >
-              <template slot-scope="scope">
-                <el-tag
-                  :type="
-                    scope.row.subscription_type === 1 ? 'primary' : 'success'
-                  "
-                  size="small"
-                >
-                  {{ getSubscriptionTypeText(scope.row.subscription_type) }}
-                </el-tag>
-              </template>
-            </el-table-column>
-            <el-table-column prop="start_time" label="开始时间" width="160">
+              prop="agent_name"
+              label="机器人名称"
+              min-width="200"
+            />
+            <el-table-column prop="start_time" label="开始时间" min-width="180">
               <template slot-scope="scope">
                 {{ formatDate(scope.row.start_time) }}
               </template>
             </el-table-column>
-            <el-table-column prop="end_time" label="结束时间" width="160">
+            <el-table-column prop="end_time" label="结束时间" min-width="180">
               <template slot-scope="scope">
                 {{ formatDate(scope.row.end_time) }}
               </template>
             </el-table-column>
-            <el-table-column label="剩余时间" width="120">
+            <el-table-column label="剩余时间" min-width="150">
               <template slot-scope="scope">
                 <span :class="getRemainingTimeClass(scope.row)">
                   {{ getRemainingTimeText(scope.row) }}
                 </span>
               </template>
             </el-table-column>
-            <el-table-column prop="status" label="状态" width="100">
+            <el-table-column prop="status" label="状态" min-width="120">
               <template slot-scope="scope">
                 <el-tag :type="getStatusTagType(scope.row.status)" size="small">
                   {{ getStatusText(scope.row.status) }}
@@ -410,7 +398,14 @@
         </div>
 
         <el-form-item label="充值数量" prop="points">
-          <el-input-number placeholder="请输入充值积分数量" />
+          <el-input
+            v-model.number="rechargeForm.points"
+            placeholder="请输入充值积分数量"
+            type="number"
+            :min="10"
+            :max="10000"
+            @input="handlePointsInput"
+          />
         </el-form-item>
 
         <div class="quick-amounts">
@@ -1382,6 +1377,21 @@ export default {
       this.rechargeForm.points = amount;
     },
 
+    handlePointsInput(value) {
+      // 只允许数字输入
+      const numericValue = value.toString().replace(/[^0-9]/g, '');
+      if (numericValue !== value.toString()) {
+        this.rechargeForm.points = parseInt(numericValue) || 0;
+      }
+      // 限制范围
+      if (this.rechargeForm.points > 10000) {
+        this.rechargeForm.points = 10000;
+      }
+      if (this.rechargeForm.points < 0) {
+        this.rechargeForm.points = 0;
+      }
+    },
+
     async submitRecharge() {
       try {
         await this.$refs.rechargeForm.validate();
@@ -1469,15 +1479,6 @@ export default {
 
     refreshSubscriptions() {
       this.loadSubscriptions();
-    },
-
-    getSubscriptionTypeText(type) {
-      const typeMap = {
-        1: '基础订阅',
-        2: '高级订阅',
-        3: '专业订阅',
-      };
-      return typeMap[type] || '未知类型';
     },
 
     getStatusText(status) {

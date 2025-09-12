@@ -303,12 +303,12 @@
         </div>
       </div>
 
-      <!-- 论文修改机器人 -->
+      <!-- 文本生成机器人 -->
       <div class="category-section">
         <div class="category-header">
           <h3 class="category-title">
             <i class="el-icon-document"></i>
-            论文修改机器人
+            文本生成机器人
           </h3>
           <el-button class="view-more-btn" @click="showCategoryDetail('paper')">
             查看更多
@@ -520,7 +520,7 @@ export default {
       recommendedRobots: [], // 推荐机器人
       rolePlayRobots: [], // 角色扮演机器人
       codingRobots: [], // 代码编程机器人
-      paperRobots: [], // 论文修改机器人
+      paperRobots: [], // 文本生成机器人
       currentCategoryType: null, // 当前查看的分类类型
       currentFirstIndex: 0, // 当前分页的起始索引
       paginationLoading: false, // 分页加载状态
@@ -707,7 +707,7 @@ export default {
         const promises = [
           this.loadRobotsByType(1, 0), // 角色扮演机器人 type=1
           this.loadRobotsByType(2, 0), // 代码编程机器人 type=2
-          this.loadRobotsByType(3, 0), // 论文修改机器人 type=3
+          this.loadRobotsByType(3, 0), // 文本生成机器人 type=3
         ];
 
         // 如果用户已登录，加载推荐机器人
@@ -927,7 +927,7 @@ export default {
         recommended: { type: 1, title: '推荐机器人' },
         roleplay: { type: 1, title: '角色扮演机器人' },
         coding: { type: 2, title: '代码编程机器人' },
-        paper: { type: 3, title: '论文修改机器人' },
+        paper: { type: 3, title: '文本生成机器人' },
       };
 
       const config = categoryConfig[categoryType];
@@ -1311,7 +1311,7 @@ export default {
         const promises = [
           this.loadRobotsByType(1, 0), // 角色扮演机器人 type=1
           this.loadRobotsByType(2, 0), // 代码编程机器人 type=2
-          this.loadRobotsByType(3, 0), // 论文修改机器人 type=3
+          this.loadRobotsByType(3, 0), // 文本生成机器人 type=3
         ];
 
         const [rolePlayData, codingData, paperData] =
@@ -1425,7 +1425,6 @@ export default {
         }
 
         :deep(.el-input-group__append) {
-          border-radius: 0 12px 12px 0;
           background: $accent-color;
           color: white;
           border-color: $accent-color;
@@ -1506,6 +1505,7 @@ export default {
   .robot-card {
     cursor: pointer;
     transition: all 0.3s ease;
+    height: 300px;
     border: 1px solid $border-color;
 
     &:hover {
@@ -1552,7 +1552,8 @@ export default {
       font-size: 0.9rem;
       line-height: 1.4;
       margin-bottom: 15px;
-      min-height: 40px;
+      min-height: 120px;
+      max-height: 120px;
     }
 
     .robot-rating-price {
