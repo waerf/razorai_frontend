@@ -390,10 +390,6 @@
         v-loading="rechargeLoading"
       >
         <div class="recharge-info">
-          <div class="current-balance">
-            <span class="label">当前积分：</span>
-          </div>
-
           <div class="recharge-rates"></div>
         </div>
 
