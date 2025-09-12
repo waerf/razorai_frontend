@@ -150,16 +150,16 @@ export default {
         const res = await getPostReportDetail(reportId);
         if (res.data && res.data.success) {
           this.report = res.data.data;
-          // 解析帖子标题内容
+          // 解析帖子内容（post字段）
           let parsed = {};
           try {
-            if (typeof this.report.postTitle === 'string') {
-              parsed = JSON.parse(this.report.postTitle);
+            if (typeof this.report.post === 'string') {
+              parsed = JSON.parse(this.report.post);
             } else if (
-              typeof this.report.postTitle === 'object' &&
-              this.report.postTitle !== null
+              typeof this.report.post === 'object' &&
+              this.report.post !== null
             ) {
-              parsed = this.report.postTitle;
+              parsed = this.report.post;
             }
           } catch (e) {
             parsed = { title: this.report.postTitle || '' };
@@ -231,12 +231,19 @@ export default {
   },
   computed: {
     formattedReportDetails() {
-      if (!this.report.reportDetails) return '';
+      // 优先显示 post.content 字段
+      let content = '';
+      if (this.parsedPostTitle && this.parsedPostTitle.content) {
+        content = this.parsedPostTitle.content;
+      } else if (this.report.reportDetails) {
+        content = this.report.reportDetails;
+      }
+      if (!content) return '';
       try {
-        return marked(this.report.reportDetails);
+        return marked(content);
       } catch (error) {
         console.error('Markdown parsing error:', error);
-        return this.report.reportDetails; // 如果解析失败，返回原始文本
+        return content; // 如果解析失败，返回原始文本
       }
     },
   },
