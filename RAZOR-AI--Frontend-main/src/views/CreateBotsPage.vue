@@ -268,8 +268,6 @@ export default {
       llmOptions: [
         { label: 'Kimi', value: 1 },
         { label: 'Deepseek', value: 2 },
-        { label: 'Claude', value: 3 },
-        { label: 'GPT-4', value: 4 },
       ],
       // 头像裁剪相关
       avatarPreviewVisible: false,
@@ -511,7 +509,7 @@ export default {
           const payload = {
             name: this.form.name,
             type: this.form.type,
-            LLM_id: this.form.LLM_id,
+            llmid: this.form.LLM_id,
             chatprompt: this.form.chatprompt,
             description: this.form.description,
             CreatorId: userId,
