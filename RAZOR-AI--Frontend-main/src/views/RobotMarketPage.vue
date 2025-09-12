@@ -137,7 +137,7 @@
             <template v-if="!isPlaceholder(robot)">
               <div class="robot-header">
                 <img
-                  :src="getRobotImage(robot.avatar_url)"
+                  :src="getRobotImage(robot.robotImage)"
                   alt="robot"
                   class="robot-logo"
                 />
