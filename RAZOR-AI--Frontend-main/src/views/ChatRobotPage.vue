@@ -78,7 +78,12 @@
                   'bot-message': msg.role === 'assistant',
                 }"
               >
-                <div class="message-content">{{ msg.content }}</div>
+                <div
+                  class="message-content"
+                  v-if="msg.role === 'assistant'"
+                  v-html="parseMarkdown(msg.content)"
+                ></div>
+                <div class="message-content" v-else>{{ msg.content }}</div>
               </div>
               <!-- 用户消息头像 -->
               <img
@@ -87,6 +92,26 @@
                 alt="用户头像"
                 class="avatar"
               />
+            </div>
+
+            <!-- 机器人回复 loading 状态，始终在最下方 -->
+            <div
+              v-if="isLoading"
+              class="loading-message"
+              style="
+                width: 100%;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+              "
+            >
+              <el-spinner type="circle" size="32" style="margin: 20px 0" />
+              <div
+                style="text-align: center; color: #409eff; margin-bottom: 10px"
+              >
+                机器人正在思考...
+              </div>
             </div>
           </div>
 
@@ -134,6 +159,7 @@ import {
   fetchAllChats as apifetchAllChats,
 } from '../utils/api';
 import { mapActions } from 'vuex';
+import { marked } from 'marked';
 
 export default {
   name: 'ChatRobot',
@@ -152,6 +178,7 @@ export default {
       isFirstmessage: false,
       chattitle: '',
       hasHandledInitMessage: false,
+      isLoading: false,
     };
   },
 
@@ -220,6 +247,10 @@ export default {
 
   methods: {
     ...mapActions('chat', ['getChatByID']),
+
+    parseMarkdown(content) {
+      return marked(content || '');
+    },
 
     async initAvatars() {
       // 1. 获取用户头像
@@ -383,6 +414,7 @@ export default {
 
       this.$nextTick(() => this.scrollToBottom());
 
+      this.isLoading = true;
       try {
         const response = await apisendMessage({
           chat_id: this.chatId,
@@ -422,6 +454,7 @@ export default {
           role: 'assistant',
         });
       } finally {
+        this.isLoading = false;
         this.$nextTick(() => this.scrollToBottom());
 
         if (this.isFirstmessage) {
