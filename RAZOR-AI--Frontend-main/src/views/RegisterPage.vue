@@ -866,6 +866,10 @@ export default {
 .avatar-preview {
   position: relative;
   display: inline-block;
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  overflow: hidden;
 
   &:hover .avatar-overlay {
     opacity: 1;
