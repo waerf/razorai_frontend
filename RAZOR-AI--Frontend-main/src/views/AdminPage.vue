@@ -259,18 +259,18 @@ export default {
         });
         if (res.data && res.data.success) {
           this.pendingPosts = res.data.data.map((item) => {
-            let postTitle = '未知帖子';
-            if (item.postTitle) {
-              try {
-                const titleObj = JSON.parse(item.postTitle);
-                postTitle = titleObj.title || '未知帖子';
-              } catch (e) {
-                postTitle = item.postTitle;
-              }
+            let postObj = {};
+            try {
+              postObj =
+                typeof item.post === 'string'
+                  ? JSON.parse(item.post)
+                  : item.post || {};
+            } catch (e) {
+              postObj = { title: item.postTitle || '未知帖子' };
             }
             return {
               id: item.reportId || item.id,
-              name: postTitle,
+              name: postObj.title || '未知帖子',
               time: item.createdAt || '',
               type: 'post',
             };
