@@ -1165,7 +1165,7 @@ export default {
       .robot-detail-logo {
         width: 8vh;
         height: 8vh;
-        border-radius: 12px;
+        border-radius: 50%;
         object-fit: cover;
         background: #f0f0f0;
       }

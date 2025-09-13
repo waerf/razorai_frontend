@@ -101,7 +101,6 @@
         <el-table-column label="评论内容" min-width="220">
           <template #default="scope">
             <p class="post-title">{{ scope.row.commentContent }}</p>
-            <p class="post-subtitle">{{ scope.row.reportReason }}</p>
           </template>
         </el-table-column>
         <el-table-column
@@ -165,20 +164,19 @@ export default {
           });
           if (res.data && res.data.success) {
             this.posts = (res.data.data || []).map((item) => {
-              let parsedTitle = {};
+              let postObj = {};
               try {
-                parsedTitle =
-                  typeof item.postTitle === 'string'
-                    ? JSON.parse(item.postTitle)
-                    : item.postTitle || {};
+                postObj =
+                  typeof item.post === 'string'
+                    ? JSON.parse(item.post)
+                    : item.post || {};
               } catch (e) {
-                parsedTitle = { title: item.postTitle || '无标题' };
+                postObj = { title: item.postTitle || '无标题' };
               }
               return {
                 id: item.reportId || item.ReportId || item.id,
-                title: parsedTitle.title || '无标题',
-                subtitle: parsedTitle.content || item.reportReason || '',
-                author: parsedTitle.author || item.reporterName || '未知',
+                title: postObj.title || '无标题',
+                author: postObj.author || item.reporterName || '未知',
                 time: item.createdAt || item.CreatedAt || '',
                 type: '举报内容',
                 status: this.mapStatus(item.status || item.Status),
