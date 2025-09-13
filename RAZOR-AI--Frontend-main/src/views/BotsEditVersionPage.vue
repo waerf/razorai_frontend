@@ -266,9 +266,9 @@ export default {
         price: [{ required: true, message: '请输入价格', trigger: 'blur' }],
       },
       robotTypes: [
-        { label: '角色扮演', value: 1 },
+        { label: '文本生成', value: 1 },
         { label: '代码编程', value: 2 },
-        { label: '文本生成', value: 3 },
+        { label: '情感伙伴', value: 3 },
       ],
       llmOptions: [
         { label: 'Kimi', value: 1 },

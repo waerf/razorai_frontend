@@ -83,7 +83,7 @@
               <p><strong>机器人名称:</strong> {{ version.name }}</p>
               <p><strong>类型:</strong> {{ getRobotType(version.type) }}</p>
               <p><strong>LLM 模型:</strong> {{ getLlmName(version.llmId) }}</p>
-              <p><strong>价格:</strong> {{ version.price }}</p>
+              <p><strong>价格:</strong> {{ version.price }} 元</p>
             </div>
 
             <!-- 版本变更日志（解析JSON） -->
@@ -315,13 +315,15 @@ export default {
 
       // 常量映射
       robotTypes: [
-        { label: '角色扮演', value: 1 },
+        { label: '文本生成', value: 1 },
         { label: '代码编程', value: 2 },
-        { label: '文本生成', value: 3 },
+        { label: '情感伙伴', value: 3 },
       ],
       llmOptions: [
         { label: 'Kimi', value: 1 },
         { label: 'Deepseek', value: 2 },
+        { label: 'Claude', value: 3 },
+        { label: 'GPT-4', value: 4 },
       ],
     };
   },

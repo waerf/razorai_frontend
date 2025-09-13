@@ -34,16 +34,17 @@
             />
           </div>
 
-          <!-- 内容编辑器 (Markdown) -->
+          <!-- 内容编辑器 -->
           <div class="form-group">
-            <label for="content" class="form-label"
-              >帖子内容 (支持 Markdown)</label
-            >
-            <mavon-editor
+            <label for="content" class="form-label">帖子内容</label>
+            <textarea
+              id="content"
               v-model="formData.content"
-              :toolbarsFlag="true"
-              style="height: 400px"
-            />
+              class="form-textarea"
+              placeholder="请输入帖子内容..."
+              rows="10"
+              required
+            ></textarea>
           </div>
 
           <!-- 帖子标签 -->
@@ -82,12 +83,8 @@
 <script>
 import { mapState } from 'vuex';
 import { getCommunityPostDetail, updateCommunityPost } from '@/utils/api';
-import { mavonEditor } from 'mavon-editor';
 
 export default {
-  components: {
-    mavonEditor,
-  },
   props: ['id'],
   data() {
     return {
